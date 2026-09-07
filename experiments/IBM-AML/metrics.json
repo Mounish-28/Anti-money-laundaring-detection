@@ -1,0 +1,12 @@
+{
+    "Dataset": "IBM Transactions",
+    "Architecture": "LightGBM + OOF Target Enc",
+    "Best_Threshold": 0.8881111111111111,
+    "Test_Accuracy": 0.9916600153330742,
+    "Precision": 0.03963011889035667,
+    "Recall": 0.3088803088803089,
+    "F1_Score": 0.07024732913800673,
+    "PR_AUC": 0.04103319705735603,
+    "ROC_AUC": 0.9560821886404198,
+    "Target_Met": "YES"
+}

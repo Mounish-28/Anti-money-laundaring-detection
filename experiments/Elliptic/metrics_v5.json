@@ -1,0 +1,13 @@
+{
+    "Dataset": "Elliptic Bitcoin",
+    "Architecture": "XGBoost (166 Features, Dynamic scale_pos_weight)",
+    "Scale_Pos_Weight": 7.6349,
+    "Test_Nodes": 16670,
+    "Test_Accuracy": 0.9752,
+    "Precision": 0.8633,
+    "Recall": 0.735,
+    "F1_Score": 0.794,
+    "PR_AUC": 0.7969,
+    "ROC_AUC": 0.9188,
+    "Execution_Time_Seconds": 32.37
+}

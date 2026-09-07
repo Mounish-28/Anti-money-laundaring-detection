@@ -1,0 +1,80 @@
+# Environments & Virtual Envs
+.venv/
+venv/
+env/
+ENV/
+.env
+
+# Python bytecode & cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyd
+*.so
+.mypy_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+htmlcov_sar/
+.tox/
+.nox/
+
+# Datasets and archives (too large for Git)
+IBM AMlSim/
+IBM anti-money/
+SAML-D/
+Time series of transaction in AML/
+elliptic_bitcoin_dataset/
+data/
+*.csv
+*.parquet
+*.zip
+*.tar.gz
+*.7z
+*.rar
+
+# Model weights & binaries larger than GitHub limits
+models/AMLSim/
+models/Elliptic/
+models/IBM-AML/
+models/SAML-D/
+models/TimeSeries-AML/
+models/ibm_amlsim/
+models/ibm_transactions/
+models/samld/
+models/timeseries/
+*.cbm
+*.xgb
+*.bin
+*.pt
+*.pth
+*.onnx
+*.pkl
+*.h5
+*.joblib
+
+# Local databases, logs & runtime outputs
+*.log
+catboost_info/
+alerts.db
+*.sqlite
+*.sqlite3
+benchmark_live_results.json
+runtime_audit_results.json
+smoke_test_results.json
+five_dataset_results_v5.json
+
+# Frontend
+nexus-frontend/node_modules/
+nexus-frontend/.next/
+nexus-frontend/out/
+nexus-frontend/dist/
+nexus-frontend/build/
+
+# IDE & OS files
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db

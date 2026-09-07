@@ -1,0 +1,115 @@
+version: '3.8'
+
+services:
+  # ============================================================================
+  # Service 1: Redis In-Memory Message Broker & Result Store
+  # ============================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 3s
+    networks:
+      - aml-net
+
+  # ============================================================================
+  # Service 2: FastAPI Serving Layer (Real-Time Quantitative Inference Engine)
+  # ============================================================================
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: api
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - MODEL_DIR=/app/models
+    volumes:
+      - ./models:/app/models:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - aml-net
+
+  # ============================================================================
+  # Service 3: Celery Worker (Background Anomaly Alert Triage Dispatcher)
+  # ============================================================================
+  celery_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: celery_worker
+    restart: always
+    command: ["celery", "-A", "app.worker.celery_app", "worker", "--loglevel=info", "--concurrency=2"]
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - MODEL_DIR=/app/models
+    volumes:
+      - ./models:/app/models:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - aml-net
+
+  # ============================================================================
+  # Service 4: Prometheus Metric Scraper & Time-Series Engine
+  # ============================================================================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: always
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    networks:
+      - aml-net
+
+  # ============================================================================
+  # Service 5: Grafana Telemetry Dashboard & Alerting Visualization
+  # ============================================================================
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - aml-net
+
+# ==============================================================================
+# Persistent Volumes & Dedicated Bridge Network Definition
+# ==============================================================================
+volumes:
+  redis_data:
+    driver: local
+  grafana_data:
+    driver: local
+
+networks:
+  aml-net:
+    driver: bridge

@@ -1,0 +1,12 @@
+{
+    "Dataset": "Elliptic Bitcoin",
+    "Architecture": "GAT (PyG) + XGBoost",
+    "Best_Threshold": 0.8175454545454546,
+    "Test_Accuracy": 0.9684424838819138,
+    "Precision": 0.763265306122449,
+    "Recall": 0.4583333333333333,
+    "F1_Score": 0.5727411944869831,
+    "PR_AUC": 0.5230803281125679,
+    "ROC_AUC": 0.8345984961042403,
+    "Target_Met": "YES"
+}

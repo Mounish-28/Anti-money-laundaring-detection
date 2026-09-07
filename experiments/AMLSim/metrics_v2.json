@@ -1,0 +1,12 @@
+{
+    "Dataset": "IBM AMLSim",
+    "Architecture": "GCN + Graph Metrics + LGBM",
+    "Best_Threshold": 0.011030150753768845,
+    "Test_Accuracy": 0.9953333333333333,
+    "Precision": 0.8833333333333333,
+    "Recall": 1.0,
+    "F1_Score": 0.9380530973451328,
+    "PR_AUC": 0.9448278596506462,
+    "ROC_AUC": 0.9990481282027879,
+    "Target_Met": "YES"
+}

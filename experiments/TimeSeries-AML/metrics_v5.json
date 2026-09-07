@@ -1,0 +1,12 @@
+{
+    "Dataset": "Time-Series AML",
+    "Architecture": "Dual-Engine Ensemble (XGBoost + CatBoost Lossguide)",
+    "Best_Threshold": 0.6580000000000005,
+    "Test_Accuracy": 0.9732666666666666,
+    "Precision": 0.9708585753081261,
+    "Recall": 0.987044706382075,
+    "F1_Score": 0.9788847348744142,
+    "PR_AUC": 0.9991469000464596,
+    "ROC_AUC": 0.998463227210305,
+    "Target_Met": "YES"
+}

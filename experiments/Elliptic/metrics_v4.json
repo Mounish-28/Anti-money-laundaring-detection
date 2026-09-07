@@ -1,0 +1,12 @@
+{
+    "Dataset": "Elliptic Bitcoin",
+    "Architecture": "XGBoost Raw + Aggregate",
+    "Best_Threshold": 0.86,
+    "Test_Accuracy": 0.9735324058364438,
+    "Precision": 0.9142857142857143,
+    "Recall": 0.47058823529411764,
+    "F1_Score": 0.6213592233009708,
+    "PR_AUC": 0.5525370208246622,
+    "ROC_AUC": 0.8446741675444043,
+    "Target_Met": "PARTIAL"
+}

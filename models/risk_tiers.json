@@ -1,0 +1,19 @@
+{
+    "ibm_transactions": {
+        "ELEVATED": 0.850,
+        "HIGH": 0.950,
+        "CRITICAL_SAR": 0.985
+    },
+    "elliptic": {
+        "ELEVATED": 0.700,
+        "HIGH": 0.880,
+        "CRITICAL_SAR": 0.940
+    },
+    "thresholds": {
+        "samld": 0.782,
+        "amlsim": 0.597,
+        "timeseries": 0.658,
+        "elliptic": 0.612,
+        "ibm_transactions": 0.724
+    }
+}
