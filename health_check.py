@@ -22,7 +22,6 @@ import sys
 import time
 import uuid
 from datetime import datetime, timezone
-from typing import Dict, List, Optional, Any
 
 import httpx
 import websockets
@@ -55,7 +54,7 @@ class DiagnosticResult:
         latency_ms: float,
         passed: bool,
         details: str = "",
-        error_diagnostic: Optional[str] = None,
+        error_diagnostic: str | None = None,
         is_warning: bool = False,
     ):
         self.name = name
@@ -83,7 +82,7 @@ class HealthChecker:
         self.stream_timeout = stream_timeout
         self.allow_idle_streamers = allow_idle_streamers
         self.use_color = not no_color and sys.stdout.isatty()
-        self.results: List[DiagnosticResult] = []
+        self.results: list[DiagnosticResult] = []
 
     def _c(self, text: str, color_code: str) -> str:
         """Applies ANSI styling if color output is enabled."""
@@ -94,7 +93,9 @@ class HealthChecker:
     # --------------------------------------------------------------------------
     # Test 1: FastAPI REST Core Accessibility
     # --------------------------------------------------------------------------
-    async def test_rest_accessibility(self, client: httpx.AsyncClient) -> DiagnosticResult:
+    async def test_rest_accessibility(
+        self, client: httpx.AsyncClient
+    ) -> DiagnosticResult:
         endpoint = "/docs"
         url = f"{self.base_http_url}{endpoint}"
         t0 = time.perf_counter()
@@ -139,7 +140,9 @@ class HealthChecker:
     # --------------------------------------------------------------------------
     # Test 2: CatBoost Banking Inference (< 50ms SLA)
     # --------------------------------------------------------------------------
-    async def test_catboost_banking(self, client: httpx.AsyncClient) -> DiagnosticResult:
+    async def test_catboost_banking(
+        self, client: httpx.AsyncClient
+    ) -> DiagnosticResult:
         endpoint = "/api/v1/score/transaction"
         url = f"{self.base_http_url}{endpoint}"
         payload = {
@@ -191,10 +194,14 @@ class HealthChecker:
                 )
 
             sla_passed = engine_latency < SLA_LATENCY_MAX_MS
-            details = f"SLA Met ({engine_latency:.1f}ms | Tier: {tier} | Score: {score:.4f})"
+            details = (
+                f"SLA Met ({engine_latency:.1f}ms | Tier: {tier} | Score: {score:.4f})"
+            )
             diagnostic = None
             if not sla_passed:
-                details = f"SLA VIOLATION ({engine_latency:.1f}ms >= {SLA_LATENCY_MAX_MS}ms)"
+                details = (
+                    f"SLA VIOLATION ({engine_latency:.1f}ms >= {SLA_LATENCY_MAX_MS}ms)"
+                )
                 diagnostic = (
                     f"CatBoost inference latency {engine_latency:.2f}ms exceeded sub-50ms SLA target. "
                     "Review model inference execution in app.services.inference_engine.score_ibm_transaction."
@@ -281,10 +288,14 @@ class HealthChecker:
                 )
 
             sla_passed = engine_latency < SLA_LATENCY_MAX_MS
-            details = f"SLA Met ({engine_latency:.1f}ms | Tier: {tier} | Score: {score:.4f})"
+            details = (
+                f"SLA Met ({engine_latency:.1f}ms | Tier: {tier} | Score: {score:.4f})"
+            )
             diagnostic = None
             if not sla_passed:
-                details = f"SLA VIOLATION ({engine_latency:.1f}ms >= {SLA_LATENCY_MAX_MS}ms)"
+                details = (
+                    f"SLA VIOLATION ({engine_latency:.1f}ms >= {SLA_LATENCY_MAX_MS}ms)"
+                )
                 diagnostic = (
                     f"XGBoost crypto inference latency {engine_latency:.2f}ms exceeded sub-50ms SLA target. "
                     "Review app.services.inference_engine.score_elliptic."
@@ -316,7 +327,9 @@ class HealthChecker:
     # --------------------------------------------------------------------------
     # Test 4: WebSocket Broadcast Hub Delivery (< 2.0s timeout)
     # --------------------------------------------------------------------------
-    async def test_websocket_broadcast(self, client: httpx.AsyncClient) -> DiagnosticResult:
+    async def test_websocket_broadcast(
+        self, client: httpx.AsyncClient
+    ) -> DiagnosticResult:
         target_endpoint = "/ws/live"
         post_endpoint = "/api/v1/score/transaction"
         test_tx_id = f"WS-VERIFY-TRIGGER-{uuid.uuid4().hex[:8]}"
@@ -362,7 +375,9 @@ class HealthChecker:
                 while time.perf_counter() < deadline:
                     remaining_timeout = max(0.1, deadline - time.perf_counter())
                     try:
-                        raw_msg = await asyncio.wait_for(ws.recv(), timeout=remaining_timeout)
+                        raw_msg = await asyncio.wait_for(
+                            ws.recv(), timeout=remaining_timeout
+                        )
                         msg_data = json.loads(raw_msg)
                         if msg_data.get("transaction_id") == test_tx_id:
                             matched = True
@@ -438,7 +453,11 @@ class HealthChecker:
 
                         if engine == "FIAT_BANKING" or currency == "INR":
                             fiat_count += 1
-                        elif engine == "CRYPTO_FORENSICS" or rail == "BTC" or currency == "BTC":
+                        elif (
+                            engine == "CRYPTO_FORENSICS"
+                            or rail == "BTC"
+                            or currency == "BTC"
+                        ):
                             crypto_count += 1
 
                         total_observed += 1
@@ -498,7 +517,12 @@ class HealthChecker:
     # --------------------------------------------------------------------------
     async def run_all(self, skip_streamers: bool = False) -> int:
         print("\n" + self._c("=" * 106, CLR_CYAN))
-        print(self._c("              QUANTUMAML NEXUS - PRODUCTION SUITE DIAGNOSTIC HEALTH CHECK", CLR_BOLD + CLR_WHITE))
+        print(
+            self._c(
+                "              QUANTUMAML NEXUS - PRODUCTION SUITE DIAGNOSTIC HEALTH CHECK",
+                CLR_BOLD + CLR_WHITE,
+            )
+        )
         print(self._c("=" * 106, CLR_CYAN))
         print(
             f"  Target Host: {self._c(self.base_http_url, CLR_CYAN)}  |  "
@@ -514,7 +538,12 @@ class HealthChecker:
 
             # If REST core is completely down, skip subsequent HTTP/WS tests
             if not res1.passed:
-                print(self._c("  [!] FATAL: FastAPI REST Core is unreachable. Aborting downstream tests.", CLR_RED))
+                print(
+                    self._c(
+                        "  [!] FATAL: FastAPI REST Core is unreachable. Aborting downstream tests.",
+                        CLR_RED,
+                    )
+                )
             else:
                 # 2. CatBoost Banking Engine
                 res2 = await self.test_catboost_banking(http_client)
@@ -583,15 +612,24 @@ class HealthChecker:
         warnings = [r for r in self.results if r.is_warning]
 
         if failures or warnings:
-            print("\n" + self._c("DIAGNOSTIC ALERTS & REMEDIATION ACTIONS:", CLR_BOLD + CLR_YELLOW))
+            print(
+                "\n"
+                + self._c(
+                    "DIAGNOSTIC ALERTS & REMEDIATION ACTIONS:", CLR_BOLD + CLR_YELLOW
+                )
+            )
             print(self._c("-" * 106, CLR_DIM))
 
             for f in failures:
-                print(f"  {self._c('[FAIL]', CLR_BOLD + CLR_RED)} {self._c(f.name, CLR_BOLD)} ({f.endpoint}):")
+                print(
+                    f"  {self._c('[FAIL]', CLR_BOLD + CLR_RED)} {self._c(f.name, CLR_BOLD)} ({f.endpoint}):"
+                )
                 print(f"         {f.error_diagnostic or f.details}\n")
 
             for w in warnings:
-                print(f"  {self._c('[WARN]', CLR_BOLD + CLR_YELLOW)} {self._c(w.name, CLR_BOLD)} ({w.endpoint}):")
+                print(
+                    f"  {self._c('[WARN]', CLR_BOLD + CLR_YELLOW)} {self._c(w.name, CLR_BOLD)} ({w.endpoint}):"
+                )
                 print(f"         {w.error_diagnostic or w.details}\n")
 
             print(self._c("-" * 106, CLR_DIM))

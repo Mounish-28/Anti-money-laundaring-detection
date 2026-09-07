@@ -1,8 +1,8 @@
 import asyncio
 import json
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from health_check import HealthChecker, DiagnosticResult, SLA_LATENCY_MAX_MS
+
+from health_check import HealthChecker
 
 
 def get_checker():
@@ -123,13 +123,15 @@ def test_websocket_broadcast_delivery():
 
         async def mock_recv():
             nonlocal target_id
-            return json.dumps({
-                "engine": "FIAT_BANKING",
-                "transaction_id": target_id,
-                "rail": "IMPS",
-                "risk_tier": "LOW",
-                "latency_ms": 5.0,
-            })
+            return json.dumps(
+                {
+                    "engine": "FIAT_BANKING",
+                    "transaction_id": target_id,
+                    "rail": "IMPS",
+                    "risk_tier": "LOW",
+                    "latency_ms": 5.0,
+                }
+            )
 
         mock_ws.recv.side_effect = mock_recv
         mock_ws_ctx = AsyncMock()
@@ -153,7 +155,9 @@ def test_streamer_verification_with_events():
         mock_ws = AsyncMock()
         messages = [
             json.dumps({"engine": "FIAT_BANKING", "currency": "INR", "rail": "UPI"}),
-            json.dumps({"engine": "CRYPTO_FORENSICS", "currency": "BTC", "rail": "BTC"}),
+            json.dumps(
+                {"engine": "CRYPTO_FORENSICS", "currency": "BTC", "rail": "BTC"}
+            ),
         ]
         idx = 0
 

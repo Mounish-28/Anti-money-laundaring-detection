@@ -15,12 +15,11 @@ Endpoints:
 
 import io
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from fastapi import (
     APIRouter,
     Body,
-    Depends,
     HTTPException,
     Path,
     Query,
@@ -58,7 +57,7 @@ class SARStatusUpdateRequest(BaseModel):
         ...,
         description="Unique identifier or badge number of the compliance investigator",
     )
-    resolution_notes: Optional[str] = Field(
+    resolution_notes: str | None = Field(
         default=None,
         description="Investigator qualitative triage rationale or FINnet filing acknowledgement",
     )
@@ -87,9 +86,13 @@ class SARStatusUpdateRequest(BaseModel):
 async def list_sars(
     page: int = Query(1, ge=1, description="Page number (1-indexed)"),
     page_size: int = Query(20, ge=1, le=100, description="Items returned per page"),
-    status: Optional[CaseStatus] = Query(None, description="Filter by case status"),
-    typology: Optional[SuspicionTypology] = Query(None, description="Filter by primary suspicion typology"),
-    search: Optional[str] = Query(None, description="Search by SAR ID or entity identifier"),
+    status: CaseStatus | None = Query(None, description="Filter by case status"),
+    typology: SuspicionTypology | None = Query(
+        None, description="Filter by primary suspicion typology"
+    ),
+    search: str | None = Query(
+        None, description="Search by SAR ID or entity identifier"
+    ),
 ) -> SARListResponse:
     """Returns paginated metadata and matching SARCaseRecord items."""
     try:
@@ -110,7 +113,7 @@ async def list_sars(
         logger.error("Failed to list SAR cases: %s", e, exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error listing SAR cases: {str(e)}",
+            detail=f"Error listing SAR cases: {e!s}",
         )
 
 
@@ -128,7 +131,9 @@ async def list_sars(
     },
 )
 async def get_sar_by_id(
-    sar_id: str = Path(..., description="Canonical SAR ID formatted as SAR-IND-YYYYMMDD-XXXXXX"),
+    sar_id: str = Path(
+        ..., description="Canonical SAR ID formatted as SAR-IND-YYYYMMDD-XXXXXX"
+    ),
 ) -> SARCaseRecord:
     """Retrieves case record or raises 404 if missing."""
     case = await sar_service.get_sar_by_id(sar_id)
@@ -158,7 +163,9 @@ async def get_sar_by_id(
     },
 )
 async def generate_sar(
-    request: SARCreateRequest = Body(..., description="Manual SAR initiation request payload"),
+    request: SARCreateRequest = Body(
+        ..., description="Manual SAR initiation request payload"
+    ),
 ) -> SARCaseRecord:
     """Manually creates or aggregates a SAR dossier from flagged transaction identifiers."""
     if not request.transaction_ids:
@@ -172,7 +179,7 @@ async def generate_sar(
         primary_tx_id = request.transaction_ids[0]
         suspect_id = request.suspect_identifier or f"MANUAL_SUSPECT_{primary_tx_id[:8]}"
 
-        tx_payload: Dict[str, Any] = {
+        tx_payload: dict[str, Any] = {
             "transaction_id": primary_tx_id,
             "suspect_identifier": suspect_id,
             "amount": 49000.0,
@@ -180,7 +187,7 @@ async def generate_sar(
             "payment_format": "UPI",
             "investigator_notes": request.investigator_notes,
         }
-        ml_result: Dict[str, Any] = {
+        ml_result: dict[str, Any] = {
             "risk_score": 0.95,
             "recommended_action": "MANUAL_INVESTIGATION_ESCALATION",
             "feature_importance": {"manual_escalation_flag": 1.0},
@@ -195,7 +202,7 @@ async def generate_sar(
 
         # Aggregate any subsequent transaction IDs provided in the request
         for secondary_tx_id in request.transaction_ids[1:]:
-            subsequent_payload: Dict[str, Any] = {
+            subsequent_payload: dict[str, Any] = {
                 "transaction_id": secondary_tx_id,
                 "suspect_identifier": suspect_id,
                 "amount": 48500.0,
@@ -219,7 +226,7 @@ async def generate_sar(
         logger.error("Failed to generate manual SAR case: %s", e, exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error generating SAR case: {str(e)}",
+            detail=f"Error generating SAR case: {e!s}",
         )
 
 
@@ -243,10 +250,18 @@ async def generate_sar(
 )
 async def update_sar_status(
     sar_id: str = Path(..., description="Canonical SAR ID"),
-    payload: Optional[SARStatusUpdateRequest] = Body(None, description="Status update body payload"),
-    new_status: Optional[CaseStatus] = Query(None, description="Query parameter fallback for target status"),
-    analyst_id: Optional[str] = Query(None, description="Query parameter fallback for analyst ID"),
-    resolution_notes: Optional[str] = Query(None, description="Query parameter fallback for notes"),
+    payload: SARStatusUpdateRequest | None = Body(
+        None, description="Status update body payload"
+    ),
+    new_status: CaseStatus | None = Query(
+        None, description="Query parameter fallback for target status"
+    ),
+    analyst_id: str | None = Query(
+        None, description="Query parameter fallback for analyst ID"
+    ),
+    resolution_notes: str | None = Query(
+        None, description="Query parameter fallback for notes"
+    ),
 ) -> SARCaseRecord:
     """Updates case status and evicts closed rings."""
     # Resolve target values from body or query params
@@ -301,7 +316,9 @@ async def update_sar_status(
 )
 async def export_sar_dossier(
     sar_id: str = Path(..., description="Canonical SAR ID"),
-    format: str = Query("pdf", pattern="^(pdf|json)$", description="Export format: 'pdf' or 'json'"),
+    format: str = Query(
+        "pdf", pattern="^(pdf|json)$", description="Export format: 'pdf' or 'json'"
+    ),
 ) -> Response:
     """Exports case as either PDF byte stream or FINnet 2.0 JSON."""
     case = await sar_service.get_sar_by_id(sar_id)
@@ -328,7 +345,7 @@ async def export_sar_dossier(
             logger.error("Failed to generate PDF for %s: %s", sar_id, e, exc_info=True)
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Error generating PDF dossier: {str(e)}",
+                detail=f"Error generating PDF dossier: {e!s}",
             )
 
     elif fmt == "json":
@@ -343,10 +360,12 @@ async def export_sar_dossier(
                 },
             )
         except Exception as e:
-            logger.error("Failed to serialize JSON for %s: %s", sar_id, e, exc_info=True)
+            logger.error(
+                "Failed to serialize JSON for %s: %s", sar_id, e, exc_info=True
+            )
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Error exporting FINnet 2.0 JSON: {str(e)}",
+                detail=f"Error exporting FINnet 2.0 JSON: {e!s}",
             )
 
     else:
@@ -376,4 +395,3 @@ async def export_sar_json_alias(
 ) -> Response:
     """Convenience alias for FINnet 2.0 JSON export."""
     return await export_sar_dossier(sar_id=sar_id, format="json")
-

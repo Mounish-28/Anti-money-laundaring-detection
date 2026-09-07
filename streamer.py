@@ -5,13 +5,13 @@ Procedurally generates realistic continuous Indian banking switch traffic (UPI, 
 and streams scored events to the QuantumAML FastAPI serving layer.
 """
 
-import sys
-import time
-import random
 import argparse
 import logging
+import random
+import sys
+import time
 from datetime import datetime, timezone
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Any
 
 try:
     import httpx
@@ -57,47 +57,128 @@ DIM = "\033[2m"
 # Static Procedural Entity Registries (Zero Dataset Replay)
 # ------------------------------------------------------------------------------
 INDIAN_FIRST_NAMES = [
-    "Amit", "Priya", "Rajesh", "Sunil", "Ananya", "Rohit", "Sneha", "Vikram",
-    "Neha", "Arjun", "Pooja", "Deepak", "Kavita", "Suresh", "Meera", "Aditya",
-    "Ritu", "Manoj", "Divya", "Sanjay", "Tanvi", "Alok", "Shreya", "Rohan",
-    "Nisha", "Gaurav", "Swati", "Karan", "Aarti", "Varun", "Rahul", "Naveen",
-    "Pallavi", "Vivek", "Preeti", "Kunal", "Harish", "Smita", "Dev", "Isha"
+    "Amit",
+    "Priya",
+    "Rajesh",
+    "Sunil",
+    "Ananya",
+    "Rohit",
+    "Sneha",
+    "Vikram",
+    "Neha",
+    "Arjun",
+    "Pooja",
+    "Deepak",
+    "Kavita",
+    "Suresh",
+    "Meera",
+    "Aditya",
+    "Ritu",
+    "Manoj",
+    "Divya",
+    "Sanjay",
+    "Tanvi",
+    "Alok",
+    "Shreya",
+    "Rohan",
+    "Nisha",
+    "Gaurav",
+    "Swati",
+    "Karan",
+    "Aarti",
+    "Varun",
+    "Rahul",
+    "Naveen",
+    "Pallavi",
+    "Vivek",
+    "Preeti",
+    "Kunal",
+    "Harish",
+    "Smita",
+    "Dev",
+    "Isha",
 ]
 
 INDIAN_LAST_NAMES = [
-    "Sharma", "Patel", "Verma", "Mehta", "Iyer", "Gupta", "Reddy", "Singh",
-    "Nair", "Choudhury", "Bose", "Joshi", "Kulkarni", "Rao", "Mishra",
-    "Deshmukh", "Aggarwal", "Pillai", "Bhat", "Saxena", "Mukherjee", "Kapoor",
-    "Chopra", "Das", "Menon", "Bhattacharya", "Trivedi", "Banerjee", "Ghosh"
+    "Sharma",
+    "Patel",
+    "Verma",
+    "Mehta",
+    "Iyer",
+    "Gupta",
+    "Reddy",
+    "Singh",
+    "Nair",
+    "Choudhury",
+    "Bose",
+    "Joshi",
+    "Kulkarni",
+    "Rao",
+    "Mishra",
+    "Deshmukh",
+    "Aggarwal",
+    "Pillai",
+    "Bhat",
+    "Saxena",
+    "Mukherjee",
+    "Kapoor",
+    "Chopra",
+    "Das",
+    "Menon",
+    "Bhattacharya",
+    "Trivedi",
+    "Banerjee",
+    "Ghosh",
 ]
 
 COMMERCIAL_ENTITIES = [
-    "Apex Logistics Pvt Ltd", "CloudNine Tech Solutions", "Bharat Mart Retail",
-    "Zenith Infotech Ltd", "Kaveri Enterprises", "Mahalaxmi Trading Co",
-    "BlueDart Express Partner", "Narmada Agro Mills", "Tata Telemedia Hub",
-    "Swiggy Merchant Ops", "Zomato Partner Hub", "Flipkart Seller 99",
-    "UrbanClap Services Pvt Ltd", "Reliance Retail Branch 40", "Paytm Payments Merchant",
-    "Infosys BPM Services", "Hindalco Ancillary Works", "Godrej Agrovet Agency",
-    "Adani Bunkering Corp", "L&T Electrical Systems"
+    "Apex Logistics Pvt Ltd",
+    "CloudNine Tech Solutions",
+    "Bharat Mart Retail",
+    "Zenith Infotech Ltd",
+    "Kaveri Enterprises",
+    "Mahalaxmi Trading Co",
+    "BlueDart Express Partner",
+    "Narmada Agro Mills",
+    "Tata Telemedia Hub",
+    "Swiggy Merchant Ops",
+    "Zomato Partner Hub",
+    "Flipkart Seller 99",
+    "UrbanClap Services Pvt Ltd",
+    "Reliance Retail Branch 40",
+    "Paytm Payments Merchant",
+    "Infosys BPM Services",
+    "Hindalco Ancillary Works",
+    "Godrej Agrovet Agency",
+    "Adani Bunkering Corp",
+    "L&T Electrical Systems",
 ]
 
 HAWALA_SHELL_ENTITIES = [
-    "Golden Bullion International FZE", "SilkRoute Global Logistics Ltd",
-    "Offshore Apex Holdings Corp", "Pacific Diamond Trading LLP",
-    "Eurasian Commodities DMCC", "Royal Falcon Precious Metals Ltd",
-    "Maritime Horizon Shipping Corp", "TransAsia Exchange House Pvt Ltd"
+    "Golden Bullion International FZE",
+    "SilkRoute Global Logistics Ltd",
+    "Offshore Apex Holdings Corp",
+    "Pacific Diamond Trading LLP",
+    "Eurasian Commodities DMCC",
+    "Royal Falcon Precious Metals Ltd",
+    "Maritime Horizon Shipping Corp",
+    "TransAsia Exchange House Pvt Ltd",
 ]
 
 MERCHANT_HANDLES = [
-    "merchant.swiggy@okhdfcbank", "paytm.merchant.grocery@paytm",
-    "zomato.order@okicici", "reliance.fresh@oksbi", "flipkart.pay@okaxis",
-    "amazon.in@ybl", "uber.trip@okhdfcbank", "ola.cabs@okaxis",
-    "apollo.pharmacy@okicici", "bigbasket.sales@oksbi"
+    "merchant.swiggy@okhdfcbank",
+    "paytm.merchant.grocery@paytm",
+    "zomato.order@okicici",
+    "reliance.fresh@oksbi",
+    "flipkart.pay@okaxis",
+    "amazon.in@ybl",
+    "uber.trip@okhdfcbank",
+    "ola.cabs@okaxis",
+    "apollo.pharmacy@okicici",
+    "bigbasket.sales@oksbi",
 ]
 
-VPA_HANDLES = [
-    "@oksbi", "@okhdfcbank", "@okicici", "@okaxis", "@paytm", "@ybl"
-]
+VPA_HANDLES = ["@oksbi", "@okhdfcbank", "@okicici", "@okaxis", "@paytm", "@ybl"]
 
 BANKS_AND_IFSC_MAP = [
     ("State Bank of India", "SBIN"),
@@ -111,11 +192,11 @@ BANKS_AND_IFSC_MAP = [
 ]
 
 HIGH_RISK_HAWALA_IFSC = [
-    ("State Bank of India", "SBIN0061299"),   # Border / Free Trade Hub
-    ("HDFC Bank", "HDFC0009941"),             # Offshore Bullion Clearing
-    ("Axis Bank", "UTIB0004812"),             # Free Trade Zone
-    ("ICICI Bank", "ICIC0007781"),            # Special Economic Zone
-    ("Bank of Baroda", "BARB0098231"),        # Bullion Exchange Branch
+    ("State Bank of India", "SBIN0061299"),  # Border / Free Trade Hub
+    ("HDFC Bank", "HDFC0009941"),  # Offshore Bullion Clearing
+    ("Axis Bank", "UTIB0004812"),  # Free Trade Zone
+    ("ICICI Bank", "ICIC0007781"),  # Special Economic Zone
+    ("Bank of Baroda", "BARB0098231"),  # Bullion Exchange Branch
 ]
 
 
@@ -129,16 +210,18 @@ class EntityGenerator:
         return f"{first} {last}"
 
     @staticmethod
-    def generate_vpa(name: Optional[str] = None) -> str:
+    def generate_vpa(name: str | None = None) -> str:
         if name is None:
             name = EntityGenerator.generate_person_name()
         clean = name.lower().replace(" ", ".")
         handle = random.choice(VPA_HANDLES)
-        suffix = random.choice(["", str(random.randint(10, 99)), str(random.randint(100, 999))])
+        suffix = random.choice(
+            ["", str(random.randint(10, 99)), str(random.randint(100, 999))]
+        )
         return f"{clean}{suffix}{handle}"
 
     @staticmethod
-    def generate_bank(high_risk: bool = False) -> Tuple[str, str]:
+    def generate_bank(high_risk: bool = False) -> tuple[str, str]:
         """Returns tuple of (Bank Name, Formatted Bank String with IFSC)."""
         if high_risk:
             bank_name, ifsc = random.choice(HIGH_RISK_HAWALA_IFSC)
@@ -169,7 +252,7 @@ class EntityGenerator:
 # ------------------------------------------------------------------------------
 # Baseline Spending Distribution Generator (85% of Traffic)
 # ------------------------------------------------------------------------------
-def generate_baseline_transaction() -> Tuple[Dict[str, Any], str]:
+def generate_baseline_transaction() -> tuple[dict[str, Any], str]:
     """
     Generates a legitimate baseline transaction weighted across payment rails:
     - 60% UPI
@@ -251,7 +334,7 @@ def generate_baseline_transaction() -> Tuple[Dict[str, Any], str]:
 # ------------------------------------------------------------------------------
 # Algorithmic Anomaly Synthesizers (15% of Traffic)
 # ------------------------------------------------------------------------------
-def generate_typology_a_structuring() -> List[Tuple[Dict[str, Any], str]]:
+def generate_typology_a_structuring() -> list[tuple[dict[str, Any], str]]:
     """
     Typology A: PAN Structuring / Smurfing.
     A rapid sequence of 4 to 8 distinct synthetic mule VPAs each sending amounts
@@ -282,13 +365,13 @@ def generate_typology_a_structuring() -> List[Tuple[Dict[str, Any], str]]:
             "currency": "INR",
             "payment_format": "UPI",
         }
-        tag = f"PAN_STRUCTURING_SMURFING [Mule {i+1}/{count} -> {aggregator_vpa}]"
+        tag = f"PAN_STRUCTURING_SMURFING [Mule {i + 1}/{count} -> {aggregator_vpa}]"
         sequence.append((tx, tag))
 
     return sequence
 
 
-def generate_typology_b_hawala_rtgs() -> List[Tuple[Dict[str, Any], str]]:
+def generate_typology_b_hawala_rtgs() -> list[tuple[dict[str, Any], str]]:
     """
     Typology B: High-Value Hawala RTGS.
     Sudden out-of-band transfers of ₹25,00,000 to ₹1,20,00,000 between newly
@@ -318,7 +401,7 @@ def generate_typology_b_hawala_rtgs() -> List[Tuple[Dict[str, Any], str]]:
     return [(tx, tag)]
 
 
-def generate_typology_c_velocity_draining() -> List[Tuple[Dict[str, Any], str]]:
+def generate_typology_c_velocity_draining() -> list[tuple[dict[str, Any], str]]:
     """
     Typology C: Velocity / Mule Draining.
     A single consumer account suddenly firing 6 to 10 rapid IMPS transfers
@@ -333,7 +416,9 @@ def generate_typology_c_velocity_draining() -> List[Tuple[Dict[str, Any], str]]:
 
     for i in range(count):
         beneficiary_name = EntityGenerator.generate_person_name()
-        beneficiary_acc = f"{beneficiary_name} ({EntityGenerator.generate_account_number()})"
+        beneficiary_acc = (
+            f"{beneficiary_name} ({EntityGenerator.generate_account_number()})"
+        )
         _, to_bank = EntityGenerator.generate_bank()
         amount = round(random.uniform(10000.0, 25000.0), 2)
 
@@ -348,7 +433,7 @@ def generate_typology_c_velocity_draining() -> List[Tuple[Dict[str, Any], str]]:
             "currency": "INR",
             "payment_format": "IMPS",
         }
-        tag = f"VELOCITY_MULE_DRAINING [Drain {i+1}/{count} from {victim_name}]"
+        tag = f"VELOCITY_MULE_DRAINING [Drain {i + 1}/{count} from {victim_name}]"
         sequence.append((tx, tag))
 
     return sequence
@@ -362,11 +447,13 @@ class ResilientDispatcher:
 
     def __init__(self, endpoint: str):
         self.endpoint = endpoint
-        self._httpx_client: Optional[Any] = None
+        self._httpx_client: Any | None = None
         if httpx is not None:
             self._httpx_client = httpx.Client(timeout=10.0)
 
-    def dispatch(self, payload: Dict[str, Any]) -> Tuple[bool, Optional[Dict[str, Any]], str]:
+    def dispatch(
+        self, payload: dict[str, Any]
+    ) -> tuple[bool, dict[str, Any] | None, str]:
         """Transmits JSON payload and returns (success, response_dict, error_message)."""
         if self._httpx_client is not None:
             try:
@@ -399,9 +486,9 @@ class ResilientDispatcher:
 # Formatted Terminal Logger
 # ------------------------------------------------------------------------------
 def format_log_line(
-    payload: Dict[str, Any],
+    payload: dict[str, Any],
     tag: str,
-    resp: Optional[Dict[str, Any]],
+    resp: dict[str, Any] | None,
     err: str,
 ) -> str:
     """Formats terminal output for high readability and operational monitoring."""
@@ -432,9 +519,7 @@ def format_log_line(
         else:
             tier_color = GREEN
 
-        status_text = (
-            f"HTTP 200 [{tier_color}{tier}{RESET} p={score:.3f} {lat:.1f}ms]"
-        )
+        status_text = f"HTTP 200 [{tier_color}{tier}{RESET} p={score:.3f} {lat:.1f}ms]"
     else:
         status_text = "SENT"
 
@@ -460,11 +545,15 @@ def run_streamer(
 ):
     """Executes continuous infinite transaction generation and transmission."""
     print("=" * 105)
-    print(f"{BOLD}{CYAN} QuantumAML Nexus - Live Indian Banking Switch Streamer {RESET}")
+    print(
+        f"{BOLD}{CYAN} QuantumAML Nexus - Live Indian Banking Switch Streamer {RESET}"
+    )
     print(f" Target Endpoint : {BOLD}{endpoint}{RESET}")
     print(f" Stream Cadence  : {base_interval:.2f}s (jitter: 1.0s - 2.0s)")
     print(f" Anomaly Rate    : {anomaly_rate * 100:.1f}%")
-    print(f" Total Count     : {'Infinite (Ctrl+C to stop)' if max_count <= 0 else max_count}")
+    print(
+        f" Total Count     : {'Infinite (Ctrl+C to stop)' if max_count <= 0 else max_count}"
+    )
     print("=" * 105)
 
     dispatcher = ResilientDispatcher(endpoint)
@@ -472,12 +561,14 @@ def run_streamer(
     anomaly_count = 0
     consecutive_errors = 0
 
-    pending_queue: List[Tuple[Dict[str, Any], str, float]] = []
+    pending_queue: list[tuple[dict[str, Any], str, float]] = []
 
     try:
         while True:
             if max_count > 0 and sent_count >= max_count:
-                print(f"\n{GREEN}Reached requested count of {max_count} transactions. Shutting down.{RESET}")
+                print(
+                    f"\n{GREEN}Reached requested count of {max_count} transactions. Shutting down.{RESET}"
+                )
                 break
 
             # If anomaly burst has pending items, drain them with rapid inter-transaction delays
@@ -492,16 +583,22 @@ def run_streamer(
                         burst = generate_typology_a_structuring()
                         # Inter-transaction delay ~0.4s to 0.9s (under 15s total for 4-8 txs)
                         for item in burst:
-                            pending_queue.append((item[0], item[1], random.uniform(0.4, 0.9)))
+                            pending_queue.append(
+                                (item[0], item[1], random.uniform(0.4, 0.9))
+                            )
                     elif typology == "B":
                         burst = generate_typology_b_hawala_rtgs()
                         for item in burst:
-                            pending_queue.append((item[0], item[1], random.uniform(1.0, 1.8)))
+                            pending_queue.append(
+                                (item[0], item[1], random.uniform(1.0, 1.8))
+                            )
                     else:
                         burst = generate_typology_c_velocity_draining()
                         # Rapid draining ~0.2s to 0.6s (under 10s total for 6-10 txs)
                         for item in burst:
-                            pending_queue.append((item[0], item[1], random.uniform(0.2, 0.6)))
+                            pending_queue.append(
+                                (item[0], item[1], random.uniform(0.2, 0.6))
+                            )
 
                     tx_payload, tag, _ = pending_queue.pop(0)
                 else:
@@ -533,14 +630,18 @@ def run_streamer(
 
             # Continuous cadence pause for baseline transactions (1.0 to 2.0s)
             if not pending_queue:
-                jittered_pause = max(0.2, random.uniform(base_interval * 0.8, base_interval * 1.3))
+                jittered_pause = max(
+                    0.2, random.uniform(base_interval * 0.8, base_interval * 1.3)
+                )
                 time.sleep(jittered_pause)
 
     except KeyboardInterrupt:
         print(f"\n{YELLOW}Streamer terminated by user (Ctrl+C).{RESET}")
     finally:
         dispatcher.close()
-        print(f"\nSummary: Sent {sent_count} transactions ({anomaly_count} anomalies injected).")
+        print(
+            f"\nSummary: Sent {sent_count} transactions ({anomaly_count} anomalies injected)."
+        )
 
 
 # ------------------------------------------------------------------------------

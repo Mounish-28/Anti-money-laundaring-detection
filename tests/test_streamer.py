@@ -1,12 +1,10 @@
-import pytest
 from streamer import (
     EntityGenerator,
+    format_log_line,
     generate_baseline_transaction,
     generate_typology_a_structuring,
     generate_typology_b_hawala_rtgs,
     generate_typology_c_velocity_draining,
-    format_log_line,
-    ResilientDispatcher,
 )
 
 
@@ -17,13 +15,25 @@ def test_entity_generator_formats():
 
     vpa = EntityGenerator.generate_vpa(name)
     assert "@" in vpa
-    assert any(h in vpa for h in ["@oksbi", "@okhdfcbank", "@okicici", "@okaxis", "@paytm", "@ybl"])
+    assert any(
+        h in vpa
+        for h in ["@oksbi", "@okhdfcbank", "@okicici", "@okaxis", "@paytm", "@ybl"]
+    )
 
     bank_name, bank_str = EntityGenerator.generate_bank()
     assert "(" in bank_str and ")" in bank_str
 
     high_risk_name, high_risk_str = EntityGenerator.generate_bank(high_risk=True)
-    assert any(code in high_risk_str for code in ["SBIN0061299", "HDFC0009941", "UTIB0004812", "ICIC0007781", "BARB0098231"])
+    assert any(
+        code in high_risk_str
+        for code in [
+            "SBIN0061299",
+            "HDFC0009941",
+            "UTIB0004812",
+            "ICIC0007781",
+            "BARB0098231",
+        ]
+    )
 
     utr = EntityGenerator.generate_utr()
     assert utr.startswith("UTR-")

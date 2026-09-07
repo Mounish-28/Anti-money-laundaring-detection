@@ -21,7 +21,7 @@ import logging
 import time
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from app.schemas.sar import (
     CaseStatus,
@@ -29,7 +29,6 @@ from app.schemas.sar import (
     MLTelemetry,
     PaymentRail,
     ReportingEntityInfo,
-    ReportingEntityType,
     RiskTier,
     SARCaseRecord,
     SuspectEntityProfile,
@@ -52,11 +51,11 @@ class SARService:
 
     def __init__(self):
         # Primary index: keyed by sar_id
-        self._cases: Dict[str, SARCaseRecord] = {}
+        self._cases: dict[str, SARCaseRecord] = {}
         # Secondary index: maps normalized suspect entity identifier -> active sar_id
-        self._active_ring_index: Dict[str, str] = {}
+        self._active_ring_index: dict[str, str] = {}
         # Tracks epoch timestamp of the most recent activity in each ring/case
-        self._ring_last_active: Dict[str, float] = {}
+        self._ring_last_active: dict[str, float] = {}
         # Concurrency lock for thread-safe operations
         self._lock = asyncio.Lock()
 
@@ -66,12 +65,12 @@ class SARService:
     def _synthesize_narrative(
         self,
         typology: SuspicionTypology,
-        tx_records: List[TransactionAuditRecord],
+        tx_records: list[TransactionAuditRecord],
         suspect: SuspectEntityProfile,
-        counterparty: Optional[SuspectEntityProfile],
-        ml_result: Dict[str, Any],
+        counterparty: SuspectEntityProfile | None,
+        ml_result: dict[str, Any],
         avg_risk_score: float,
-        latest_tx_payload: Optional[Dict[str, Any]] = None,
+        latest_tx_payload: dict[str, Any] | None = None,
     ) -> str:
         """
         Synthesizes standardized, legally sound grounds of suspicion compliant
@@ -84,7 +83,11 @@ class SARService:
 
         # Determine payment rail representation
         rails = list({tx.rail for tx in tx_records if tx.rail})
-        rail_str = ", ".join(rails) if rails else (str(payload.get("rail") or payload.get("payment_format") or "UPI"))
+        rail_str = (
+            ", ".join(rails)
+            if rails
+            else (str(payload.get("rail") or payload.get("payment_format") or "UPI"))
+        )
 
         # Calculate total exposure in INR
         total_inr = sum(tx.amount for tx in tx_records if tx.currency.upper() == "INR")
@@ -103,7 +106,9 @@ class SARService:
 
         # Elapsed window in seconds across transactions
         if earliest_tx and latest_tx and len(tx_records) > 1:
-            window_seconds = int(abs((latest_tx.timestamp - earliest_tx.timestamp).total_seconds()))
+            window_seconds = int(
+                abs((latest_tx.timestamp - earliest_tx.timestamp).total_seconds())
+            )
             if window_seconds == 0:
                 window_seconds = int(self.DEDUP_WINDOW_SECONDS)
         else:
@@ -120,7 +125,11 @@ class SARService:
             )
 
         elif typology == SuspicionTypology.IN_TYP_HAWALA:
-            amount_val = latest_tx.amount if latest_tx else float(payload.get("amount", total_inr))
+            amount_val = (
+                latest_tx.amount
+                if latest_tx
+                else float(payload.get("amount", total_inr))
+            )
             amount_formatted = f"{amount_val:,.2f}"
             corp_entity = (
                 payload.get("entity_name")
@@ -148,8 +157,12 @@ class SARService:
                 or payload.get("transaction_id")
                 or "0xUNKNOWN_HASH"
             )
-            num_inputs = int(payload.get("num_inputs") or payload.get("inputs_count") or 5)
-            num_outputs = int(payload.get("num_outputs") or payload.get("outputs_count") or 8)
+            num_inputs = int(
+                payload.get("num_inputs") or payload.get("inputs_count") or 5
+            )
+            num_outputs = int(
+                payload.get("num_outputs") or payload.get("outputs_count") or 8
+            )
             return (
                 f"Illicit crypto hop detected: High-velocity peeling or mixer signature "
                 f"identified across {num_inputs} inputs and {num_outputs} outputs "
@@ -175,9 +188,9 @@ class SARService:
     # --------------------------------------------------------------------------
     def _extract_suspect_identifier(
         self,
-        tx_payload: Dict[str, Any],
+        tx_payload: dict[str, Any],
         typology: SuspicionTypology,
-    ) -> Tuple[str, Optional[str]]:
+    ) -> tuple[str, str | None]:
         """
         Extracts the primary suspect entity identifier and counterparty identifier
         based on payload attributes, typology, and existing active rings.
@@ -241,10 +254,10 @@ class SARService:
     # --------------------------------------------------------------------------
     def _build_audit_record(
         self,
-        tx_payload: Dict[str, Any],
-        ml_result: Dict[str, Any],
+        tx_payload: dict[str, Any],
+        ml_result: dict[str, Any],
         suspect_id: str,
-        counterparty_id: Optional[str],
+        counterparty_id: str | None,
     ) -> TransactionAuditRecord:
         """Constructs a compliant TransactionAuditRecord from payload and ML inference."""
         raw_tx_id = (
@@ -271,7 +284,9 @@ class SARService:
         raw_rail = str(
             tx_payload.get("payment_format")
             or tx_payload.get("rail")
-            or ("BTC" if "btc" in str(tx_payload.get("currency", "")).lower() else "UPI")
+            or (
+                "BTC" if "btc" in str(tx_payload.get("currency", "")).lower() else "UPI"
+            )
         ).upper()
 
         try:
@@ -305,7 +320,10 @@ class SARService:
             or ml_result.get("flags")
             or []
         )
-        if ml_result.get("recommended_action") and ml_result["recommended_action"] not in anomalies:
+        if (
+            ml_result.get("recommended_action")
+            and ml_result["recommended_action"] not in anomalies
+        ):
             anomalies.append(ml_result["recommended_action"])
 
         c_from = (
@@ -338,8 +356,8 @@ class SARService:
     # --------------------------------------------------------------------------
     async def create_or_aggregate_sar(
         self,
-        tx_payload: Dict[str, Any],
-        ml_result: Dict[str, Any],
+        tx_payload: dict[str, Any],
+        ml_result: dict[str, Any],
         typology: SuspicionTypology,
     ) -> SARCaseRecord:
         """
@@ -355,12 +373,16 @@ class SARService:
         """
         async with self._lock:
             current_time = time.time()
-            suspect_id, counterparty_id = self._extract_suspect_identifier(tx_payload, typology)
-            tx_record = self._build_audit_record(tx_payload, ml_result, suspect_id, counterparty_id)
+            suspect_id, counterparty_id = self._extract_suspect_identifier(
+                tx_payload, typology
+            )
+            tx_record = self._build_audit_record(
+                tx_payload, ml_result, suspect_id, counterparty_id
+            )
 
             existing_sar_id = self._active_ring_index.get(suspect_id)
             is_active_case = False
-            existing_case: Optional[SARCaseRecord] = None
+            existing_case: SARCaseRecord | None = None
 
             if existing_sar_id and existing_sar_id in self._cases:
                 candidate_case = self._cases[existing_sar_id]
@@ -373,7 +395,9 @@ class SARService:
                 }
                 is_unfiled = candidate_case.status in unfiled_statuses
                 last_active = self._ring_last_active.get(existing_sar_id, 0.0)
-                within_window = (current_time - last_active) <= self.DEDUP_WINDOW_SECONDS
+                within_window = (
+                    current_time - last_active
+                ) <= self.DEDUP_WINDOW_SECONDS
 
                 if is_unfiled and within_window:
                     is_active_case = True
@@ -391,7 +415,11 @@ class SARService:
                     tx_record.transaction_id,
                     existing_case.sar_id,
                     suspect_id,
-                    self.DEDUP_WINDOW_SECONDS - (current_time - self._ring_last_active.get(existing_case.sar_id, current_time)),
+                    self.DEDUP_WINDOW_SECONDS
+                    - (
+                        current_time
+                        - self._ring_last_active.get(existing_case.sar_id, current_time)
+                    ),
                 )
 
                 # 1. Append transaction audit record
@@ -400,15 +428,25 @@ class SARService:
                 # 2. Increment cumulative exposures
                 if tx_record.currency.upper() == "INR":
                     existing_case.total_exposure_inr = round(
-                        sum(tx.amount for tx in existing_case.transactions if tx.currency.upper() == "INR"),
+                        sum(
+                            tx.amount
+                            for tx in existing_case.transactions
+                            if tx.currency.upper() == "INR"
+                        ),
                         2,
                     )
                 elif tx_record.currency.upper() == "BTC":
-                    btc_sum = sum(tx.amount for tx in existing_case.transactions if tx.currency.upper() == "BTC")
+                    btc_sum = sum(
+                        tx.amount
+                        for tx in existing_case.transactions
+                        if tx.currency.upper() == "BTC"
+                    )
                     existing_case.total_exposure_btc = round(btc_sum, 6)
 
                 # 3. Recalculate rolling average risk score
-                avg_score = sum(tx.risk_score for tx in existing_case.transactions) / len(existing_case.transactions)
+                avg_score = sum(
+                    tx.risk_score for tx in existing_case.transactions
+                ) / len(existing_case.transactions)
 
                 # 4. Update ML telemetry feature importance and latency
                 new_importance = (
@@ -422,7 +460,8 @@ class SARService:
                 new_latency = float(ml_result.get("latency_ms", 0.0))
                 if new_latency > 0:
                     existing_case.ml_telemetry.inference_latency_ms = round(
-                        (existing_case.ml_telemetry.inference_latency_ms + new_latency) / 2.0,
+                        (existing_case.ml_telemetry.inference_latency_ms + new_latency)
+                        / 2.0,
                         2,
                     )
 
@@ -441,9 +480,12 @@ class SARService:
                 # Append secondary typology if new and distinct
                 if (
                     typology != existing_case.grounds_of_suspicion.primary_typology
-                    and typology not in existing_case.grounds_of_suspicion.secondary_typologies
+                    and typology
+                    not in existing_case.grounds_of_suspicion.secondary_typologies
                 ):
-                    existing_case.grounds_of_suspicion.secondary_typologies.append(typology)
+                    existing_case.grounds_of_suspicion.secondary_typologies.append(
+                        typology
+                    )
 
                 # 6. Reset 5-minute rolling activity timer to keep ring open
                 self._ring_last_active[existing_case.sar_id] = current_time
@@ -471,18 +513,20 @@ class SARService:
                 entity_identifier=suspect_id,
                 entity_name=tx_payload.get("entity_name") or "ANONYMOUS_HOLDER",
                 entity_type=tx_payload.get("entity_type", "INDIVIDUAL"),
-                institution_code=tx_payload.get("branch_ifsc") or tx_payload.get("ifsc"),
+                institution_code=tx_payload.get("branch_ifsc")
+                or tx_payload.get("ifsc"),
                 kyc_risk_tier=RiskTier.CRITICAL_SAR,
                 is_pep=bool(tx_payload.get("is_pep", False)),
                 flags=list(tx_payload.get("flags", [])),
             )
 
             # Counterparty profile
-            counterparty_profile: Optional[SuspectEntityProfile] = None
+            counterparty_profile: SuspectEntityProfile | None = None
             if counterparty_id:
                 counterparty_profile = SuspectEntityProfile(
                     entity_identifier=counterparty_id,
-                    entity_name=tx_payload.get("counterparty_name") or "ANONYMOUS_COUNTERPARTY",
+                    entity_name=tx_payload.get("counterparty_name")
+                    or "ANONYMOUS_COUNTERPARTY",
                     entity_type="INDIVIDUAL",
                     institution_code=tx_payload.get("counterparty_ifsc"),
                     kyc_risk_tier=RiskTier.HIGH,
@@ -490,11 +534,17 @@ class SARService:
 
             # Model telemetry
             model_name = ml_result.get("model_name") or (
-                "Elliptic-XGBoost-v1.2" if tx_record.currency.upper() == "BTC" else "CatBoost-Banking-v2.4"
+                "Elliptic-XGBoost-v1.2"
+                if tx_record.currency.upper() == "BTC"
+                else "CatBoost-Banking-v2.4"
             )
             model_version = str(ml_result.get("model_version", "v2.4"))
             latency_ms = float(ml_result.get("latency_ms", 12.4))
-            feature_imp = dict(ml_result.get("feature_importance") or ml_result.get("top_features") or {})
+            feature_imp = dict(
+                ml_result.get("feature_importance")
+                or ml_result.get("top_features")
+                or {}
+            )
 
             ml_telemetry = MLTelemetry(
                 model_name=model_name,
@@ -530,7 +580,9 @@ class SARService:
             )
 
             total_inr = tx_record.amount if tx_record.currency.upper() == "INR" else 0.0
-            total_btc = tx_record.amount if tx_record.currency.upper() == "BTC" else None
+            total_btc = (
+                tx_record.amount if tx_record.currency.upper() == "BTC" else None
+            )
 
             case_record = SARCaseRecord(
                 sar_id=sar_id,
@@ -560,7 +612,7 @@ class SARService:
     # --------------------------------------------------------------------------
     # Core API 2: Get SAR By ID
     # --------------------------------------------------------------------------
-    async def get_sar_by_id(self, sar_id: str) -> Optional[SARCaseRecord]:
+    async def get_sar_by_id(self, sar_id: str) -> SARCaseRecord | None:
         """Retrieves a single SAR case dossier by its canonical SAR ID."""
         async with self._lock:
             return self._cases.get(sar_id)
@@ -572,10 +624,10 @@ class SARService:
         self,
         page: int = 1,
         page_size: int = 20,
-        status: Optional[CaseStatus] = None,
-        typology: Optional[SuspicionTypology] = None,
-        search: Optional[str] = None,
-    ) -> Tuple[List[SARCaseRecord], int]:
+        status: CaseStatus | None = None,
+        typology: SuspicionTypology | None = None,
+        search: str | None = None,
+    ) -> tuple[list[SARCaseRecord], int]:
         """
         Returns a paginated list of cases sorted by newest first,
         with query filtering across case status, grounds typology, and text search.
@@ -588,13 +640,17 @@ class SARService:
                 reverse=True,
             )
 
-            filtered: List[SARCaseRecord] = []
+            filtered: list[SARCaseRecord] = []
             search_clean = search.strip().lower() if search else None
 
             for case in all_cases:
                 # Filter by status
                 if status is not None:
-                    c_status = case.status.value if hasattr(case.status, "value") else case.status
+                    c_status = (
+                        case.status.value
+                        if hasattr(case.status, "value")
+                        else case.status
+                    )
                     s_status = status.value if hasattr(status, "value") else status
                     if c_status != s_status:
                         continue
@@ -606,7 +662,9 @@ class SARService:
                         if hasattr(case.grounds_of_suspicion.primary_typology, "value")
                         else case.grounds_of_suspicion.primary_typology
                     )
-                    t_typology = typology.value if hasattr(typology, "value") else typology
+                    t_typology = (
+                        typology.value if hasattr(typology, "value") else typology
+                    )
                     if c_typology != t_typology:
                         continue
 
@@ -620,7 +678,9 @@ class SARService:
                     ]
                     if case.counterparty:
                         match_fields.append(case.counterparty.entity_identifier.lower())
-                        match_fields.append((case.counterparty.entity_name or "").lower())
+                        match_fields.append(
+                            (case.counterparty.entity_name or "").lower()
+                        )
                     for tx in case.transactions:
                         if tx.counterparty_from:
                             match_fields.append(tx.counterparty_from.lower())
@@ -647,8 +707,8 @@ class SARService:
         sar_id: str,
         new_status: CaseStatus,
         analyst_id: str,
-        resolution_notes: Optional[str] = None,
-    ) -> Optional[SARCaseRecord]:
+        resolution_notes: str | None = None,
+    ) -> SARCaseRecord | None:
         """
         Handles state transitions (e.g. PENDING_REVIEW -> FILED_WITH_FIU or DISMISSED).
         Evicts closed cases from `_active_ring_index` so future activity triggers fresh investigations.

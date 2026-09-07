@@ -1,4 +1,3 @@
-from typing import Optional
 from pydantic import BaseModel, Field
 
 
@@ -11,7 +10,7 @@ class TransactionInput(BaseModel):
     amount: float = Field(..., gt=0)
     currency: str
     payment_format: str
-    timestamp: Optional[str] = None
+    timestamp: str | None = None
 
 
 class AMLSimInput(BaseModel):

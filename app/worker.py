@@ -1,5 +1,7 @@
 import logging
+
 from celery import Celery
+
 from app.config import settings
 
 logging.basicConfig(level=logging.INFO)

@@ -1,4 +1,5 @@
 from fastapi import APIRouter, BackgroundTasks, HTTPException
+
 from app.schemas import CryptoScoreRequest, ScoreResponse
 from app.services.risk_engine import risk_engine
 
@@ -14,4 +15,4 @@ async def score_crypto(request: CryptoScoreRequest, background_tasks: Background
         response = risk_engine.score_crypto(request, background_tasks=background_tasks)
         return response
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Crypto scoring error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Crypto scoring error: {e!s}")

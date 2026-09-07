@@ -5,14 +5,15 @@ _base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _base not in sys.path:
     sys.path.insert(0, _base)
 
-import pytest  # noqa: E402
-from pydantic import ValidationError  # noqa: E402
-from app.schemas import (  # noqa: E402
-    TransactionInput,
-    TimeSeriesInput,
+import pytest
+from pydantic import ValidationError
+
+from app.schemas import (
     EllipticNodeInput,
-    SAMLDInput,
     RiskEvaluationResponse,
+    SAMLDInput,
+    TimeSeriesInput,
+    TransactionInput,
 )
 
 

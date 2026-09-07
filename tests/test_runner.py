@@ -1,15 +1,12 @@
 import os
 import sys
-import subprocess
 from unittest.mock import MagicMock, patch
-import pytest
 
 from runner import (
-    resolve_python_path,
-    resolve_npm_path,
-    ServiceProcess,
     Orchestrator,
-    SERVICE_CONFIGS,
+    ServiceProcess,
+    resolve_npm_path,
+    resolve_python_path,
 )
 
 
@@ -121,4 +118,3 @@ def test_orchestrator_cli_flags():
     assert orch.no_frontend is True
     assert orch.streamer_interval == 3.0
     assert orch.crypto_rate_limit == 0.5
-

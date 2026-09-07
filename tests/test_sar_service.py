@@ -15,15 +15,16 @@ Validates:
 
 import asyncio
 import time
-from datetime import datetime, timezone
+
 import pytest
 
-from app.schemas.sar import CaseStatus, SuspicionTypology, PaymentRail
+from app.schemas.sar import CaseStatus, SuspicionTypology
 from app.services.sar_service import SARService
 
 
 def test_initial_case_creation():
     """Case B: Verify initial transaction creates a complete compliant SAR case."""
+
     async def _test():
         service = SARService()
 
@@ -64,7 +65,10 @@ def test_initial_case_creation():
         assert case.fiu_deadline > case.created_at
 
         # Check narrative synthesis
-        assert "Coordinated structuring pattern detected" in case.grounds_of_suspicion.narrative_summary
+        assert (
+            "Coordinated structuring pattern detected"
+            in case.grounds_of_suspicion.narrative_summary
+        )
         assert "\u20b948,500.00" in case.grounds_of_suspicion.narrative_summary
         assert "mule_hub@oksbi" in case.grounds_of_suspicion.narrative_summary
 
@@ -73,6 +77,7 @@ def test_initial_case_creation():
 
 def test_rolling_window_aggregation_within_5min():
     """Case A: Rapid-fire transactions to same suspect within 300s aggregate into single SAR."""
+
     async def _test():
         service = SARService()
 
@@ -149,6 +154,7 @@ def test_rolling_window_aggregation_within_5min():
 
 def test_rolling_window_expiry_creates_new_sar():
     """Case B: Transactions occurring AFTER 300 seconds trigger a fresh SAR dossier."""
+
     async def _test():
         service = SARService()
 
@@ -199,6 +205,7 @@ def test_rolling_window_expiry_creates_new_sar():
 
 def test_narrative_synthesis_typologies():
     """Validates FIU-IND compliant narrative synthesis across all required typologies."""
+
     async def _test():
         service = SARService()
 
@@ -236,11 +243,18 @@ def test_narrative_synthesis_typologies():
         }
         case_crypto = await service.create_or_aggregate_sar(
             tx_payload=crypto_tx,
-            ml_result={"risk_score": 0.97, "latency_ms": 14.5, "model_name": "Elliptic-XGBoost-v1.2"},
+            ml_result={
+                "risk_score": 0.97,
+                "latency_ms": 14.5,
+                "model_name": "Elliptic-XGBoost-v1.2",
+            },
             typology=SuspicionTypology.IN_TYP_VDA_MIX,
         )
         c_narrative = case_crypto.grounds_of_suspicion.narrative_summary
-        assert "Illicit crypto hop detected: High-velocity peeling or mixer signature" in c_narrative
+        assert (
+            "Illicit crypto hop detected: High-velocity peeling or mixer signature"
+            in c_narrative
+        )
         assert "12 inputs and 24 outputs" in c_narrative
         assert crypto_tx["transaction_id"] in c_narrative
         assert case_crypto.total_exposure_btc == 3.45
@@ -268,6 +282,7 @@ def test_narrative_synthesis_typologies():
 
 def test_case_lifecycle_and_ring_eviction():
     """Tests case retrieval, status update, and active ring eviction on filing/dismissal."""
+
     async def _test():
         service = SARService()
 
@@ -329,6 +344,7 @@ def test_case_lifecycle_and_ring_eviction():
 
 def test_list_sars_filtering_and_pagination():
     """Tests list_sars with pagination, sorting, status/typology filters, and search query."""
+
     async def _test():
         service = SARService()
 
@@ -343,7 +359,9 @@ def test_list_sars_filtering_and_pagination():
                     "entity_name": f"Corporate Target {i}",
                 },
                 ml_result={"risk_score": 0.85 + i * 0.02, "latency_ms": 6.0},
-                typology=SuspicionTypology.IN_TYP_STRUCT if i % 2 == 0 else SuspicionTypology.IN_TYP_HAWALA,
+                typology=SuspicionTypology.IN_TYP_STRUCT
+                if i % 2 == 0
+                else SuspicionTypology.IN_TYP_HAWALA,
             )
 
         # 1. Total count & pagination
@@ -355,12 +373,19 @@ def test_list_sars_filtering_and_pagination():
         assert len(page2_items) == 2
 
         # 2. Typology filter
-        struct_items, struct_total = await service.list_sars(typology=SuspicionTypology.IN_TYP_STRUCT)
+        struct_items, struct_total = await service.list_sars(
+            typology=SuspicionTypology.IN_TYP_STRUCT
+        )
         assert struct_total == 3
-        assert all(c.grounds_of_suspicion.primary_typology == SuspicionTypology.IN_TYP_STRUCT for c in struct_items)
+        assert all(
+            c.grounds_of_suspicion.primary_typology == SuspicionTypology.IN_TYP_STRUCT
+            for c in struct_items
+        )
 
         # 3. Search filter
-        search_items, search_total = await service.list_sars(search="Corporate Target 3")
+        search_items, search_total = await service.list_sars(
+            search="Corporate Target 3"
+        )
         assert search_total == 1
         assert search_items[0].suspect.entity_name == "Corporate Target 3"
         assert search_items[0].counterparty.entity_identifier == "distinct_dest_3@bank"
@@ -370,6 +395,7 @@ def test_list_sars_filtering_and_pagination():
 
 def test_concurrent_aggregation_race_safety():
     """Tests thread-safe handling of 10 concurrent burst transactions to the same mule ring."""
+
     async def _test():
         service = SARService()
         target_account = "concurrent_mule_pool@oksbi"

@@ -1,9 +1,9 @@
-import pytest
 from fastapi.testclient import TestClient
+
 from app.main import app
 from live_crypto_feed import (
-    EllipticTensorBuilder,
     BitcoinTxParser,
+    EllipticTensorBuilder,
     format_crypto_log,
 )
 
@@ -25,7 +25,7 @@ def test_elliptic_tensor_builder_dimensions():
     for val in tensor:
         assert isinstance(val, float)
         assert not (val != val)  # No NaN
-        assert abs(val) < 1e9    # No Inf
+        assert abs(val) < 1e9  # No Inf
 
 
 def test_bitcoin_tx_parser_blockchain_info():
@@ -53,14 +53,17 @@ def test_bitcoin_tx_parser_blockchain_info():
                 {
                     "addr": "bc1qchange998811223344",
                     "value": 13574,
-                }
+                },
             ],
-        }
+        },
     }
 
     parsed = BitcoinTxParser.parse_blockchain_info(mock_blockchain_info_msg)
     assert parsed is not None
-    assert parsed["tx_hash"] == "74146f0c91559816bfb4421b4a66399120ba4ec2e08b76c8c4a4fcf85bc1d442"
+    assert (
+        parsed["tx_hash"]
+        == "74146f0c91559816bfb4421b4a66399120ba4ec2e08b76c8c4a4fcf85bc1d442"
+    )
     assert parsed["in_count"] == 1
     assert parsed["out_count"] == 2
     assert parsed["btc_value"] == round((150000 + 13574) / 1e8, 8)
@@ -86,7 +89,10 @@ def test_bitcoin_tx_parser_mempool_space():
 
     parsed = BitcoinTxParser.parse_mempool_space(mock_mempool_msg)
     assert parsed is not None
-    assert parsed["tx_hash"] == "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    assert (
+        parsed["tx_hash"]
+        == "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    )
     assert parsed["btc_value"] == round(348120000 / 1e8, 8)
     assert parsed["to_address"] == "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"
     assert len(parsed["features"]) == 166
@@ -126,7 +132,7 @@ def test_fastapi_score_crypto_contract_integration():
             "vout_sz": 2,
             "inputs": [{"prev_out": {"addr": "bc1qsender", "value": 50000000}}],
             "out": [{"addr": "bc1qreceiver", "value": 49950000}],
-        }
+        },
     }
 
     parsed = BitcoinTxParser.parse_blockchain_info(mock_msg)

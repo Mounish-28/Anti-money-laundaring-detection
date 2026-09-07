@@ -1,17 +1,18 @@
-import os
-import time
 import logging
-from typing import Dict, Any, Tuple
+import os
+import sys
+import time
+from typing import Any
+
+import joblib
 import numpy as np
 import pandas as pd
-import joblib
 
-import sys
 if sys.version_info < (3, 14):
     try:
         import torch
-        import torch.nn as nn
         import torch.nn.functional as F
+        from torch import nn
         from torch_geometric.nn import GCNConv
     except (ImportError, OSError):
         torch = None
@@ -43,7 +44,7 @@ else:
 class UnifiedInferenceEngine:
     def __init__(self, model_dir: str = "models"):
         self.model_dir = model_dir
-        self.models: Dict[str, Any] = {}
+        self.models: dict[str, Any] = {}
         self.device = (
             torch.device("cuda" if torch.cuda.is_available() else "cpu")
             if torch is not None
@@ -83,11 +84,13 @@ class UnifiedInferenceEngine:
             self.models["elliptic"] = joblib.load(elliptic_path)
         elif os.path.exists(elliptic_bin):
             import xgboost as xgb
+
             bst = xgb.XGBClassifier()
             bst.load_model(elliptic_bin)
             self.models["elliptic"] = bst
         elif os.path.exists(elliptic_xgb):
             import xgboost as xgb
+
             bst = xgb.XGBClassifier()
             bst.load_model(elliptic_xgb)
             self.models["elliptic"] = bst
@@ -164,7 +167,7 @@ class UnifiedInferenceEngine:
         except Exception as e:
             logger.warning(f"Engine warmup completed with minor warnings: {e}")
 
-    def _assign_tier(self, score: float, dataset: str) -> Tuple[str, str, bool]:
+    def _assign_tier(self, score: float, dataset: str) -> tuple[str, str, bool]:
         """Maps continuous probability to risk triage tier based on dataset type."""
         if dataset in ["ibm_transactions", "elliptic"]:
             tiers = CONFIG_DATA.get(dataset, {})
@@ -186,7 +189,7 @@ class UnifiedInferenceEngine:
             action = "AUTO_FLAG_SAR" if is_anomaly else "AUTO_CLEARED"
             return tier, action, is_anomaly
 
-    def score_ibm_transaction(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    def score_ibm_transaction(self, data: dict[str, Any]) -> dict[str, Any]:
         t0 = time.perf_counter()
         if "ibm_transactions" not in self.models:
             raise RuntimeError("IBM Transactions model artifact is not loaded.")
@@ -194,13 +197,25 @@ class UnifiedInferenceEngine:
         df = pd.DataFrame(
             [
                 {
-                    "From Bank": str(data.get("from_bank", data.get("From Bank", "10"))),
+                    "From Bank": str(
+                        data.get("from_bank", data.get("From Bank", "10"))
+                    ),
                     "To Bank": str(data.get("to_bank", data.get("To Bank", "12"))),
-                    "Account_From": str(data.get("account_from", data.get("Account_From", "ACC_001"))),
-                    "Account_To": str(data.get("account_to", data.get("Account_To", "ACC_002"))),
+                    "Account_From": str(
+                        data.get("account_from", data.get("Account_From", "ACC_001"))
+                    ),
+                    "Account_To": str(
+                        data.get("account_to", data.get("Account_To", "ACC_002"))
+                    ),
                     "Amount": float(data.get("amount", data.get("Amount", 100.0))),
-                    "Currency": str(data.get("currency", data.get("Currency", "US Dollar"))),
-                    "Payment Format": str(data.get("payment_format", data.get("Payment Format", "Credit Card"))),
+                    "Currency": str(
+                        data.get("currency", data.get("Currency", "US Dollar"))
+                    ),
+                    "Payment Format": str(
+                        data.get(
+                            "payment_format", data.get("Payment Format", "Credit Card")
+                        )
+                    ),
                 }
             ]
         )
@@ -215,19 +230,15 @@ class UnifiedInferenceEngine:
                 curr = str(data.get("currency", data.get("Currency", "US Dollar")))
                 if curr == "USD":
                     curr = "US Dollar"
-                fmt = str(data.get("payment_format", data.get("Payment Format", "Credit Card")))
+                fmt = str(
+                    data.get(
+                        "payment_format", data.get("Payment Format", "Credit Card")
+                    )
+                )
                 fb_raw = data.get("from_bank", data.get("From Bank", 10))
-                fb = (
-                    int(fb_raw)
-                    if str(fb_raw).isdigit()
-                    else 10
-                )
+                fb = int(fb_raw) if str(fb_raw).isdigit() else 10
                 tb_raw = data.get("to_bank", data.get("To Bank", 12))
-                tb = (
-                    int(tb_raw)
-                    if str(tb_raw).isdigit()
-                    else 12
-                )
+                tb = int(tb_raw) if str(tb_raw).isdigit() else 12
                 row = {
                     "From Bank": fb,
                     "To Bank": tb,
@@ -251,7 +262,11 @@ class UnifiedInferenceEngine:
                 score = float(model.predict_proba(numeric_features)[0][1])
 
         tier, action, is_anomaly = self._assign_tier(score, "ibm_transactions")
-        entity_id = str(data.get("transaction_id", data.get("entity_id", data.get("tx_id", "ibm_tx_001"))))
+        entity_id = str(
+            data.get(
+                "transaction_id", data.get("entity_id", data.get("tx_id", "ibm_tx_001"))
+            )
+        )
         return {
             "entity_id": entity_id,
             "dataset": "IBM Transactions",
@@ -265,7 +280,7 @@ class UnifiedInferenceEngine:
     # Alias for score_ibm_transaction
     score_transaction = score_ibm_transaction
 
-    def score_timeseries(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    def score_timeseries(self, data: dict[str, Any]) -> dict[str, Any]:
         t0 = time.perf_counter()
         if "timeseries_xgb" not in self.models or "timeseries_cb" not in self.models:
             raise RuntimeError("Time-Series AML ensemble models are not fully loaded.")
@@ -342,7 +357,7 @@ class UnifiedInferenceEngine:
             "latency_ms": round((time.perf_counter() - t0) * 1000, 3),
         }
 
-    def score_elliptic(self, data: Any) -> Dict[str, Any]:
+    def score_elliptic(self, data: Any) -> dict[str, Any]:
         t0 = time.perf_counter()
         if "elliptic" not in self.models:
             raise RuntimeError("Elliptic Bitcoin model artifact is not loaded.")
@@ -353,9 +368,15 @@ class UnifiedInferenceEngine:
         elif isinstance(data, dict):
             features_raw = data.get("features", [])
             features = np.array(features_raw, dtype=np.float32).reshape(1, -1)
-            entity_id = str(data.get("node_id", data.get("tx_id", data.get("entity_id", "btc_node_001"))))
+            entity_id = str(
+                data.get(
+                    "node_id", data.get("tx_id", data.get("entity_id", "btc_node_001"))
+                )
+            )
         else:
-            raise ValueError(f"Unsupported payload type for crypto scoring: {type(data)}")
+            raise ValueError(
+                f"Unsupported payload type for crypto scoring: {type(data)}"
+            )
 
         n_feats = getattr(self.models["elliptic"], "n_features_in_", 166)
         if features.shape[1] < n_feats:
@@ -378,7 +399,7 @@ class UnifiedInferenceEngine:
     # Alias for score_elliptic
     score_crypto = score_elliptic
 
-    def score_samld(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    def score_samld(self, data: dict[str, Any]) -> dict[str, Any]:
         t0 = time.perf_counter()
         if "samld" not in self.models:
             raise RuntimeError("SAML-D model artifact is not loaded.")
@@ -414,7 +435,7 @@ class UnifiedInferenceEngine:
             "latency_ms": round((time.perf_counter() - t0) * 1000, 3),
         }
 
-    def score_amlsim(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    def score_amlsim(self, data: dict[str, Any]) -> dict[str, Any]:
         t0 = time.perf_counter()
         if "amlsim_lgbm" not in self.models:
             raise RuntimeError("IBM AMLSim LightGBM head is not loaded.")

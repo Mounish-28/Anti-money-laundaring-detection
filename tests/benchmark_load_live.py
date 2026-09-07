@@ -1,9 +1,10 @@
 import asyncio
-import time
 import json
-import psutil
-import numpy as np
+import time
+
 import httpx
+import numpy as np
+import psutil
 
 BASE_URL = "http://127.0.0.1:8000"
 
@@ -197,7 +198,7 @@ async def run_benchmark():
     print(f"Wall Clock Time:     {total_duration:.3f} s")
     print(f"Throughput:          {len(results) / total_duration:.1f} req/sec")
     print(
-        f"Memory (RSS):        {mem_before:.1f} MB -> {mem_after:.1f} MB (Delta: +{mem_after-mem_before:.1f} MB)"
+        f"Memory (RSS):        {mem_before:.1f} MB -> {mem_after:.1f} MB (Delta: +{mem_after - mem_before:.1f} MB)"
     )
     print(f"CPU Utilization:     {cpu_after:.1f}%")
     print(
@@ -256,7 +257,7 @@ async def run_benchmark():
     report_matrix.append(batch_row)
     print(
         f"\nBatch Pipeline (50 items): Status: {batch_res.status_code} | "
-        f"Total: {batch_duration_ms:.2f}ms | Per-Item: {batch_duration_ms/50.0:.2f}ms"
+        f"Total: {batch_duration_ms:.2f}ms | Per-Item: {batch_duration_ms / 50.0:.2f}ms"
     )
 
     # Overall Metrics

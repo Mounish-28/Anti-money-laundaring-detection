@@ -11,13 +11,12 @@ Validates:
 """
 
 import asyncio
-from fastapi.testclient import TestClient
+
 import pytest
+from fastapi.testclient import TestClient
 
 from app.main import app
 from app.schemas.sar import (
-    CaseStatus,
-    ReportingEntityInfo,
     SuspicionTypology,
 )
 from app.services.sar_service import sar_service
@@ -197,7 +196,10 @@ def test_export_sar_dossier_pdf_and_json(test_client):
     resp_pdf = test_client.get(f"/api/v1/sar/{sar_id}/export?format=pdf")
     assert resp_pdf.status_code == 200
     assert resp_pdf.headers["content-type"] == "application/pdf"
-    assert f'attachment; filename="{sar_id}.pdf"' in resp_pdf.headers["content-disposition"]
+    assert (
+        f'attachment; filename="{sar_id}.pdf"'
+        in resp_pdf.headers["content-disposition"]
+    )
     assert resp_pdf.content.startswith(b"%PDF-")
     assert len(resp_pdf.content) > 2000
 
@@ -205,7 +207,10 @@ def test_export_sar_dossier_pdf_and_json(test_client):
     resp_json = test_client.get(f"/api/v1/sar/{sar_id}/export?format=json")
     assert resp_json.status_code == 200
     assert resp_json.headers["content-type"] == "application/json"
-    assert f'attachment; filename="{sar_id}_FINNET2.json"' in resp_json.headers["content-disposition"]
+    assert (
+        f'attachment; filename="{sar_id}_FINNET2.json"'
+        in resp_json.headers["content-disposition"]
+    )
     json_data = resp_json.json()
     assert json_data["batch_header"]["report_type"] == "STR"
     assert json_data["case_summary"]["sar_id"] == sar_id

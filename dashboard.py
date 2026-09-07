@@ -4,13 +4,12 @@ Production-ready Streamlit real-time triage interface for banking and cryptocurr
 """
 
 import time
-import json
 from datetime import datetime
-from typing import List, Dict, Any, Optional
+from typing import Any
 
-import requests
-import pandas as pd
 import numpy as np
+import pandas as pd
+import requests
 import streamlit as st
 
 # ==============================================================================
@@ -20,11 +19,12 @@ st.set_page_config(
     page_title="QuantumAML Nexus | Compliance Investigator Dashboard",
     page_icon="🛡️",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
 )
 
 # Custom Glassmorphism & Triage Tier Styling
-st.markdown("""
+st.markdown(
+    """
 <style>
     /* Metric & Card Containers */
     .stApp {
@@ -121,7 +121,9 @@ st.markdown("""
         font-weight: 600;
     }
 </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
 
 # ==============================================================================
@@ -155,13 +157,15 @@ if "crypto_timestep" not in st.session_state:
     st.session_state.crypto_timestep = 35
 if "crypto_features_text" not in st.session_state:
     # Default 165 clean floats
-    st.session_state.crypto_features_text = ", ".join([f"{0.05 + 0.001 * (i % 10):.4f}" for i in range(165)])
+    st.session_state.crypto_features_text = ", ".join(
+        [f"{0.05 + 0.001 * (i % 10):.4f}" for i in range(165)]
+    )
 
 
 # ==============================================================================
 # Helper Functions & Network Handlers
 # ==============================================================================
-def check_health(api_base_url: str) -> Dict[str, Any]:
+def check_health(api_base_url: str) -> dict[str, Any]:
     """Queries GET /health endpoint to check server availability and loaded models."""
     try:
         url = f"{api_base_url.rstrip('/')}/health"
@@ -174,13 +178,13 @@ def check_health(api_base_url: str) -> Dict[str, Any]:
         return {"online": False, "data": None, "error": str(e)}
 
 
-def fetch_prometheus_metrics(api_base_url: str) -> Dict[str, Any]:
+def fetch_prometheus_metrics(api_base_url: str) -> dict[str, Any]:
     """Parses Prometheus text exposition format from GET /metrics."""
     metrics_summary = {
         "transactions_total": 0,
         "anomalies_total": 0,
         "raw_text": "",
-        "online": False
+        "online": False,
     }
     try:
         url = f"{api_base_url.rstrip('/')}/metrics"
@@ -212,12 +216,12 @@ def render_tier_badge(tier_name: str) -> str:
     """Renders HTML colored badge based on standard risk tier names."""
     tier = str(tier_name).upper()
     if tier in ("CRITICAL", "CRITICAL_SAR"):
-        return f'<span class="tier-critical">CRITICAL SAR</span>'
+        return '<span class="tier-critical">CRITICAL SAR</span>'
     elif tier in ("HIGH", "HIGH_RISK"):
-        return f'<span class="tier-high">HIGH RISK</span>'
+        return '<span class="tier-high">HIGH RISK</span>'
     elif tier in ("ELEVATED", "ELEVATED_RISK", "MEDIUM"):
-        return f'<span class="tier-elevated">ELEVATED</span>'
-    return f'<span class="tier-low">LOW RISK</span>'
+        return '<span class="tier-elevated">ELEVATED</span>'
+    return '<span class="tier-low">LOW RISK</span>'
 
 
 # ==============================================================================
@@ -230,18 +234,22 @@ with st.sidebar:
 
     st.markdown("---")
     st.subheader("🌐 Inference Cluster Gateway")
-    api_url = st.text_input(
-        "Backend API Base URL",
-        value="http://localhost:8000",
-        help="FastAPI serving layer endpoint URL"
-    ).strip().rstrip("/")
+    api_url = (
+        st.text_input(
+            "Backend API Base URL",
+            value="http://localhost:8000",
+            help="FastAPI serving layer endpoint URL",
+        )
+        .strip()
+        .rstrip("/")
+    )
 
     # Health Check Probe
     health_result = check_health(api_url)
     if health_result["online"]:
         st.markdown(
             '<div style="margin-bottom: 10px;"><span class="status-badge badge-online">● ONLINE</span> <span style="font-size:0.85rem; color:#9ca3af; margin-left:8px;">FastAPI v2.0.0</span></div>',
-            unsafe_allow_html=True
+            unsafe_allow_html=True,
         )
         loaded_models = health_result["data"].get("loaded_models", [])
         with st.expander("📦 Active Model Artifacts", expanded=True):
@@ -253,7 +261,7 @@ with st.sidebar:
     else:
         st.markdown(
             '<div style="margin-bottom: 10px;"><span class="status-badge badge-offline">● OFFLINE</span> <span style="font-size:0.85rem; color:#ef4444; margin-left:8px;">Unreachable</span></div>',
-            unsafe_allow_html=True
+            unsafe_allow_html=True,
         )
         st.error(f"Cannot connect to `{api_url}`. Ensure FastAPI backend is running.")
 
@@ -281,11 +289,13 @@ st.markdown(
     "Continuous real-time anomaly detection, risk triage classification, and SAR escalation dispatch."
 )
 
-tab1, tab2, tab3 = st.tabs([
-    "🏦 Banking Transaction Triage (IBM CatBoost)",
-    "⚡ Crypto Transaction Triage (Elliptic XGBoost)",
-    "📈 Cluster Telemetry & Audit Trail"
-])
+tab1, tab2, tab3 = st.tabs(
+    [
+        "🏦 Banking Transaction Triage (IBM CatBoost)",
+        "⚡ Crypto Transaction Triage (Elliptic XGBoost)",
+        "📈 Cluster Telemetry & Audit Trail",
+    ]
+)
 
 
 # ==============================================================================
@@ -293,7 +303,9 @@ tab1, tab2, tab3 = st.tabs([
 # ==============================================================================
 with tab1:
     st.markdown("### IBM Transactions AML Structuring & Topology Analysis")
-    st.caption("Evaluates banking transactions against balanced CatBoost weights trained on 5.08M transactions.")
+    st.caption(
+        "Evaluates banking transactions against balanced CatBoost weights trained on 5.08M transactions."
+    )
 
     # Quick-Load Presets
     st.markdown("##### ⚡ Quick-Load Scenario Presets")
@@ -329,30 +341,54 @@ with tab1:
 
         with col1:
             tx_id = st.text_input("Transaction ID", value=st.session_state.ibm_tx_id)
-            from_bank = st.text_input("Originating Bank (From Bank)", value=st.session_state.ibm_from_bank)
-            to_bank = st.text_input("Receiving Bank (To Bank)", value=st.session_state.ibm_to_bank)
+            from_bank = st.text_input(
+                "Originating Bank (From Bank)", value=st.session_state.ibm_from_bank
+            )
+            to_bank = st.text_input(
+                "Receiving Bank (To Bank)", value=st.session_state.ibm_to_bank
+            )
 
         with col2:
-            account_from = st.text_input("Originating Account (Account_From)", value=st.session_state.ibm_account_from)
-            account_to = st.text_input("Beneficiary Account (Account_To)", value=st.session_state.ibm_account_to)
+            account_from = st.text_input(
+                "Originating Account (Account_From)",
+                value=st.session_state.ibm_account_from,
+            )
+            account_to = st.text_input(
+                "Beneficiary Account (Account_To)",
+                value=st.session_state.ibm_account_to,
+            )
             amount = st.number_input(
                 "Transaction Amount",
                 min_value=0.01,
                 value=float(st.session_state.ibm_amount),
                 step=100.0,
-                format="%.2f"
+                format="%.2f",
             )
 
         with col3:
             currency_options = ["USD", "EUR", "GBP", "CHF", "JPY"]
-            curr_idx = currency_options.index(st.session_state.ibm_currency) if st.session_state.ibm_currency in currency_options else 0
-            currency = st.selectbox("Currency", options=currency_options, index=curr_idx)
+            curr_idx = (
+                currency_options.index(st.session_state.ibm_currency)
+                if st.session_state.ibm_currency in currency_options
+                else 0
+            )
+            currency = st.selectbox(
+                "Currency", options=currency_options, index=curr_idx
+            )
 
             format_options = ["ACH", "Wire", "Credit Card", "Cheque", "Cash"]
-            fmt_idx = format_options.index(st.session_state.ibm_payment_format) if st.session_state.ibm_payment_format in format_options else 0
-            payment_format = st.selectbox("Payment Format", options=format_options, index=fmt_idx)
+            fmt_idx = (
+                format_options.index(st.session_state.ibm_payment_format)
+                if st.session_state.ibm_payment_format in format_options
+                else 0
+            )
+            payment_format = st.selectbox(
+                "Payment Format", options=format_options, index=fmt_idx
+            )
 
-        evaluate_ibm = st.form_submit_button("🔍 Evaluate Banking Transaction", use_container_width=True)
+        evaluate_ibm = st.form_submit_button(
+            "🔍 Evaluate Banking Transaction", use_container_width=True
+        )
 
     if evaluate_ibm:
         payload = {
@@ -363,7 +399,7 @@ with tab1:
             "account_to": str(account_to).strip(),
             "amount": float(amount),
             "currency": str(currency).strip(),
-            "payment_format": str(payment_format).strip()
+            "payment_format": str(payment_format).strip(),
         }
 
         with st.spinner("Executing real-time inference against IBM CatBoost model..."):
@@ -385,9 +421,16 @@ with tab1:
                     st.markdown("#### 🎯 Triage Evaluation Report")
                     res_col1, res_col2, res_col3, res_col4 = st.columns(4)
 
-                    res_col1.metric("Risk Score", f"{risk_score:.4f}", delta=f"{risk_score*100:.1f}%")
+                    res_col1.metric(
+                        "Risk Score",
+                        f"{risk_score:.4f}",
+                        delta=f"{risk_score * 100:.1f}%",
+                    )
                     with res_col2:
-                        st.markdown(f"**Triage Classification**<br>{render_tier_badge(risk_tier)}", unsafe_allow_html=True)
+                        st.markdown(
+                            f"**Triage Classification**<br>{render_tier_badge(risk_tier)}",
+                            unsafe_allow_html=True,
+                        )
                     res_col3.metric("Recommended Action", action)
 
                     sla_color = "normal" if engine_latency < 50.0 else "inverse"
@@ -395,7 +438,7 @@ with tab1:
                         "Inference Latency",
                         f"{engine_latency:.2f} ms",
                         delta="PASS < 50ms" if engine_latency < 50.0 else "SLA BREACH",
-                        delta_color=sla_color
+                        delta_color=sla_color,
                     )
 
                     # Visual Progress Bar
@@ -407,47 +450,55 @@ with tab1:
                             f"""
                             <div class="sar-alert-box">
                                 🚨 <b>CELERY ASYNCHRONOUS ALERT DISPATCHED</b><br>
-                                Transaction <code>{tx_id}</code> breached anomaly thresholds. Triage task 
-                                <code>tasks.dispatch_investigator_alert</code> enqueued to Celery queue <code>aml_tasks</code> 
+                                Transaction <code>{tx_id}</code> breached anomaly thresholds. Triage task
+                                <code>tasks.dispatch_investigator_alert</code> enqueued to Celery queue <code>aml_tasks</code>
                                 for mandatory Suspicious Activity Report (SAR) filing.
                             </div>
                             """,
-                            unsafe_allow_html=True
+                            unsafe_allow_html=True,
                         )
                     else:
                         st.markdown(
                             f"""
                             <div class="cleared-box">
                                 ✅ <b>TRANSACTION CLEARED</b><br>
-                                Transaction <code>{tx_id}</code> evaluated within normal legitimate operational parameters. 
+                                Transaction <code>{tx_id}</code> evaluated within normal legitimate operational parameters.
                                 Automated triage cleared without investigator escalation.
                             </div>
                             """,
-                            unsafe_allow_html=True
+                            unsafe_allow_html=True,
                         )
 
                     # Update session history
-                    st.session_state.history.append({
-                        "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                        "Entity ID": tx_id,
-                        "Dataset": "IBM Transactions",
-                        "Risk Score": round(risk_score, 4),
-                        "Tier": risk_tier,
-                        "Is Anomaly": is_anomaly,
-                        "Latency (ms)": round(engine_latency, 2)
-                    })
+                    st.session_state.history.append(
+                        {
+                            "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                            "Entity ID": tx_id,
+                            "Dataset": "IBM Transactions",
+                            "Risk Score": round(risk_score, 4),
+                            "Tier": risk_tier,
+                            "Is Anomaly": is_anomaly,
+                            "Latency (ms)": round(engine_latency, 2),
+                        }
+                    )
 
                 elif resp.status_code == 422:
                     st.error(f"Schema Validation Error (HTTP 422): {resp.text}")
                 else:
-                    st.error(f"Inference Engine Error (HTTP {resp.status_code}): {resp.text}")
+                    st.error(
+                        f"Inference Engine Error (HTTP {resp.status_code}): {resp.text}"
+                    )
 
             except requests.exceptions.ConnectionError:
-                st.error(f"Connection Failed: Backend serving engine at `{api_url}` is unreachable.")
+                st.error(
+                    f"Connection Failed: Backend serving engine at `{api_url}` is unreachable."
+                )
             except requests.exceptions.Timeout:
-                st.error("Request Timeout: The inference request took longer than 5.0 seconds.")
+                st.error(
+                    "Request Timeout: The inference request took longer than 5.0 seconds."
+                )
             except requests.exceptions.RequestException as e:
-                st.error(f"Network error: {str(e)}")
+                st.error(f"Network error: {e!s}")
 
 
 # ==============================================================================
@@ -455,7 +506,9 @@ with tab1:
 # ==============================================================================
 with tab2:
     st.markdown("### Elliptic Bitcoin Graph Anomaly & Illicit Node Triage")
-    st.caption("Evaluates Bitcoin graph node topology features against out-of-time calibrated XGBoost weights (166 features).")
+    st.caption(
+        "Evaluates Bitcoin graph node topology features against out-of-time calibrated XGBoost weights (166 features)."
+    )
 
     # Quick-Load Presets
     st.markdown("##### ⚡ Quick-Load Scenario Presets")
@@ -465,20 +518,26 @@ with tab2:
         st.session_state.crypto_node_id = f"BTC_CLEAN_UTXO_{int(time.time())}"
         st.session_state.crypto_timestep = 35
         # 165 low-variance, clean local features
-        st.session_state.crypto_features_text = ", ".join([f"{0.02 + 0.005 * (i % 5):.4f}" for i in range(165)])
+        st.session_state.crypto_features_text = ", ".join(
+            [f"{0.02 + 0.005 * (i % 5):.4f}" for i in range(165)]
+        )
         st.rerun()
 
     if col_cpre2.button("🔴 Darknet / Mixer Illicit Pattern", use_container_width=True):
         st.session_state.crypto_node_id = f"BTC_MIXER_DARK_{int(time.time())}"
         st.session_state.crypto_timestep = 42
         # 165 high-degree, anomalous structural features
-        st.session_state.crypto_features_text = ", ".join([f"{1.85 + 0.25 * (i % 8):.4f}" for i in range(165)])
+        st.session_state.crypto_features_text = ", ".join(
+            [f"{1.85 + 0.25 * (i % 8):.4f}" for i in range(165)]
+        )
         st.rerun()
 
     if col_cpre3.button("🎲 Auto-Generate 165 Floats", use_container_width=True):
         np.random.seed(int(time.time()) % 1000)
         random_vec = np.random.uniform(0.01, 1.25, 165)
-        st.session_state.crypto_features_text = ", ".join([f"{x:.4f}" for x in random_vec])
+        st.session_state.crypto_features_text = ", ".join(
+            [f"{x:.4f}" for x in random_vec]
+        )
         st.rerun()
 
     st.markdown("---")
@@ -488,27 +547,33 @@ with tab2:
         col_c1, col_c2 = st.columns([2, 1])
 
         with col_c1:
-            crypto_node_id = st.text_input("Node Transaction ID (txId)", value=st.session_state.crypto_node_id)
+            crypto_node_id = st.text_input(
+                "Node Transaction ID (txId)", value=st.session_state.crypto_node_id
+            )
         with col_c2:
             crypto_timestep = st.slider(
                 "Graph Snapshot Timestep (1–49)",
                 min_value=1,
                 max_value=49,
-                value=int(st.session_state.crypto_timestep)
+                value=int(st.session_state.crypto_timestep),
             )
 
         features_input = st.text_area(
             "Local & Aggregate Node Feature Vector (Exactly 165 comma-separated floats)",
             value=st.session_state.crypto_features_text,
             height=140,
-            help="Comma-separated float values corresponding to the 165 local and aggregated neighbor features of the Elliptic dataset."
+            help="Comma-separated float values corresponding to the 165 local and aggregated neighbor features of the Elliptic dataset.",
         )
 
-        evaluate_crypto = st.form_submit_button("⚡ Evaluate Crypto Node", use_container_width=True)
+        evaluate_crypto = st.form_submit_button(
+            "⚡ Evaluate Crypto Node", use_container_width=True
+        )
 
     if evaluate_crypto:
         # Client-side validation: ensure exactly 165 comma-separated floats
-        raw_elements = [x.strip() for x in features_input.replace("\n", ",").split(",") if x.strip()]
+        raw_elements = [
+            x.strip() for x in features_input.replace("\n", ",").split(",") if x.strip()
+        ]
         valid_floats = []
         parse_error = None
 
@@ -531,14 +596,18 @@ with tab2:
             full_tensor_166 = [float(crypto_timestep)] + valid_floats
             payload_crypto = {
                 "node_id": str(crypto_node_id).strip(),
-                "features": full_tensor_166
+                "features": full_tensor_166,
             }
 
-            with st.spinner("Executing topological inference against Elliptic XGBoost model..."):
+            with st.spinner(
+                "Executing topological inference against Elliptic XGBoost model..."
+            ):
                 endpoint_crypto = f"{api_url}/api/v1/score/crypto"
                 try:
                     t0_req = time.perf_counter()
-                    resp = requests.post(endpoint_crypto, json=payload_crypto, timeout=5.0)
+                    resp = requests.post(
+                        endpoint_crypto, json=payload_crypto, timeout=5.0
+                    )
                     roundtrip_ms = (time.perf_counter() - t0_req) * 1000.0
 
                     if resp.status_code == 200:
@@ -553,17 +622,26 @@ with tab2:
                         st.markdown("#### 🎯 Crypto Node Triage Report")
                         c_col1, c_col2, c_col3, c_col4 = st.columns(4)
 
-                        c_col1.metric("Illicit Probability", f"{risk_score:.4f}", delta=f"{risk_score*100:.1f}%")
+                        c_col1.metric(
+                            "Illicit Probability",
+                            f"{risk_score:.4f}",
+                            delta=f"{risk_score * 100:.1f}%",
+                        )
                         with c_col2:
-                            st.markdown(f"**Risk Classification**<br>{render_tier_badge(risk_tier)}", unsafe_allow_html=True)
+                            st.markdown(
+                                f"**Risk Classification**<br>{render_tier_badge(risk_tier)}",
+                                unsafe_allow_html=True,
+                            )
                         c_col3.metric("Triage Action", action)
 
                         sla_color = "normal" if engine_latency < 50.0 else "inverse"
                         c_col4.metric(
                             "Inference Latency",
                             f"{engine_latency:.2f} ms",
-                            delta="PASS < 50ms" if engine_latency < 50.0 else "SLA BREACH",
-                            delta_color=sla_color
+                            delta="PASS < 50ms"
+                            if engine_latency < 50.0
+                            else "SLA BREACH",
+                            delta_color=sla_color,
                         )
 
                         # Progress Bar
@@ -575,11 +653,11 @@ with tab2:
                                 f"""
                                 <div class="sar-alert-box">
                                     🚨 <b>ILLICIT GRAPH TOPOLOGY FLAGGED</b><br>
-                                    Node <code>{crypto_node_id}</code> at timestep {crypto_timestep} identified with high illicit 
+                                    Node <code>{crypto_node_id}</code> at timestep {crypto_timestep} identified with high illicit
                                     probability ({risk_score:.4f}). Auto-flagged for FinCEN SAR cryptocurrency escalation.
                                 </div>
                                 """,
-                                unsafe_allow_html=True
+                                unsafe_allow_html=True,
                             )
                         else:
                             st.markdown(
@@ -589,31 +667,41 @@ with tab2:
                                     Node <code>{crypto_node_id}</code> exhibits regular exchange/custodial transfer patterns. Cleared.
                                 </div>
                                 """,
-                                unsafe_allow_html=True
+                                unsafe_allow_html=True,
                             )
 
                         # Update session history
-                        st.session_state.history.append({
-                            "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                            "Entity ID": crypto_node_id,
-                            "Dataset": "Elliptic Bitcoin",
-                            "Risk Score": round(risk_score, 4),
-                            "Tier": risk_tier,
-                            "Is Anomaly": is_anomaly,
-                            "Latency (ms)": round(engine_latency, 2)
-                        })
+                        st.session_state.history.append(
+                            {
+                                "Timestamp": datetime.now().strftime(
+                                    "%Y-%m-%d %H:%M:%S"
+                                ),
+                                "Entity ID": crypto_node_id,
+                                "Dataset": "Elliptic Bitcoin",
+                                "Risk Score": round(risk_score, 4),
+                                "Tier": risk_tier,
+                                "Is Anomaly": is_anomaly,
+                                "Latency (ms)": round(engine_latency, 2),
+                            }
+                        )
 
                     elif resp.status_code == 422:
                         st.error(f"Schema Validation Error (HTTP 422): {resp.text}")
                     else:
-                        st.error(f"Inference Engine Error (HTTP {resp.status_code}): {resp.text}")
+                        st.error(
+                            f"Inference Engine Error (HTTP {resp.status_code}): {resp.text}"
+                        )
 
                 except requests.exceptions.ConnectionError:
-                    st.error(f"Connection Failed: Backend serving engine at `{api_url}` is unreachable.")
+                    st.error(
+                        f"Connection Failed: Backend serving engine at `{api_url}` is unreachable."
+                    )
                 except requests.exceptions.Timeout:
-                    st.error("Request Timeout: The crypto inference request took longer than 5.0 seconds.")
+                    st.error(
+                        "Request Timeout: The crypto inference request took longer than 5.0 seconds."
+                    )
                 except requests.exceptions.RequestException as e:
-                    st.error(f"Network error: {str(e)}")
+                    st.error(f"Network error: {e!s}")
 
 
 # ==============================================================================
@@ -629,7 +717,9 @@ with tab3:
 
     prom_col1, prom_col2, prom_col3 = st.columns(3)
     if prom_metrics["online"]:
-        prom_col1.metric("Evaluations Processed", f"{prom_metrics['transactions_total']:,d}")
+        prom_col1.metric(
+            "Evaluations Processed", f"{prom_metrics['transactions_total']:,d}"
+        )
         prom_col2.metric("Anomalies Detected", f"{prom_metrics['anomalies_total']:,d}")
         prom_col3.metric("Latency SLA Status", "HEALTHY (< 50ms)", delta="Certified")
     else:
@@ -644,14 +734,22 @@ with tab3:
     st.markdown("#### 📋 Interactive Session Audit Log")
 
     if not st.session_state.history:
-        st.info("No transaction scoring requests executed in this session yet. Evaluate records in Tab 1 or Tab 2 to populate.")
+        st.info(
+            "No transaction scoring requests executed in this session yet. Evaluate records in Tab 1 or Tab 2 to populate."
+        )
     else:
         audit_df = pd.DataFrame(st.session_state.history)
 
         # Filters
         f_col1, f_col2 = st.columns([1, 2])
-        dataset_filter = f_col1.selectbox("Filter by Dataset", ["All"] + list(audit_df["Dataset"].unique()))
-        tier_filter = f_col2.multiselect("Filter by Tier", list(audit_df["Tier"].unique()), default=list(audit_df["Tier"].unique()))
+        dataset_filter = f_col1.selectbox(
+            "Filter by Dataset", ["All"] + list(audit_df["Dataset"].unique())
+        )
+        tier_filter = f_col2.multiselect(
+            "Filter by Tier",
+            list(audit_df["Tier"].unique()),
+            default=list(audit_df["Tier"].unique()),
+        )
 
         filtered_df = audit_df.copy()
         if dataset_filter != "All":
@@ -668,7 +766,7 @@ with tab3:
             data=csv_data,
             file_name=f"aml_audit_log_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
             mime="text/csv",
-            use_container_width=True
+            use_container_width=True,
         )
 
 # ==============================================================================
@@ -679,5 +777,5 @@ st.markdown(
     "<div style='text-align:center; color:#6b7280; font-size:0.8rem;'>"
     "QuantumAML Nexus Enterprise Decision Engine • Zero-Downtime Multi-Model Serving Architecture • Confidential"
     "</div>",
-    unsafe_allow_html=True
+    unsafe_allow_html=True,
 )

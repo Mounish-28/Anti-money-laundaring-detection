@@ -1,4 +1,5 @@
-from typing import Optional, Dict, Any
+from typing import Any
+
 from pydantic import BaseModel
 
 
@@ -10,4 +11,4 @@ class RiskEvaluationResponse(BaseModel):
     is_anomaly: bool
     recommended_action: str
     latency_ms: float
-    metadata: Optional[Dict[str, Any]] = None
+    metadata: dict[str, Any] | None = None

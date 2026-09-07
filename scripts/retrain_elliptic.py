@@ -4,22 +4,22 @@ Resolves illicit node class imbalance with dynamic scale_pos_weight.
 Enforces exact 166-feature tensor format and temporal train/test split.
 """
 
+import json
 import os
 import sys
 import time
-import json
+
 import joblib
-import numpy as np
 import pandas as pd
 import xgboost as xgb
 from sklearn.metrics import (
     accuracy_score,
+    average_precision_score,
+    classification_report,
+    f1_score,
     precision_score,
     recall_score,
-    f1_score,
-    average_precision_score,
     roc_auc_score,
-    classification_report
 )
 
 
@@ -33,11 +33,11 @@ def retrain_elliptic():
     # 1. Dataset Loading
     features_candidates = [
         "data/elliptic/elliptic_txs_features.csv",
-        "elliptic_bitcoin_dataset/elliptic_txs_features.csv"
+        "elliptic_bitcoin_dataset/elliptic_txs_features.csv",
     ]
     classes_candidates = [
         "data/elliptic/elliptic_txs_classes.csv",
-        "elliptic_bitcoin_dataset/elliptic_txs_classes.csv"
+        "elliptic_bitcoin_dataset/elliptic_txs_classes.csv",
     ]
 
     features_path = next((p for p in features_candidates if os.path.exists(p)), None)
@@ -54,50 +54,61 @@ def retrain_elliptic():
     features_df = pd.read_csv(features_path, header=None)
 
     # Assign column names: txId (col 0), timestep (col 1), feat_0..feat_164 (cols 2..166)
-    cols = ['txId', 'timestep'] + [f'feat_{i}' for i in range(165)]
+    cols = ["txId", "timestep"] + [f"feat_{i}" for i in range(165)]
     features_df.columns = cols
 
     # Merge classes and filter out unclassified nodes (usually class 'unknown' or 3)
-    df = features_df.merge(classes_df, on='txId')
-    df = df[df['class'].isin(['1', '2', 1, 2])].copy()
+    df = features_df.merge(classes_df, on="txId")
+    df = df[df["class"].isin(["1", "2", 1, 2])].copy()
 
     # Map illicit nodes to 1 and licit nodes to 0 (Original: '1'=illicit, '2'=licit)
-    df['target'] = df['class'].map({'1': 1, '2': 0, 1: 1, 2: 0}).astype(int)
+    df["target"] = df["class"].map({"1": 1, "2": 0, 1: 1, 2: 0}).astype(int)
 
     # Exact 166 features: timestep (1) + local & aggregate features (165)
-    feature_cols = ['timestep'] + [f'feat_{i}' for i in range(165)]
+    feature_cols = ["timestep"] + [f"feat_{i}" for i in range(165)]
     assert len(feature_cols) == 166, f"Expected 166 features, got {len(feature_cols)}"
 
     # Temporal train/test split: Timesteps 1-34 for training, 35-49 for testing
-    print("\n[2/4] Executing temporal train/test split (Timesteps 1-34 Train, 35-49 Test)...")
-    train_mask = df['timestep'] <= 34
-    test_mask = df['timestep'] > 34
+    print(
+        "\n[2/4] Executing temporal train/test split (Timesteps 1-34 Train, 35-49 Test)..."
+    )
+    train_mask = df["timestep"] <= 34
+    test_mask = df["timestep"] > 34
 
     X_train = df.loc[train_mask, feature_cols]
-    y_train = df.loc[train_mask, 'target'].values
+    y_train = df.loc[train_mask, "target"].values
 
     X_test = df.loc[test_mask, feature_cols]
-    y_test = df.loc[test_mask, 'target'].values
+    y_test = df.loc[test_mask, "target"].values
 
     # Calculate dynamic scale_pos_weight: count(licit) / count(illicit) in training set
     licit_count = int((y_train == 0).sum())
     illicit_count = int((y_train == 1).sum())
     scale_pos_weight = float(licit_count / illicit_count)
 
-    print(f"  Training Nodes: {len(X_train):,d} (Licit: {licit_count:,d}, Illicit: {illicit_count:,d})")
-    print(f"  Test Nodes:     {len(X_test):,d} (Licit: {int((y_test==0).sum()):,d}, Illicit: {int((y_test==1).sum()):,d})")
-    print(f"  Dynamic scale_pos_weight: {scale_pos_weight:.4f} (Ratio {scale_pos_weight:.2f}:1)")
+    print(
+        f"  Training Nodes: {len(X_train):,d} (Licit: {licit_count:,d}, Illicit: {illicit_count:,d})"
+    )
+    print(
+        f"  Test Nodes:     {len(X_test):,d} (Licit: {int((y_test == 0).sum()):,d}, Illicit: {int((y_test == 1).sum()):,d})"
+    )
+    print(
+        f"  Dynamic scale_pos_weight: {scale_pos_weight:.4f} (Ratio {scale_pos_weight:.2f}:1)"
+    )
     sys.stdout.flush()
 
     # Release intermediate raw frames from memory
     del df, features_df, classes_df
     import gc
+
     gc.collect()
 
     # 2. Model Training with Specified Hyperparameters
     print("\n[3/4] Instantiating XGBClassifier with target hyperparameters:")
     print(f"  scale_pos_weight={scale_pos_weight:.4f}, max_depth=6, learning_rate=0.1,")
-    print("  n_estimators=500, objective='binary:logistic', eval_metric='aucpr', random_state=42")
+    print(
+        "  n_estimators=500, objective='binary:logistic', eval_metric='aucpr', random_state=42"
+    )
     sys.stdout.flush()
 
     model = xgb.XGBClassifier(
@@ -105,11 +116,11 @@ def retrain_elliptic():
         max_depth=6,
         learning_rate=0.1,
         n_estimators=500,
-        objective='binary:logistic',
-        eval_metric='aucpr',
+        objective="binary:logistic",
+        eval_metric="aucpr",
         random_state=42,
-        tree_method='hist',
-        n_jobs=-1
+        tree_method="hist",
+        n_jobs=-1,
     )
 
     t_train = time.time()
@@ -129,7 +140,7 @@ def retrain_elliptic():
         "models/elliptic.xgb",
         "models/elliptic/xgboost_model.joblib",
         "models/Elliptic/xgboost_model.joblib",
-        "models/Elliptic/model_v5.joblib"
+        "models/Elliptic/model_v5.joblib",
     ]
     for p in out_paths:
         os.makedirs(os.path.dirname(p), exist_ok=True)
@@ -137,12 +148,14 @@ def retrain_elliptic():
             model.save_model(p)
         else:
             joblib.dump(model, p)
-        print(f"  Exported -> {p} ({os.path.getsize(p)/(1024*1024):.2f} MB)")
+        print(f"  Exported -> {p} ({os.path.getsize(p) / (1024 * 1024):.2f} MB)")
     sys.stdout.flush()
 
     # 4. Output: Final Validation Summary
     print("\n" + "=" * 75)
-    print(f"FINAL VALIDATION SUMMARY (Test Split: {len(X_test):,d} out-of-time nodes, TS 35-49)")
+    print(
+        f"FINAL VALIDATION SUMMARY (Test Split: {len(X_test):,d} out-of-time nodes, TS 35-49)"
+    )
     print("=" * 75)
     sys.stdout.flush()
 
@@ -157,17 +170,21 @@ def retrain_elliptic():
     roc_auc = roc_auc_score(y_test, y_prob)
     acc = accuracy_score(y_test, y_pred)
 
-    print(f"Evaluation Latency: {time.time()-t_eval:.2f}s")
-    print(f"\n--- Primary Test Metrics (Decision Threshold T = 0.50) ---")
-    print(f"  Accuracy:   {acc:.4f} ({acc*100:.2f}%)")
+    print(f"Evaluation Latency: {time.time() - t_eval:.2f}s")
+    print("\n--- Primary Test Metrics (Decision Threshold T = 0.50) ---")
+    print(f"  Accuracy:   {acc:.4f} ({acc * 100:.2f}%)")
     print(f"  Precision:  {prec:.4f}")
-    print(f"  Recall:     {rec:.4f} ({(rec*100):.2f}% of illicit nodes captured)")
+    print(f"  Recall:     {rec:.4f} ({(rec * 100):.2f}% of illicit nodes captured)")
     print(f"  F1-Score:   {f1:.4f}")
     print(f"  PR-AUC:     {pr_auc:.4f}")
     print(f"  ROC-AUC:    {roc_auc:.4f}")
     print("=" * 75)
     print("\nDetailed Scikit-Learn Classification Report:")
-    print(classification_report(y_test, y_pred, target_names=['Licit', 'Illicit'], digits=4))
+    print(
+        classification_report(
+            y_test, y_pred, target_names=["Licit", "Illicit"], digits=4
+        )
+    )
     sys.stdout.flush()
 
     # Export metrics record
@@ -183,12 +200,14 @@ def retrain_elliptic():
         "F1_Score": round(float(f1), 4),
         "PR_AUC": round(float(pr_auc), 4),
         "ROC_AUC": round(float(roc_auc), 4),
-        "Execution_Time_Seconds": round(time.time() - t0, 2)
+        "Execution_Time_Seconds": round(time.time() - t0, 2),
     }
     with open("experiments/Elliptic/metrics_v5.json", "w") as f:
         json.dump(metrics_record, f, indent=4)
 
-    print(f"\nAll artifacts verified and saved. Execution finished in {time.time()-t0:.2f}s.\n")
+    print(
+        f"\nAll artifacts verified and saved. Execution finished in {time.time() - t0:.2f}s.\n"
+    )
     return metrics_record
 
 

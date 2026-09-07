@@ -1,6 +1,7 @@
+import json
 import os
 import sys
-import json
+
 import joblib
 
 # Ensure src is in sys.path so calibrators and utils unpickle seamlessly
@@ -15,7 +16,7 @@ class ModelRegistry:
 
     def __new__(cls):
         if cls._instance is None:
-            cls._instance = super(ModelRegistry, cls).__new__(cls)
+            cls._instance = super().__new__(cls)
             cls._instance._initialized = False
         return cls._instance
 

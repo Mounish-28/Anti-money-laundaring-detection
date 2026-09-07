@@ -18,16 +18,17 @@ import re
 import uuid
 from datetime import datetime, timedelta, timezone
 from enum import Enum
-from typing import Dict, List, Optional, Any
-from pydantic import BaseModel, Field, field_validator, model_validator, ConfigDict
 
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 # ==============================================================================
 # 1. Regulatory Enumerations
 # ==============================================================================
 
+
 class ReportingEntityType(str, Enum):
     """FIU-IND Reporting Entity Category Classifications."""
+
     SCHEDULED_COMMERCIAL_BANK = "SCHEDULED_COMMERCIAL_BANK"
     PAYMENT_AGGREGATOR = "PAYMENT_AGGREGATOR"
     VIRTUAL_DIGITAL_ASSET_SERVICE_PROVIDER = "VIRTUAL_DIGITAL_ASSET_SERVICE_PROVIDER"
@@ -35,6 +36,7 @@ class ReportingEntityType(str, Enum):
 
 class PaymentRail(str, Enum):
     """Payment Switch & Settlement Rails."""
+
     UPI = "UPI"
     IMPS = "IMPS"
     NEFT = "NEFT"
@@ -45,6 +47,7 @@ class PaymentRail(str, Enum):
 
 class RiskTier(str, Enum):
     """Operational Risk Tiers for Surveillance & AML Scoring."""
+
     CRITICAL_SAR = "CRITICAL_SAR"
     HIGH = "HIGH"
     ELEVATED = "ELEVATED"
@@ -58,6 +61,7 @@ class RiskTier(str, Enum):
 
 class CaseStatus(str, Enum):
     """FIU-IND Regulatory Case Workflow Status."""
+
     PENDING_REVIEW = "PENDING_REVIEW"
     ESCALATED = "ESCALATED"
     FILED_WITH_FIU = "FILED_WITH_FIU"
@@ -68,9 +72,12 @@ class SuspicionTypology(str, Enum):
     """
     Standardized Grounds of Suspicion Typologies under PMLA / FIU-IND Guidance.
     """
-    IN_TYP_STRUCT = "IN_TYP_STRUCT"    # Structuring transactions below statutory ₹50,000 PAN threshold
-    IN_TYP_HAWALA = "IN_TYP_HAWALA"    # High-value abnormal wire transfers lacking commercial rationale
-    IN_TYP_MULE = "IN_TYP_MULE"        # Multi-account smurfing and rapid draining through mule accounts
+
+    IN_TYP_STRUCT = "IN_TYP_STRUCT"  # Structuring transactions below statutory ₹50,000 PAN threshold
+    IN_TYP_HAWALA = "IN_TYP_HAWALA"  # High-value abnormal wire transfers lacking commercial rationale
+    IN_TYP_MULE = (
+        "IN_TYP_MULE"  # Multi-account smurfing and rapid draining through mule accounts
+    )
     IN_TYP_VDA_MIX = "IN_TYP_VDA_MIX"  # High-velocity crypto peel chains, mixers, or unhosted illicit hops
 
 
@@ -78,7 +85,8 @@ class SuspicionTypology(str, Enum):
 # Helper Functions: FIU Deadline & ID Generation
 # ==============================================================================
 
-def calculate_fiu_deadline(detection_date: Optional[datetime] = None) -> datetime:
+
+def calculate_fiu_deadline(detection_date: datetime | None = None) -> datetime:
     """
     Calculates statutory FIU-IND filing deadline per PMLA Rule 3:
     Strictly 7 working days (excluding Saturdays and Sundays) from detection date.
@@ -108,8 +116,10 @@ def generate_sar_id(prefix: str = "SAR-IND") -> str:
 # 2. Sub-Models
 # ==============================================================================
 
+
 class ReportingEntityInfo(BaseModel):
     """Details of the FIU-IND registered Reporting Entity (RE)."""
+
     model_config = ConfigDict(populate_by_name=True, use_enum_values=True)
 
     fiureid: str = Field(
@@ -132,13 +142,14 @@ class ReportingEntityInfo(BaseModel):
 
 class SuspectEntityProfile(BaseModel):
     """Subject/Counterparty Entity Compliance Profile."""
+
     model_config = ConfigDict(populate_by_name=True, use_enum_values=True)
 
     entity_identifier: str = Field(
         ...,
         description="Unique identifier: Account Number, UPI VPA (user@bank), or Bitcoin Address",
     )
-    entity_name: Optional[str] = Field(
+    entity_name: str | None = Field(
         default="ANONYMOUS_HOLDER",
         description="Legal name or account holder name",
     )
@@ -146,7 +157,7 @@ class SuspectEntityProfile(BaseModel):
         default="INDIVIDUAL",
         description="Classification: 'INDIVIDUAL', 'CORPORATE', or 'UNHOSTED_WALLET'",
     )
-    institution_code: Optional[str] = Field(
+    institution_code: str | None = Field(
         default=None,
         description="Branch IFSC code, bank institution name, or crypto cluster label",
     )
@@ -158,7 +169,7 @@ class SuspectEntityProfile(BaseModel):
         default=False,
         description="Politically Exposed Person (PEP) flag",
     )
-    flags: List[str] = Field(
+    flags: list[str] = Field(
         default_factory=list,
         description="Automated risk indicators (e.g. 'PAN_MISSING', 'HIGH_RISK_IFSC')",
     )
@@ -174,6 +185,7 @@ class SuspectEntityProfile(BaseModel):
 
 class TransactionAuditRecord(BaseModel):
     """Individual transaction record forming the suspicious chronology."""
+
     model_config = ConfigDict(populate_by_name=True, use_enum_values=True)
 
     transaction_id: str = Field(
@@ -211,7 +223,7 @@ class TransactionAuditRecord(BaseModel):
         le=1.0,
         description="ML model inferred fraud probability score [0.0 - 1.0]",
     )
-    detected_anomalies: List[str] = Field(
+    detected_anomalies: list[str] = Field(
         default_factory=list,
         description="Specific anomaly tags triggered (e.g. 'PAN_STRUCTURING', 'HAWALA_VELOCITY')",
     )
@@ -227,6 +239,7 @@ class TransactionAuditRecord(BaseModel):
 
 class MLTelemetry(BaseModel):
     """Diagnostic audit trail of the machine learning inference decision."""
+
     model_config = ConfigDict(populate_by_name=True, use_enum_values=True)
 
     model_name: str = Field(
@@ -242,7 +255,7 @@ class MLTelemetry(BaseModel):
         ge=0.0,
         description="Latency recorded during model scoring (sub-50ms SLA target)",
     )
-    feature_importance: Dict[str, float] = Field(
+    feature_importance: dict[str, float] = Field(
         default_factory=dict,
         description="Top predictive feature attributions (e.g. 'amount_p99_ratio': 0.38)",
     )
@@ -250,17 +263,18 @@ class MLTelemetry(BaseModel):
 
 class GroundsOfSuspicion(BaseModel):
     """Formal compliance justification for regulatory filing."""
+
     model_config = ConfigDict(populate_by_name=True, use_enum_values=True)
 
     primary_typology: SuspicionTypology = Field(
         ...,
         description="Primary FIU-IND criminal typology identified",
     )
-    secondary_typologies: List[SuspicionTypology] = Field(
+    secondary_typologies: list[SuspicionTypology] = Field(
         default_factory=list,
         description="Secondary contributing financial crime patterns",
     )
-    rule_triggers: List[str] = Field(
+    rule_triggers: list[str] = Field(
         default_factory=list,
         description="Specific statutory compliance rules breached (e.g., 'PMLA-SEC-12')",
     )
@@ -274,11 +288,13 @@ class GroundsOfSuspicion(BaseModel):
 # 3. Top-Level Request & Response Schemas
 # ==============================================================================
 
+
 class SARCreateRequest(BaseModel):
     """Payload dispatched to generate or escalate a Suspicious Activity Report."""
+
     model_config = ConfigDict(populate_by_name=True, use_enum_values=True)
 
-    transaction_ids: List[str] = Field(
+    transaction_ids: list[str] = Field(
         ...,
         min_length=1,
         description="List of one or more transaction IDs (UTRs or BTC hashes) to attach",
@@ -287,19 +303,19 @@ class SARCreateRequest(BaseModel):
         default=SuspicionTypology.IN_TYP_STRUCT,
         description="Primary grounds of suspicion typology",
     )
-    investigator_notes: Optional[str] = Field(
+    investigator_notes: str | None = Field(
         default=None,
         description="Analyst qualitative commentary or triage notes",
     )
-    assigned_investigator: Optional[str] = Field(
+    assigned_investigator: str | None = Field(
         default=None,
         description="Name or badge ID of assigned compliance officer",
     )
-    suspect_identifier: Optional[str] = Field(
+    suspect_identifier: str | None = Field(
         default=None,
         description="Primary suspect account or VPA if overriding transaction remitter",
     )
-    reporting_entity: Optional[ReportingEntityInfo] = Field(
+    reporting_entity: ReportingEntityInfo | None = Field(
         default=None,
         description="Custom reporting entity details (defaults to platform gateway if null)",
     )
@@ -310,6 +326,7 @@ class SARCaseRecord(BaseModel):
     Full canonical Suspicious Transaction Report (STR / SAR) dossier model.
     Matches FIU-IND FINnet 2.0 / FINGate e-filing specifications.
     """
+
     model_config = ConfigDict(
         populate_by_name=True,
         use_enum_values=True,
@@ -340,11 +357,11 @@ class SARCaseRecord(BaseModel):
         ...,
         description="Primary suspect entity profile",
     )
-    counterparty: Optional[SuspectEntityProfile] = Field(
+    counterparty: SuspectEntityProfile | None = Field(
         default=None,
         description="Primary counterparty or beneficiary entity profile",
     )
-    transactions: List[TransactionAuditRecord] = Field(
+    transactions: list[TransactionAuditRecord] = Field(
         default_factory=list,
         description="Chronological audit ledger of linked suspicious transactions",
     )
@@ -353,7 +370,7 @@ class SARCaseRecord(BaseModel):
         ge=0.0,
         description="Aggregate suspicious volume exposure in Indian Rupees (INR)",
     )
-    total_exposure_btc: Optional[float] = Field(
+    total_exposure_btc: float | None = Field(
         default=None,
         ge=0.0,
         description="Aggregate suspicious volume exposure in Bitcoin (BTC)",
@@ -366,7 +383,7 @@ class SARCaseRecord(BaseModel):
         ...,
         description="Statutory typologies and compliance narrative",
     )
-    assigned_analyst: Optional[str] = Field(
+    assigned_analyst: str | None = Field(
         default=None,
         description="Assigned senior AML investigator or compliance officer",
     )
@@ -401,9 +418,16 @@ class SARCaseRecord(BaseModel):
 
 class SARListResponse(BaseModel):
     """Paginated regulatory SAR listing response envelope."""
+
     model_config = ConfigDict(populate_by_name=True, use_enum_values=True)
 
-    total_count: int = Field(..., ge=0, description="Total number of SAR cases matching query")
+    total_count: int = Field(
+        ..., ge=0, description="Total number of SAR cases matching query"
+    )
     page: int = Field(default=1, ge=1, description="Current page number")
-    page_size: int = Field(default=20, ge=1, le=100, description="Items returned per page")
-    items: List[SARCaseRecord] = Field(default_factory=list, description="List of SAR case records")
+    page_size: int = Field(
+        default=20, ge=1, le=100, description="Items returned per page"
+    )
+    items: list[SARCaseRecord] = Field(
+        default_factory=list, description="List of SAR case records"
+    )

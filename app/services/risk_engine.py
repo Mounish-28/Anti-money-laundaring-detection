@@ -1,23 +1,23 @@
 import time
+from datetime import datetime
+
 import numpy as np
 import pandas as pd
-from typing import Tuple
-from datetime import datetime
 
 from app.models_loader import registry
 from app.schemas import (
-    TransactionScoreRequest,
-    CryptoScoreRequest,
-    ScoreResponse,
-    RiskTier,
     ActionType,
+    CryptoScoreRequest,
+    RiskTier,
+    ScoreResponse,
+    TransactionScoreRequest,
 )
 from app.worker import async_dispatch_alert
 
 
 def resolve_percentile_and_tier(
     prob: float, dataset_key: str
-) -> Tuple[float, RiskTier, ActionType]:
+) -> tuple[float, RiskTier, ActionType]:
     """
     Resolves calibrated probability to empirical percentile and operational risk tier.
     """

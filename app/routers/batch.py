@@ -1,9 +1,10 @@
-import time
 import io
+import time
+
 import pandas as pd
-from typing import List
-from fastapi import APIRouter, BackgroundTasks, UploadFile, File, HTTPException
-from app.schemas import TransactionScoreRequest, BatchScoreResponse, BatchScoreItem
+from fastapi import APIRouter, BackgroundTasks, File, HTTPException, UploadFile
+
+from app.schemas import BatchScoreItem, BatchScoreResponse, TransactionScoreRequest
 from app.services.risk_engine import risk_engine
 
 router = APIRouter(prefix="/api/v1/score", tags=["Batch Scoring"])
@@ -11,7 +12,7 @@ router = APIRouter(prefix="/api/v1/score", tags=["Batch Scoring"])
 
 @router.post("/batch", response_model=BatchScoreResponse)
 async def score_batch_json(
-    requests: List[TransactionScoreRequest], background_tasks: BackgroundTasks
+    requests: list[TransactionScoreRequest], background_tasks: BackgroundTasks
 ):
     """
     Asynchronous bulk evaluator for a batch of transaction JSON payloads.
@@ -21,7 +22,7 @@ async def score_batch_json(
     if not requests:
         raise HTTPException(status_code=400, detail="Empty batch requests list")
 
-    items: List[BatchScoreItem] = []
+    items: list[BatchScoreItem] = []
     tier_counts = {"LOW_RISK": 0, "ELEVATED_RISK": 0, "HIGH_RISK": 0, "CRITICAL_SAR": 0}
     scores_sum = 0.0
 
@@ -68,7 +69,7 @@ async def score_batch_csv(
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Invalid CSV format: {e}")
 
-    items: List[BatchScoreItem] = []
+    items: list[BatchScoreItem] = []
     tier_counts = {"LOW_RISK": 0, "ELEVATED_RISK": 0, "HIGH_RISK": 0, "CRITICAL_SAR": 0}
     scores_sum = 0.0
 

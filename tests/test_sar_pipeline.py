@@ -11,12 +11,12 @@ Validates:
 """
 
 import asyncio
-import time
-from fastapi.testclient import TestClient
-import pytest
 
-from app.main import app, _resolve_typology, manager
-from app.schemas.sar import SuspicionTypology, CaseStatus
+import pytest
+from fastapi.testclient import TestClient
+
+from app.main import _resolve_typology, app
+from app.schemas.sar import SuspicionTypology
 from app.services.sar_service import sar_service
 
 
@@ -35,26 +35,46 @@ def clean_sar_store():
 def test_resolve_typology_rules():
     """Tests in-memory typology classification rules."""
     # 1. Crypto engine -> VDA MIX
-    assert _resolve_typology("CRYPTO_FORENSICS", [], {}) == SuspicionTypology.IN_TYP_VDA_MIX
+    assert (
+        _resolve_typology("CRYPTO_FORENSICS", [], {})
+        == SuspicionTypology.IN_TYP_VDA_MIX
+    )
 
     # 2. Fiat structuring: amount in [45000, 49999]
-    assert _resolve_typology("FIAT_BANKING", [], {"amount": 48500.0}) == SuspicionTypology.IN_TYP_STRUCT
+    assert (
+        _resolve_typology("FIAT_BANKING", [], {"amount": 48500.0})
+        == SuspicionTypology.IN_TYP_STRUCT
+    )
 
     # 3. Fiat structuring: PAN flag
     assert (
-        _resolve_typology("FIAT_BANKING", ["PAN_STRUCTURING_EVASION"], {"amount": 10000.0})
+        _resolve_typology(
+            "FIAT_BANKING", ["PAN_STRUCTURING_EVASION"], {"amount": 10000.0}
+        )
         == SuspicionTypology.IN_TYP_STRUCT
     )
 
     # 4. Hawala: wire anomaly >= 2,500,000 INR
-    assert _resolve_typology("FIAT_BANKING", [], {"amount": 2500000.0}) == SuspicionTypology.IN_TYP_HAWALA
-    assert _resolve_typology("FIAT_BANKING", ["HAWALA_WIRE"], {"amount": 50000.0}) == SuspicionTypology.IN_TYP_HAWALA
+    assert (
+        _resolve_typology("FIAT_BANKING", [], {"amount": 2500000.0})
+        == SuspicionTypology.IN_TYP_HAWALA
+    )
+    assert (
+        _resolve_typology("FIAT_BANKING", ["HAWALA_WIRE"], {"amount": 50000.0})
+        == SuspicionTypology.IN_TYP_HAWALA
+    )
 
     # 5. Mule burst: MULE_BURST flag
-    assert _resolve_typology("FIAT_BANKING", ["MULE_BURST"], {"amount": 12000.0}) == SuspicionTypology.IN_TYP_MULE
+    assert (
+        _resolve_typology("FIAT_BANKING", ["MULE_BURST"], {"amount": 12000.0})
+        == SuspicionTypology.IN_TYP_MULE
+    )
 
     # 6. Default fallback
-    assert _resolve_typology("FIAT_BANKING", [], {"amount": 500.0}) == SuspicionTypology.IN_TYP_STRUCT
+    assert (
+        _resolve_typology("FIAT_BANKING", [], {"amount": 500.0})
+        == SuspicionTypology.IN_TYP_STRUCT
+    )
 
 
 def test_fiat_scoring_triggers_sar_background():
@@ -81,10 +101,16 @@ def test_fiat_scoring_triggers_sar_background():
     # If the transaction is high risk / critical, a SAR should have been created
     # Check if case was registered in sar_service
     cases, count = asyncio.run(sar_service.list_sars())
-    if res_data.get("risk_score", 0.0) >= 0.85 or res_data.get("risk_tier") in ("CRITICAL_SAR", "CRITICAL"):
+    if res_data.get("risk_score", 0.0) >= 0.85 or res_data.get("risk_tier") in (
+        "CRITICAL_SAR",
+        "CRITICAL",
+    ):
         assert count >= 1
         assert cases[0].total_exposure_inr == 48900.0
-        assert cases[0].grounds_of_suspicion.primary_typology == SuspicionTypology.IN_TYP_STRUCT
+        assert (
+            cases[0].grounds_of_suspicion.primary_typology
+            == SuspicionTypology.IN_TYP_STRUCT
+        )
 
 
 def test_crypto_scoring_triggers_sar_background():
@@ -108,9 +134,15 @@ def test_crypto_scoring_triggers_sar_background():
     res_data = response.json()
 
     cases, count = asyncio.run(sar_service.list_sars())
-    if res_data.get("risk_score", 0.0) >= 0.80 or res_data.get("risk_tier") in ("CRITICAL_SAR", "CRITICAL"):
+    if res_data.get("risk_score", 0.0) >= 0.80 or res_data.get("risk_tier") in (
+        "CRITICAL_SAR",
+        "CRITICAL",
+    ):
         assert count >= 1
-        assert cases[0].grounds_of_suspicion.primary_typology == SuspicionTypology.IN_TYP_VDA_MIX
+        assert (
+            cases[0].grounds_of_suspicion.primary_typology
+            == SuspicionTypology.IN_TYP_VDA_MIX
+        )
         assert cases[0].total_exposure_btc == 4.75
 
 

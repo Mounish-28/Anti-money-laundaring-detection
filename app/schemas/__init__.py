@@ -1,33 +1,33 @@
-from typing import Dict, Any
+from typing import Any
 
-from app.schemas.transaction import TransactionInput, AMLSimInput
-from app.schemas.timeseries import TimeSeriesInput
 from app.schemas.crypto import EllipticNodeInput
-from app.schemas.samld import SAMLDInput
 from app.schemas.response import RiskEvaluationResponse
+from app.schemas.samld import SAMLDInput
 from app.schemas.sar import (
-    ReportingEntityType,
-    PaymentRail,
-    RiskTier,
     CaseStatus,
-    SuspicionTypology,
-    ReportingEntityInfo,
-    SuspectEntityProfile,
-    TransactionAuditRecord,
-    MLTelemetry,
     GroundsOfSuspicion,
-    SARCreateRequest,
+    MLTelemetry,
+    PaymentRail,
+    ReportingEntityInfo,
+    ReportingEntityType,
+    RiskTier,
     SARCaseRecord,
+    SARCreateRequest,
     SARListResponse,
+    SuspectEntityProfile,
+    SuspicionTypology,
+    TransactionAuditRecord,
     calculate_fiu_deadline,
     generate_sar_id,
 )
+from app.schemas.timeseries import TimeSeriesInput
+from app.schemas.transaction import AMLSimInput, TransactionInput
 
 # Backward compatibility exports for legacy router references
 TransactionScoreRequest = TransactionInput
 CryptoScoreRequest = EllipticNodeInput
 ScoreResponse = RiskEvaluationResponse
-BatchScoreResponse = Dict[str, Any]
+BatchScoreResponse = dict[str, Any]
 BatchScoreItem = RiskEvaluationResponse
 AlertRecord = RiskEvaluationResponse
 ActionType = str

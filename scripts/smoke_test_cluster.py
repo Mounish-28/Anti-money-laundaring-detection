@@ -285,21 +285,21 @@ def run_smoke_test():
 
     # 3.1: Harvest Prometheus metrics from API
     metrics_resp = session.get(f"{base_url}/metrics")
-    assert (
-        metrics_resp.status_code == 200
-    ), f"Failed to scrape metrics: {metrics_resp.status_code}"
+    assert metrics_resp.status_code == 200, (
+        f"Failed to scrape metrics: {metrics_resp.status_code}"
+    )
     metrics_text = metrics_resp.text
 
     print("  -> Verifying custom Prometheus metrics at /metrics:")
-    assert (
-        "aml_transactions_evaluated_total" in metrics_text
-    ), "Missing aml_transactions_evaluated_total"
-    assert (
-        "aml_anomalies_detected_total" in metrics_text
-    ), "Missing aml_anomalies_detected_total"
-    assert (
-        "aml_inference_latency_seconds_bucket" in metrics_text
-    ), "Missing aml_inference_latency_seconds_bucket"
+    assert "aml_transactions_evaluated_total" in metrics_text, (
+        "Missing aml_transactions_evaluated_total"
+    )
+    assert "aml_anomalies_detected_total" in metrics_text, (
+        "Missing aml_anomalies_detected_total"
+    )
+    assert "aml_inference_latency_seconds_bucket" in metrics_text, (
+        "Missing aml_inference_latency_seconds_bucket"
+    )
 
     # Parse metric counts
     tx_eval_lines = [
@@ -325,12 +325,12 @@ def run_smoke_test():
     print(
         f"     [OK] aml_inference_latency_seconds_bucket: Confirmed active histogram buckets."
     )
-    assert (
-        total_evaluated_metric == 21
-    ), f"Metric mismatch: {total_evaluated_metric} != 21"
-    assert (
-        total_anomalies_metric >= 1
-    ), f"Anomaly metric mismatch: {total_anomalies_metric} < 1"
+    assert total_evaluated_metric == 21, (
+        f"Metric mismatch: {total_evaluated_metric} != 21"
+    )
+    assert total_anomalies_metric >= 1, (
+        f"Anomaly metric mismatch: {total_anomalies_metric} < 1"
+    )
 
     # 3.2: Verify Prometheus Target Health
     print("  -> Querying Prometheus Targets at http://127.0.0.1:9090/api/v1/targets...")

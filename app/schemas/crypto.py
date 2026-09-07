@@ -1,17 +1,16 @@
-from typing import List, Optional
 from pydantic import BaseModel, Field, model_validator
 
 
 class EllipticNodeInput(BaseModel):
-    node_id: Optional[str] = None
-    tx_hash: Optional[str] = None
-    timestep: Optional[int] = 49
-    features: List[float] = Field(..., min_length=166, max_length=166)
-    btc_value: Optional[float] = None
-    from_address: Optional[str] = None
-    to_address: Optional[str] = None
-    in_count: Optional[int] = None
-    out_count: Optional[int] = None
+    node_id: str | None = None
+    tx_hash: str | None = None
+    timestep: int | None = 49
+    features: list[float] = Field(..., min_length=166, max_length=166)
+    btc_value: float | None = None
+    from_address: str | None = None
+    to_address: str | None = None
+    in_count: int | None = None
+    out_count: int | None = None
 
     @model_validator(mode="before")
     @classmethod

@@ -18,7 +18,6 @@ Usage:
 
 import argparse
 import asyncio
-import io
 import json
 import math
 import os
@@ -28,19 +27,25 @@ import subprocess
 import sys
 import time
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 # Third-party async dependencies
 try:
     import httpx
 except ImportError:
-    print("FATAL: 'httpx' library is required. Install via 'pip install httpx'.", file=sys.stderr)
+    print(
+        "FATAL: 'httpx' library is required. Install via 'pip install httpx'.",
+        file=sys.stderr,
+    )
     sys.exit(1)
 
 try:
     import websockets
 except ImportError:
-    print("FATAL: 'websockets' library is required. Install via 'pip install websockets'.", file=sys.stderr)
+    print(
+        "FATAL: 'websockets' library is required. Install via 'pip install websockets'.",
+        file=sys.stderr,
+    )
     sys.exit(1)
 
 # Ensure UTF-8 output across Windows consoles
@@ -89,7 +94,7 @@ def format_status(status_str: str, use_color: bool = True) -> str:
     return f"{BOLD}{CYAN}{status_str}{RESET}"
 
 
-def calculate_percentiles(values: List[float]) -> Tuple[float, float, float]:
+def calculate_percentiles(values: list[float]) -> tuple[float, float, float]:
     """Calculates p50, p95, and p99 percentiles from a list of floats."""
     if not values:
         return 0.0, 0.0, 0.0
@@ -141,7 +146,7 @@ class OrchestratedEnvironment:
     def __init__(self, backend_port: int = 8000, skip_frontend: bool = False):
         self.backend_port = backend_port
         self.skip_frontend = skip_frontend
-        self.process: Optional[subprocess.Popen] = None
+        self.process: subprocess.Popen | None = None
         self.we_spawned = False
 
     def ensure_services_running(self, timeout_sec: float = 35.0) -> bool:
@@ -218,23 +223,23 @@ class QuantumAMLE2EVerifier:
         self.use_color = not no_color
 
         # Results & Telemetry Store
-        self.stage_results: Dict[str, bool] = {}
-        self.stage_details: Dict[str, Any] = {}
-        self.service_statuses: Dict[str, str] = {
+        self.stage_results: dict[str, bool] = {}
+        self.stage_details: dict[str, Any] = {}
+        self.service_statuses: dict[str, str] = {
             "Backend Core": "UNKNOWN",
             "Frontend UI": "UNKNOWN",
             "Banking Streamer": "UNKNOWN",
             "Crypto Feed": "UNKNOWN",
         }
-        self.latencies: Dict[str, Tuple[float, float, float]] = {
+        self.latencies: dict[str, tuple[float, float, float]] = {
             "CatBoost Banking": (0.0, 0.0, 0.0),
             "XGBoost Crypto": (0.0, 0.0, 0.0),
         }
         self.ws_throughput: float = 0.0
         self.ws_max_delivery_ms: float = 0.0
-        self.generated_sar_id: Optional[str] = None
+        self.generated_sar_id: str | None = None
 
-    def log(self, stage_tag: str, msg: str, status: Optional[str] = None):
+    def log(self, stage_tag: str, msg: str, status: str | None = None):
         """Prints a styled log line to stdout."""
         ts = datetime.now().strftime("%H:%M:%S")
         c_tag = f"{CYAN}[{stage_tag}]{RESET}" if self.use_color else f"[{stage_tag}]"
@@ -250,7 +255,7 @@ class QuantumAMLE2EVerifier:
         """
         self.log("STAGE 1", "Executing Subsystem Discovery & Readiness Gate...")
         passed = True
-        stage_info: Dict[str, Any] = {}
+        stage_info: dict[str, Any] = {}
 
         async with httpx.AsyncClient(timeout=10.0) as client:
             # 1. FastAPI Health Check (with resilience retry loop)
@@ -268,11 +273,17 @@ class QuantumAMLE2EVerifier:
                         if status_val == "HEALTHY" and has_catboost and has_xgboost:
                             self.service_statuses["Backend Core"] = "ONLINE (HEALTHY)"
                             stage_info["models_loaded"] = models
-                            self.log("STAGE 1", f"FastAPI Core healthy. Models loaded: {models}", "PASS")
+                            self.log(
+                                "STAGE 1",
+                                f"FastAPI Core healthy. Models loaded: {models}",
+                                "PASS",
+                            )
                             backend_ok = True
                             break
                         else:
-                            self.service_statuses["Backend Core"] = f"DEGRADED (Models: {models})"
+                            self.service_statuses["Backend Core"] = (
+                                f"DEGRADED (Models: {models})"
+                            )
                 except Exception:
                     pass
                 await asyncio.sleep(0.5)
@@ -281,7 +292,11 @@ class QuantumAMLE2EVerifier:
                 passed = False
                 if self.service_statuses["Backend Core"] == "UNKNOWN":
                     self.service_statuses["Backend Core"] = "OFFLINE"
-                self.log("STAGE 1", f"FastAPI readiness check failed on {self.backend_url}", "FAIL")
+                self.log(
+                    "STAGE 1",
+                    f"FastAPI readiness check failed on {self.backend_url}",
+                    "FAIL",
+                )
 
             # 2. Vite React Frontend Check (with resilience retry loop)
             if not self.skip_frontend:
@@ -289,9 +304,17 @@ class QuantumAMLE2EVerifier:
                 for attempt in range(1, 16):
                     try:
                         fe_resp = await client.get(self.frontend_url)
-                        if fe_resp.status_code == 200 and ("<div id=\"root\">" in fe_resp.text or "vite" in fe_resp.text.lower() or "html" in fe_resp.text.lower()):
+                        if fe_resp.status_code == 200 and (
+                            '<div id="root">' in fe_resp.text
+                            or "vite" in fe_resp.text.lower()
+                            or "html" in fe_resp.text.lower()
+                        ):
                             self.service_statuses["Frontend UI"] = "ONLINE (Vite React)"
-                            self.log("STAGE 1", f"Frontend reachable on {self.frontend_url} (HTTP 200)", "PASS")
+                            self.log(
+                                "STAGE 1",
+                                f"Frontend reachable on {self.frontend_url} (HTTP 200)",
+                                "PASS",
+                            )
                             frontend_ok = True
                             break
                     except Exception:
@@ -301,10 +324,18 @@ class QuantumAMLE2EVerifier:
                 if not frontend_ok:
                     passed = False
                     self.service_statuses["Frontend UI"] = "OFFLINE"
-                    self.log("STAGE 1", f"Failed connecting to Frontend at {self.frontend_url}", "FAIL")
+                    self.log(
+                        "STAGE 1",
+                        f"Failed connecting to Frontend at {self.frontend_url}",
+                        "FAIL",
+                    )
             else:
                 self.service_statuses["Frontend UI"] = "SKIPPED (--skip-frontend)"
-                self.log("STAGE 1", "Frontend check bypassed via --skip-frontend flag.", "WARN")
+                self.log(
+                    "STAGE 1",
+                    "Frontend check bypassed via --skip-frontend flag.",
+                    "WARN",
+                )
 
         self.stage_results["Stage 1 - Readiness Gate"] = passed
         self.stage_details["Stage 1"] = stage_info
@@ -320,15 +351,20 @@ class QuantumAMLE2EVerifier:
         - Asserts >= 1 CRYPTO_FORENSICS event
         - Asserts delivery latency < 200 ms
         """
-        self.log("STAGE 2", "Sampling WebSocket live stream for 10-second observation window...")
+        self.log(
+            "STAGE 2",
+            "Sampling WebSocket live stream for 10-second observation window...",
+        )
         passed = True
         window_sec = 10.0
-        fiat_events: List[Dict[str, Any]] = []
-        crypto_events: List[Dict[str, Any]] = []
-        latencies_ms: List[float] = []
+        fiat_events: list[dict[str, Any]] = []
+        crypto_events: list[dict[str, Any]] = []
+        latencies_ms: list[float] = []
 
         try:
-            async with websockets.connect(self.ws_url, ping_interval=None, close_timeout=2.0) as ws:
+            async with websockets.connect(
+                self.ws_url, ping_interval=None, close_timeout=2.0
+            ) as ws:
                 t_start = time.time()
 
                 async def _reader():
@@ -346,8 +382,12 @@ class QuantumAMLE2EVerifier:
                                 event_ts_str = event.get("timestamp")
                                 if event_ts_str:
                                     try:
-                                        dt_obj = datetime.fromisoformat(event_ts_str.replace("Z", "+00:00"))
-                                        transit_ms = (arrival_time - dt_obj.timestamp()) * 1000.0
+                                        dt_obj = datetime.fromisoformat(
+                                            event_ts_str.replace("Z", "+00:00")
+                                        )
+                                        transit_ms = (
+                                            arrival_time - dt_obj.timestamp()
+                                        ) * 1000.0
                                         if 0.0 <= transit_ms <= 200.0:
                                             delivery_ms = transit_ms
                                     except Exception:
@@ -401,7 +441,11 @@ class QuantumAMLE2EVerifier:
                     pass
 
         except Exception as ws_err:
-            self.log("STAGE 2", f"WebSocket connection failed on {self.ws_url}: {ws_err}", "FAIL")
+            self.log(
+                "STAGE 2",
+                f"WebSocket connection failed on {self.ws_url}: {ws_err}",
+                "FAIL",
+            )
             self.stage_results["Stage 2 - Streaming & WebSocket"] = False
             return False
 
@@ -414,8 +458,14 @@ class QuantumAMLE2EVerifier:
         fiat_count = len(fiat_events)
         crypto_count = len(crypto_events)
 
-        self.service_statuses["Banking Streamer"] = f"ACTIVE ({fiat_count} events in 10s)" if fiat_count >= 3 else "INACTIVE"
-        self.service_statuses["Crypto Feed"] = f"ACTIVE ({crypto_count} events in 10s)" if crypto_count >= 1 else "INACTIVE"
+        self.service_statuses["Banking Streamer"] = (
+            f"ACTIVE ({fiat_count} events in 10s)" if fiat_count >= 3 else "INACTIVE"
+        )
+        self.service_statuses["Crypto Feed"] = (
+            f"ACTIVE ({crypto_count} events in 10s)"
+            if crypto_count >= 1
+            else "INACTIVE"
+        )
 
         self.log(
             "STAGE 2",
@@ -471,8 +521,8 @@ class QuantumAMLE2EVerifier:
         )
         passed = True
 
-        banking_latencies: List[float] = []
-        crypto_latencies: List[float] = []
+        banking_latencies: list[float] = []
+        crypto_latencies: list[float] = []
 
         limits = httpx.Limits(max_keepalive_connections=100, max_connections=150)
         async with httpx.AsyncClient(limits=limits, timeout=15.0) as client:
@@ -490,7 +540,9 @@ class QuantumAMLE2EVerifier:
                     "timestamp": datetime.now(timezone.utc).isoformat(),
                 }
                 t0 = time.perf_counter()
-                r = await client.post(f"{self.backend_url}/api/v1/score/transaction", json=payload)
+                r = await client.post(
+                    f"{self.backend_url}/api/v1/score/transaction", json=payload
+                )
                 elapsed_ms = (time.perf_counter() - t0) * 1000.0
                 if r.status_code == 200:
                     server_ms = float(r.json().get("latency_ms", elapsed_ms))
@@ -510,7 +562,9 @@ class QuantumAMLE2EVerifier:
                     "to_address": "3J98t1WpEZ73CNmQviecrnyiWrnqRhWNLy",
                 }
                 t0 = time.perf_counter()
-                r = await client.post(f"{self.backend_url}/api/v1/score/crypto", json=payload)
+                r = await client.post(
+                    f"{self.backend_url}/api/v1/score/crypto", json=payload
+                )
                 elapsed_ms = (time.perf_counter() - t0) * 1000.0
                 if r.status_code == 200:
                     server_ms = float(r.json().get("latency_ms", elapsed_ms))
@@ -572,7 +626,9 @@ class QuantumAMLE2EVerifier:
         Intercepts SAR_DISPATCHED alert over WebSocket.
         Asserts exactly 1 aggregated SAR record with exposure = ₹1,99,400.00 and 4 txs.
         """
-        self.log("STAGE 4", "Testing FIU-IND SAR 5-Minute Deduplication & Alert Loop...")
+        self.log(
+            "STAGE 4", "Testing FIU-IND SAR 5-Minute Deduplication & Alert Loop..."
+        )
         passed = True
         remitter = "smurf.mule@okaxis"
         recipient = "aggregator.hub@okaxis"
@@ -585,7 +641,9 @@ class QuantumAMLE2EVerifier:
         # Connect WebSocket listener specifically for SAR_DISPATCHED alert
         async def _alert_listener():
             try:
-                async with websockets.connect(self.ws_url, ping_interval=None, close_timeout=2.0) as ws:
+                async with websockets.connect(
+                    self.ws_url, ping_interval=None, close_timeout=2.0
+                ) as ws:
                     connected_event.set()
                     while not sar_alert_future.done():
                         msg_str = await ws.recv()
@@ -600,7 +658,9 @@ class QuantumAMLE2EVerifier:
         try:
             await asyncio.wait_for(connected_event.wait(), timeout=5.0)
         except asyncio.TimeoutError:
-            self.log("STAGE 4", "Failed to connect WebSocket alert listener in time.", "WARN")
+            self.log(
+                "STAGE 4", "Failed to connect WebSocket alert listener in time.", "WARN"
+            )
 
         # Dispatch 4 sequential smurfing transactions within a 2-second interval
         async with httpx.AsyncClient(timeout=10.0) as client:
@@ -622,7 +682,11 @@ class QuantumAMLE2EVerifier:
                     json=tx_payload,
                 )
                 if resp.status_code != 200:
-                    self.log("STAGE 4", f"Smurfing transaction {i} failed: {resp.text}", "FAIL")
+                    self.log(
+                        "STAGE 4",
+                        f"Smurfing transaction {i} failed: {resp.text}",
+                        "FAIL",
+                    )
                     passed = False
                 await asyncio.sleep(0.3)  # 4 * 0.3s = 1.2s total (< 2.0s interval)
 
@@ -637,7 +701,11 @@ class QuantumAMLE2EVerifier:
                     "PASS",
                 )
             except asyncio.TimeoutError:
-                self.log("STAGE 4", "Timed out waiting for SAR_DISPATCHED WebSocket broadcast alert.", "WARN")
+                self.log(
+                    "STAGE 4",
+                    "Timed out waiting for SAR_DISPATCHED WebSocket broadcast alert.",
+                    "WARN",
+                )
 
             # Allow background tasks a brief moment to persist case record
             await asyncio.sleep(0.5)
@@ -649,7 +717,11 @@ class QuantumAMLE2EVerifier:
             )
 
             if query_resp.status_code != 200:
-                self.log("STAGE 4", f"Failed querying SAR case list: {query_resp.text}", "FAIL")
+                self.log(
+                    "STAGE 4",
+                    f"Failed querying SAR case list: {query_resp.text}",
+                    "FAIL",
+                )
                 passed = False
                 listener_task.cancel()
                 self.stage_results["Stage 4 - SAR Ring Deduplication"] = False
@@ -676,7 +748,9 @@ class QuantumAMLE2EVerifier:
                 tx_records = case.get("transactions", [])
 
                 # Assert cumulative exposure of ₹1,99,400.00
-                is_exposure_exact = math.isclose(actual_exposure, expected_exposure, abs_tol=0.01)
+                is_exposure_exact = math.isclose(
+                    actual_exposure, expected_exposure, abs_tol=0.01
+                )
                 self.log(
                     "STAGE 4",
                     f"Assert cumulative exposure: ₹{actual_exposure:,.2f} == ₹{expected_exposure:,.2f}.",
@@ -723,7 +797,11 @@ class QuantumAMLE2EVerifier:
         passed = True
 
         if not self.generated_sar_id:
-            self.log("STAGE 5", "No sar_id available from Stage 4. Querying existing case list...", "WARN")
+            self.log(
+                "STAGE 5",
+                "No sar_id available from Stage 4. Querying existing case list...",
+                "WARN",
+            )
             async with httpx.AsyncClient(timeout=10.0) as client:
                 r = await client.get(f"{self.backend_url}/api/v1/sar/list?page_size=1")
                 if r.status_code == 200 and r.json().get("items"):
@@ -737,7 +815,9 @@ class QuantumAMLE2EVerifier:
         async with httpx.AsyncClient(timeout=15.0) as client:
             # 1. JSON Export Verification (FINnet 2.0)
             try:
-                json_resp = await client.get(f"{self.backend_url}/api/v1/sar/{sar_id}/export?format=json")
+                json_resp = await client.get(
+                    f"{self.backend_url}/api/v1/sar/{sar_id}/export?format=json"
+                )
                 if json_resp.status_code == 200:
                     json_data = json_resp.json()
                     has_header = "batch_header" in json_data
@@ -754,23 +834,38 @@ class QuantumAMLE2EVerifier:
                         )
                     else:
                         passed = False
-                        self.log("STAGE 5", f"FINnet 2.0 JSON missing schema keys: {list(json_data.keys())}", "FAIL")
+                        self.log(
+                            "STAGE 5",
+                            f"FINnet 2.0 JSON missing schema keys: {list(json_data.keys())}",
+                            "FAIL",
+                        )
                 else:
                     passed = False
-                    self.log("STAGE 5", f"JSON export returned HTTP {json_resp.status_code}", "FAIL")
+                    self.log(
+                        "STAGE 5",
+                        f"JSON export returned HTTP {json_resp.status_code}",
+                        "FAIL",
+                    )
             except Exception as e:
                 passed = False
                 self.log("STAGE 5", f"JSON export request failed: {e}", "FAIL")
 
             # 2. Binary PDF Dossier Verification (ReportLab)
             try:
-                pdf_resp = await client.get(f"{self.backend_url}/api/v1/sar/{sar_id}/export?format=pdf")
+                pdf_resp = await client.get(
+                    f"{self.backend_url}/api/v1/sar/{sar_id}/export?format=pdf"
+                )
                 content_type = pdf_resp.headers.get("content-type", "")
                 is_pdf_content_type = "application/pdf" in content_type
                 is_magic_bytes = pdf_resp.content.startswith(b"%PDF-")
                 byte_length = len(pdf_resp.content)
 
-                if pdf_resp.status_code == 200 and is_pdf_content_type and is_magic_bytes and byte_length > 1000:
+                if (
+                    pdf_resp.status_code == 200
+                    and is_pdf_content_type
+                    and is_magic_bytes
+                    and byte_length > 1000
+                ):
                     self.log(
                         "STAGE 5",
                         f"Binary ReportLab PDF stream validated (Size: {byte_length:,} bytes, Magic: '%PDF-', Content-Type: application/pdf).",
@@ -815,10 +910,16 @@ class QuantumAMLE2EVerifier:
         print(f"{c_box}╠{border_horiz}╣{c_rst}")
 
         # Section 1: Service Runtime Statuses
-        print(f"{c_box}║{c_rst}  {BOLD}RUNTIME SERVICE TOPOLOGY & HEALTH GATES{RESET: <{w - 41}} {c_box}║{c_rst}")
+        print(
+            f"{c_box}║{c_rst}  {BOLD}RUNTIME SERVICE TOPOLOGY & HEALTH GATES{RESET: <{w - 41}} {c_box}║{c_rst}"
+        )
         print(f"{c_box}╟{sep_horiz}╢{c_rst}")
         for svc, stat in self.service_statuses.items():
-            stat_str = f"{GREEN}● {stat}{RESET}" if "ONLINE" in stat or "ACTIVE" in stat else f"{YELLOW}○ {stat}{RESET}"
+            stat_str = (
+                f"{GREEN}● {stat}{RESET}"
+                if "ONLINE" in stat or "ACTIVE" in stat
+                else f"{YELLOW}○ {stat}{RESET}"
+            )
             line = f"  {svc:.<34} {stat_str}"
             # Stripping ANSI for width calculation
             raw_len = len(f"  {svc:.<34} ● {stat}")
@@ -827,7 +928,9 @@ class QuantumAMLE2EVerifier:
 
         # Section 2: Dual-Engine Inference Latencies
         print(f"{c_box}╠{border_horiz}╣{c_rst}")
-        print(f"{c_box}║{c_rst}  {BOLD}DUAL-ENGINE SUB-50ms SLA BENCHMARK (100 CONCURRENT INFERENCES){RESET: <{w - 63}} {c_box}║{c_rst}")
+        print(
+            f"{c_box}║{c_rst}  {BOLD}DUAL-ENGINE SUB-50ms SLA BENCHMARK (100 CONCURRENT INFERENCES){RESET: <{w - 63}} {c_box}║{c_rst}"
+        )
         print(f"{c_box}╟{sep_horiz}╢{c_rst}")
         for model_name, (p50, p95, p99) in self.latencies.items():
             sla_pass = p95 < 50.0
@@ -840,24 +943,49 @@ class QuantumAMLE2EVerifier:
 
         # Section 3: Streaming & Deduplication Performance
         print(f"{c_box}╠{border_horiz}╣{c_rst}")
-        print(f"{c_box}║{c_rst}  {BOLD}STREAMING, DEDUPLICATION & REGULATORY COMPLIANCE LEDGER{RESET: <{w - 56}} {c_box}║{c_rst}")
+        print(
+            f"{c_box}║{c_rst}  {BOLD}STREAMING, DEDUPLICATION & REGULATORY COMPLIANCE LEDGER{RESET: <{w - 56}} {c_box}║{c_rst}"
+        )
         print(f"{c_box}╟{sep_horiz}╢{c_rst}")
 
         throughput_badge = format_status("PASS", self.use_color)
         t_line = f"  WebSocket Ingestion Rate..... {self.ws_throughput:5.2f} tx/sec  (Max Latency: {self.ws_max_delivery_ms:.2f}ms)  [{throughput_badge}]"
-        pad = max(0, w - len(f"  WebSocket Ingestion Rate..... {self.ws_throughput:5.2f} tx/sec  (Max Latency: {self.ws_max_delivery_ms:.2f}ms)  [[ PASS ]]") - 2)
+        pad = max(
+            0,
+            w
+            - len(
+                f"  WebSocket Ingestion Rate..... {self.ws_throughput:5.2f} tx/sec  (Max Latency: {self.ws_max_delivery_ms:.2f}ms)  [[ PASS ]]"
+            )
+            - 2,
+        )
         print(f"{c_box}║{c_rst}{t_line}{' ' * pad}{c_box}║{c_rst}")
 
         dedup_pass = self.stage_results.get("Stage 4 - SAR Ring Deduplication", False)
         d_badge = format_status("PASS" if dedup_pass else "FAIL", self.use_color)
         d_line = f"  SAR Ring Deduplication....... 4 smurfing txs -> 1 SAR (₹1,99,400.00)  [{d_badge}]"
-        pad = max(0, w - len("  SAR Ring Deduplication....... 4 smurfing txs -> 1 SAR (₹1,99,400.00)  [[ PASS ]]") - 2)
+        pad = max(
+            0,
+            w
+            - len(
+                "  SAR Ring Deduplication....... 4 smurfing txs -> 1 SAR (₹1,99,400.00)  [[ PASS ]]"
+            )
+            - 2,
+        )
         print(f"{c_box}║{c_rst}{d_line}{' ' * pad}{c_box}║{c_rst}")
 
-        export_pass = self.stage_results.get("Stage 5 - Regulatory Dossier Export", False)
+        export_pass = self.stage_results.get(
+            "Stage 5 - Regulatory Dossier Export", False
+        )
         e_badge = format_status("PASS" if export_pass else "FAIL", self.use_color)
         e_line = f"  FINnet 2.0 & PDF Dossier..... Verified JSON Schema & %PDF- Magic Bytes  [{e_badge}]"
-        pad = max(0, w - len("  FINnet 2.0 & PDF Dossier..... Verified JSON Schema & %PDF- Magic Bytes  [[ PASS ]]") - 2)
+        pad = max(
+            0,
+            w
+            - len(
+                "  FINnet 2.0 & PDF Dossier..... Verified JSON Schema & %PDF- Magic Bytes  [[ PASS ]]"
+            )
+            - 2,
+        )
         print(f"{c_box}║{c_rst}{e_line}{' ' * pad}{c_box}║{c_rst}")
 
         # Section 4: Final Compliance Gate Result
@@ -869,7 +997,9 @@ class QuantumAMLE2EVerifier:
             gate_text = f"{BOLD}{RED}VERIFICATION GATE FAILED — ONE OR MORE CHECKS EXCEEDED SLA{RESET}"
             raw_gate = "VERIFICATION GATE FAILED — ONE OR MORE CHECKS EXCEEDED SLA"
 
-        print(f"{c_box}║{c_rst} {gate_text:^{w + (len(gate_text) - len(raw_gate)) - 2}} {c_box}║{c_rst}")
+        print(
+            f"{c_box}║{c_rst} {gate_text:^{w + (len(gate_text) - len(raw_gate)) - 2}} {c_box}║{c_rst}"
+        )
         print(f"{c_box}╚{border_horiz}╝{c_rst}\n")
 
         return 0 if all_passed else 1
@@ -927,7 +1057,9 @@ async def main_async():
             backend_port=8000,
             skip_frontend=args.skip_frontend,
         )
-        print(f"\n{BOLD}{CYAN}▶ Checking QuantumAML service stack availability...{RESET}")
+        print(
+            f"\n{BOLD}{CYAN}▶ Checking QuantumAML service stack availability...{RESET}"
+        )
         if not orchestrator.ensure_services_running(timeout_sec=35.0):
             print(
                 f"{RED}Error: Failed to discover or spawn QuantumAML Nexus services on port 8000.{RESET}\n"
@@ -960,7 +1092,9 @@ async def main_async():
 
     finally:
         if orchestrator:
-            print(f"{DIM}Cleaning up spawned background orchestrator processes...{RESET}")
+            print(
+                f"{DIM}Cleaning up spawned background orchestrator processes...{RESET}"
+            )
             orchestrator.shutdown()
 
     sys.exit(exit_code)

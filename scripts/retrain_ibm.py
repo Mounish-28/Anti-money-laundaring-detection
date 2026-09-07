@@ -1,19 +1,20 @@
 import os
 import sys
 import time
+
 import joblib
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import train_test_split
+from catboost import CatBoostClassifier
 from sklearn.metrics import (
+    average_precision_score,
+    f1_score,
     precision_score,
     recall_score,
-    f1_score,
-    average_precision_score,
     roc_auc_score,
-    classification_report
 )
-from catboost import CatBoostClassifier
+from sklearn.model_selection import train_test_split
+
 
 def retrain_ibm():
     print("=" * 75)
@@ -25,7 +26,7 @@ def retrain_ibm():
     t0 = time.time()
     csv_candidates = [
         "data/ibm_transactions/HI-Small_Trans.csv",
-        "IBM anti-money/HI-Small_Trans.csv"
+        "IBM anti-money/HI-Small_Trans.csv",
     ]
     data_path = None
     for p in csv_candidates:
@@ -39,41 +40,56 @@ def retrain_ibm():
     sys.stdout.flush()
 
     usecols = [
-        'From Bank', 'Account', 'To Bank', 'Account.1',
-        'Amount Received', 'Receiving Currency', 'Payment Format', 'Is Laundering'
+        "From Bank",
+        "Account",
+        "To Bank",
+        "Account.1",
+        "Amount Received",
+        "Receiving Currency",
+        "Payment Format",
+        "Is Laundering",
     ]
     dtypes = {
-        'From Bank': 'str',
-        'Account': 'str',
-        'To Bank': 'str',
-        'Account.1': 'str',
-        'Amount Received': 'float32',
-        'Receiving Currency': 'str',
-        'Payment Format': 'str',
-        'Is Laundering': 'int8'
+        "From Bank": "str",
+        "Account": "str",
+        "To Bank": "str",
+        "Account.1": "str",
+        "Amount Received": "float32",
+        "Receiving Currency": "str",
+        "Payment Format": "str",
+        "Is Laundering": "int8",
     }
     df = pd.read_csv(data_path, usecols=usecols, dtype=dtypes)
-    print(f"  Loaded {len(df):,d} transactions in {time.time()-t0:.2f}s")
+    print(f"  Loaded {len(df):,d} transactions in {time.time() - t0:.2f}s")
     sys.stdout.flush()
 
     # 2. Schema Alignment: Exact 7 features
     print("\n[2/5] Aligning exact 7 features expected by UnifiedInferenceEngine...")
-    df = df.rename(columns={
-        'Account': 'Account_From',
-        'Account.1': 'Account_To',
-        'Amount Received': 'Amount',
-        'Receiving Currency': 'Currency'
-    })
+    df = df.rename(
+        columns={
+            "Account": "Account_From",
+            "Account.1": "Account_To",
+            "Amount Received": "Amount",
+            "Receiving Currency": "Currency",
+        }
+    )
     feature_cols = [
-        'From Bank', 'To Bank', 'Account_From', 'Account_To',
-        'Amount', 'Currency', 'Payment Format'
+        "From Bank",
+        "To Bank",
+        "Account_From",
+        "Account_To",
+        "Amount",
+        "Currency",
+        "Payment Format",
     ]
     X = df[feature_cols]
-    y = df['Is Laundering'].values
+    y = df["Is Laundering"].values
     target_pos = (y == 1).sum()
     target_neg = (y == 0).sum()
     print(f"  Feature Schema ({len(feature_cols)} features): {feature_cols}")
-    print(f"  Class Distribution: Legitimate={target_neg:,d} ({(target_neg/len(y))*100:.2f}%), Laundering={target_pos:,d} ({(target_pos/len(y))*100:.3f}%)")
+    print(
+        f"  Class Distribution: Legitimate={target_neg:,d} ({(target_neg / len(y)) * 100:.2f}%), Laundering={target_pos:,d} ({(target_pos / len(y)) * 100:.3f}%)"
+    )
     sys.stdout.flush()
 
     # 80/20 train/test split
@@ -81,38 +97,54 @@ def retrain_ibm():
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.20, random_state=42, stratify=y
     )
-    print(f"  Train Set: {len(X_train):,d} transactions (Laundering: {(y_train==1).sum():,d})")
-    print(f"  Test Set:  {len(X_test):,d} transactions (Laundering: {(y_test==1).sum():,d})")
-    
+    print(
+        f"  Train Set: {len(X_train):,d} transactions (Laundering: {(y_train == 1).sum():,d})"
+    )
+    print(
+        f"  Test Set:  {len(X_test):,d} transactions (Laundering: {(y_test == 1).sum():,d})"
+    )
+
     # Release raw dataset memory immediately
     del df, X, y
     import gc
+
     gc.collect()
     sys.stdout.flush()
 
-    cat_features = ['From Bank', 'To Bank', 'Account_From', 'Account_To', 'Currency', 'Payment Format']
+    cat_features = [
+        "From Bank",
+        "To Bank",
+        "Account_From",
+        "Account_To",
+        "Currency",
+        "Payment Format",
+    ]
 
     # 3. Model Training
     print("\n[4/5] Instantiating CatBoostClassifier with target hyperparameters:")
-    print("  auto_class_weights='Balanced', iterations=800, learning_rate=0.05, depth=6, eval_metric='F1', random_seed=42")
+    print(
+        "  auto_class_weights='Balanced', iterations=800, learning_rate=0.05, depth=6, eval_metric='F1', random_seed=42"
+    )
     sys.stdout.flush()
 
     cb = CatBoostClassifier(
         iterations=800,
         learning_rate=0.05,
         depth=6,
-        auto_class_weights='Balanced',
-        eval_metric='F1',
+        auto_class_weights="Balanced",
+        eval_metric="F1",
         random_seed=42,
         thread_count=4,
-        verbose=50
+        verbose=50,
     )
 
     t_train = time.time()
     cb.fit(X_train, y_train, cat_features=cat_features)
     train_duration = time.time() - t_train
-    print(f"  Training finished in {train_duration:.2f}s ({train_duration/60:.2f} min)")
-    
+    print(
+        f"  Training finished in {train_duration:.2f}s ({train_duration / 60:.2f} min)"
+    )
+
     # Release training data from memory before evaluation
     del X_train, y_train
     gc.collect()
@@ -125,7 +157,7 @@ def retrain_ibm():
         "models/ibm_transactions/catboost_model.cbm",
         "models/ibm_transactions/catboost_model.joblib",
         "models/IBM-AML/model_v5.cbm",
-        "models/IBM-AML/model_v5.joblib"
+        "models/IBM-AML/model_v5.joblib",
     ]
     for p in out_paths:
         os.makedirs(os.path.dirname(p), exist_ok=True)
@@ -133,7 +165,7 @@ def retrain_ibm():
             cb.save_model(p)
         else:
             joblib.dump(cb, p)
-        print(f"  Exported -> {p} ({os.path.getsize(p)/(1024*1024):.2f} MB)")
+        print(f"  Exported -> {p} ({os.path.getsize(p) / (1024 * 1024):.2f} MB)")
     sys.stdout.flush()
 
     # 5. Output: Final Validation Summary
@@ -152,10 +184,10 @@ def retrain_ibm():
     pr_auc = average_precision_score(y_test, y_prob)
     roc_auc = roc_auc_score(y_test, y_prob)
 
-    print(f"Evaluation Time: {time.time()-t_eval:.2f}s")
-    print(f"\n--- Metrics at Default Operational Threshold (T = 0.50) ---")
+    print(f"Evaluation Time: {time.time() - t_eval:.2f}s")
+    print("\n--- Metrics at Default Operational Threshold (T = 0.50) ---")
     print(f"  Precision: {prec_50:.4f}")
-    print(f"  Recall:    {rec_50:.4f} ({(rec_50*100):.2f}% captured anomalies)")
+    print(f"  Recall:    {rec_50:.4f} ({(rec_50 * 100):.2f}% captured anomalies)")
     print(f"  F1-Score:  {f1_50:.4f}")
     print(f"  PR-AUC:    {pr_auc:.4f}")
     print(f"  ROC-AUC:   {roc_auc:.4f}")
@@ -180,6 +212,7 @@ def retrain_ibm():
     print(f"  PR-AUC:    {pr_auc:.4f}")
     print("=" * 75)
     sys.stdout.flush()
+
 
 if __name__ == "__main__":
     retrain_ibm()

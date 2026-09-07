@@ -1,40 +1,36 @@
+import asyncio
 import logging
 import time
 from contextlib import asynccontextmanager
-from typing import List, Dict, Any, Optional, Tuple
 from datetime import datetime, timezone
-import asyncio
+from typing import Any
+
 from fastapi import (
-    FastAPI,
     BackgroundTasks,
+    Body,
+    FastAPI,
     HTTPException,
     Query,
-    Body,
     WebSocket,
     WebSocketDisconnect,
-    Response,
 )
 from fastapi.middleware.cors import CORSMiddleware
+from prometheus_client import REGISTRY, Counter, Histogram
 from prometheus_fastapi_instrumentator import Instrumentator
-from prometheus_client import Counter, Histogram, REGISTRY
 
+from app.routers.sar import router as sar_router
 from app.schemas import (
-    TransactionInput,
-    TimeSeriesInput,
     EllipticNodeInput,
-    SAMLDInput,
     RiskEvaluationResponse,
+    SAMLDInput,
+    TimeSeriesInput,
+    TransactionInput,
 )
 from app.schemas.sar import (
     SuspicionTypology,
-    CaseStatus,
-    SARCaseRecord,
-    SARListResponse,
 )
-from app.services.sar_service import sar_service
-from app.services.sar_exporter import sar_exporter
 from app.services.inference_engine import UnifiedInferenceEngine
-from app.routers.sar import router as sar_router
+from app.services.sar_service import sar_service
 from app.worker import dispatch_investigator_alert
 
 # Observability Configuration
@@ -85,7 +81,7 @@ aml_anomalies_detected_total = _get_or_create_counter(
 
 
 def _record_metrics(
-    dataset_model: str, res: Dict[str, Any], duration_seconds: float
+    dataset_model: str, res: dict[str, Any], duration_seconds: float
 ) -> None:
     """Records latency observation, throughput by risk tier, and anomaly counters."""
     aml_inference_latency_seconds.labels(dataset_model=dataset_model).observe(
@@ -194,8 +190,8 @@ manager = ConnectionManager()
 # ------------------------------------------------------------------------------
 def _resolve_typology(
     engine_type: str,
-    flags: List[str],
-    payload: Dict[str, Any],
+    flags: list[str],
+    payload: dict[str, Any],
 ) -> SuspicionTypology:
     """
     In-memory classification helper determining the appropriate FIU-IND SuspicionTypology.
@@ -224,8 +220,8 @@ def _resolve_typology(
 
 
 async def process_sar_background(
-    tx_payload: Dict[str, Any],
-    result_payload: Dict[str, Any],
+    tx_payload: dict[str, Any],
+    result_payload: dict[str, Any],
     typology: SuspicionTypology,
 ):
     """
@@ -248,7 +244,9 @@ async def process_sar_background(
         )
 
         # Broadcast real-time SAR alert packet to connected monitoring dashboards
-        status_val = case.status.value if hasattr(case.status, "value") else str(case.status)
+        status_val = (
+            case.status.value if hasattr(case.status, "value") else str(case.status)
+        )
         sar_alert_packet = {
             "event": "SAR_DISPATCHED",
             "sar_id": case.sar_id,
@@ -257,12 +255,22 @@ async def process_sar_background(
             "status": status_val,
             "typology": typology.value if hasattr(typology, "value") else str(typology),
             "suspect": (
-                (getattr(case.suspect, "full_legal_name", None) or getattr(case.suspect, "entity_name", None))
+                (
+                    getattr(case.suspect, "full_legal_name", None)
+                    or getattr(case.suspect, "entity_name", None)
+                )
                 if case.suspect
-                else (tx_payload.get("account_from") or tx_payload.get("node_id") or "Unknown Suspect")
+                else (
+                    tx_payload.get("account_from")
+                    or tx_payload.get("node_id")
+                    or "Unknown Suspect"
+                )
             ),
-            "triggering_tx_id": tx_payload.get("transaction_id") or tx_payload.get("node_id"),
-            "timestamp": case.created_at.isoformat() if hasattr(case.created_at, "isoformat") else str(case.created_at),
+            "triggering_tx_id": tx_payload.get("transaction_id")
+            or tx_payload.get("node_id"),
+            "timestamp": case.created_at.isoformat()
+            if hasattr(case.created_at, "isoformat")
+            else str(case.created_at),
         }
         await manager.broadcast(sar_alert_packet)
     except Exception as e:
@@ -356,7 +364,9 @@ async def websocket_live(websocket: WebSocket):
 # 4. Model Scoring Endpoints
 # ------------------------------------------------------------------------------
 @app.post("/api/v1/score/transaction", response_model=RiskEvaluationResponse)
-async def score_transaction(payload: TransactionInput, background_tasks: BackgroundTasks):
+async def score_transaction(
+    payload: TransactionInput, background_tasks: BackgroundTasks
+):
     try:
         t0 = time.perf_counter()
         res = engine.score_ibm_transaction(payload.model_dump())
@@ -379,7 +389,11 @@ async def score_transaction(payload: TransactionInput, background_tasks: Backgro
             or "PAN_STRUCTURING_EVASION" in flags
             or "smurf" in str(payload.account_from).lower()
         )
-        if raw_tier in ("CRITICAL_SAR", "CRITICAL") or score_val >= 0.85 or is_structuring_candidate:
+        if (
+            raw_tier in ("CRITICAL_SAR", "CRITICAL")
+            or score_val >= 0.85
+            or is_structuring_candidate
+        ):
             txn_dict = payload.model_dump()
             typology = _resolve_typology("FIAT_BANKING", flags, txn_dict)
             background_tasks.add_task(
@@ -532,7 +546,7 @@ def score_amlsim(payload: TransactionInput, background_tasks: BackgroundTasks):
 
 @app.post("/api/v1/score/batch")
 def score_batch(
-    items: List[Dict[str, Any]] = Body(...),
+    items: list[dict[str, Any]] = Body(...),
     background_tasks: BackgroundTasks = BackgroundTasks(),
     dataset: str = Query(..., description="Target dataset for batch evaluation"),
 ):
@@ -598,4 +612,3 @@ app.include_router(
     prefix="/api/v1/sar",
     tags=["SAR Compliance & Reporting"],
 )
-

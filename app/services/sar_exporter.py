@@ -18,18 +18,15 @@ import logging
 import os
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
-from reportlab.lib.units import inch, cm, mm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
 from reportlab.platypus import (
-    HRFlowable,
-    KeepTogether,
     Paragraph,
     SimpleDocTemplate,
     Spacer,
@@ -38,12 +35,7 @@ from reportlab.platypus import (
 )
 
 from app.schemas.sar import (
-    CaseStatus,
-    PaymentRail,
-    RiskTier,
     SARCaseRecord,
-    SuspicionTypology,
-    TransactionAuditRecord,
 )
 
 logger = logging.getLogger("SARExporter")
@@ -57,7 +49,7 @@ PRINTABLE_WIDTH = PAGE_WIDTH - (2 * MARGIN)  # 523.27 pt
 # ------------------------------------------------------------------------------
 # Typography & Font Registration
 # ------------------------------------------------------------------------------
-def _setup_fonts() -> Tuple[str, str, bool]:
+def _setup_fonts() -> tuple[str, str, bool]:
     """
     Registers Unicode TrueType fonts if available (e.g. Arial on Windows)
     to support the native Rupee symbol (₹). Falls back to Helvetica if not found.
@@ -114,7 +106,7 @@ class NumberedCanvas(canvas.Canvas):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._saved_page_states: List[Dict[str, Any]] = []
+        self._saved_page_states: list[dict[str, Any]] = []
 
     def showPage(self):
         self._saved_page_states.append(dict(self.__dict__))
@@ -154,7 +146,9 @@ class NumberedCanvas(canvas.Canvas):
         self.setLineWidth(0.5)
         self.line(MARGIN, 32, PAGE_WIDTH - MARGIN, 32)
 
-        footer_text = "CONFIDENTIAL // STRICTLY FOR REGULATORY COMPLIANCE UNDER PMLA 2002"
+        footer_text = (
+            "CONFIDENTIAL // STRICTLY FOR REGULATORY COMPLIANCE UNDER PMLA 2002"
+        )
         page_str = f"Page {self._pageNumber} of {page_count}"
         ts_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
@@ -167,7 +161,7 @@ class NumberedCanvas(canvas.Canvas):
 # ------------------------------------------------------------------------------
 # JSON Exporter (FIU-IND FINnet 2.0 Specification)
 # ------------------------------------------------------------------------------
-def export_fiu_json(case: SARCaseRecord) -> Dict[str, Any]:
+def export_fiu_json(case: SARCaseRecord) -> dict[str, Any]:
     """
     Transforms a SARCaseRecord into a machine-readable dictionary conforming
     to FIU-IND FINnet 2.0 / FINGate electronic STR intake specifications.
@@ -176,7 +170,9 @@ def export_fiu_json(case: SARCaseRecord) -> Dict[str, Any]:
     now_iso = datetime.now(timezone.utc).isoformat()
 
     # Status value
-    status_str = case.status.value if hasattr(case.status, "value") else str(case.status)
+    status_str = (
+        case.status.value if hasattr(case.status, "value") else str(case.status)
+    )
 
     # Primary & secondary typologies
     prim_typology = (
@@ -197,20 +193,22 @@ def export_fiu_json(case: SARCaseRecord) -> Dict[str, Any]:
     )
 
     # Transaction schedule
-    tx_schedule: List[Dict[str, Any]] = []
+    tx_schedule: list[dict[str, Any]] = []
     for tx in case.transactions:
         rail_val = tx.rail.value if hasattr(tx.rail, "value") else str(tx.rail)
-        tx_schedule.append({
-            "transaction_id": tx.transaction_id,
-            "timestamp": tx.timestamp.isoformat(),
-            "rail": rail_val,
-            "amount": tx.amount,
-            "currency": tx.currency,
-            "counterparty_from": tx.counterparty_from,
-            "counterparty_to": tx.counterparty_to,
-            "risk_score": round(tx.risk_score, 4),
-            "detected_anomalies": tx.detected_anomalies,
-        })
+        tx_schedule.append(
+            {
+                "transaction_id": tx.transaction_id,
+                "timestamp": tx.timestamp.isoformat(),
+                "rail": rail_val,
+                "amount": tx.amount,
+                "currency": tx.currency,
+                "counterparty_from": tx.counterparty_from,
+                "counterparty_to": tx.counterparty_to,
+                "risk_score": round(tx.risk_score, 4),
+                "detected_anomalies": tx.detected_anomalies,
+            }
+        )
 
     payload = {
         "batch_header": {
@@ -383,31 +381,47 @@ def generate_sar_pdf(case: SARCaseRecord) -> bytes:
         textColor=colors.white,
     )
 
-    story: List[Any] = []
+    story: list[Any] = []
 
     # --------------------------------------------------------------------------
     # 1. Header Banner
     # --------------------------------------------------------------------------
     banner_content = [
         [
-            Paragraph("CONFIDENTIAL // REGULATORY COMPLIANCE DOSSIER - FIU-IND FORM STR", title_banner_style),
-            Paragraph(f"DOSSIER: {case.sar_id}", ParagraphStyle("SARIdRight", parent=title_banner_style, alignment=2, fontSize=9)),
+            Paragraph(
+                "CONFIDENTIAL // REGULATORY COMPLIANCE DOSSIER - FIU-IND FORM STR",
+                title_banner_style,
+            ),
+            Paragraph(
+                f"DOSSIER: {case.sar_id}",
+                ParagraphStyle(
+                    "SARIdRight", parent=title_banner_style, alignment=2, fontSize=9
+                ),
+            ),
         ],
         [
-            Paragraph("Issued under Prevention of Money Laundering Act (PMLA) 2002 & PML Rules | FINnet 2.0 Intake Standard", sub_banner_style),
-            Paragraph("AUTOMATED SURVEILLANCE AUDIT", ParagraphStyle("SubRight", parent=sub_banner_style, alignment=2)),
+            Paragraph(
+                "Issued under Prevention of Money Laundering Act (PMLA) 2002 & PML Rules | FINnet 2.0 Intake Standard",
+                sub_banner_style,
+            ),
+            Paragraph(
+                "AUTOMATED SURVEILLANCE AUDIT",
+                ParagraphStyle("SubRight", parent=sub_banner_style, alignment=2),
+            ),
         ],
     ]
     banner_table = Table(banner_content, colWidths=[363.27, 160.0])
     banner_table.setStyle(
-        TableStyle([
-            ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#0F172A")),
-            ("TOPPADDING", (0, 0), (-1, -1), 8),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
-            ("LEFTPADDING", (0, 0), (-1, -1), 10),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 10),
-            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ])
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#0F172A")),
+                ("TOPPADDING", (0, 0), (-1, -1), 8),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+                ("LEFTPADDING", (0, 0), (-1, -1), 10),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 10),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ]
+        )
     )
     story.append(banner_table)
     story.append(Spacer(1, 8))
@@ -415,7 +429,9 @@ def generate_sar_pdf(case: SARCaseRecord) -> bytes:
     # --------------------------------------------------------------------------
     # 2. Executive Metadata Strip
     # --------------------------------------------------------------------------
-    status_str = case.status.value if hasattr(case.status, "value") else str(case.status)
+    status_str = (
+        case.status.value if hasattr(case.status, "value") else str(case.status)
+    )
     deadline_str = case.fiu_deadline.strftime("%Y-%m-%d %H:%M UTC")
     created_str = case.created_at.strftime("%Y-%m-%d %H:%M UTC")
 
@@ -439,7 +455,10 @@ def generate_sar_pdf(case: SARCaseRecord) -> bytes:
         ],
         [
             Paragraph("<b>Statutory Filing Deadline:</b>", body_style),
-            Paragraph(f"<font color='#B91C1C'><b>{deadline_str}</b></font> (PMLA Rule 3)", body_style),
+            Paragraph(
+                f"<font color='#B91C1C'><b>{deadline_str}</b></font> (PMLA Rule 3)",
+                body_style,
+            ),
             Paragraph("<b>Principal Officer ID:</b>", body_style),
             Paragraph(case.reporting_entity.principal_officer_id, body_style),
         ],
@@ -447,22 +466,28 @@ def generate_sar_pdf(case: SARCaseRecord) -> bytes:
             Paragraph("<b>Workflow Status:</b>", body_style),
             Paragraph(f"<b>{status_str}</b>", body_bold_style),
             Paragraph("<b>Cumulative Exposure:</b>", body_style),
-            Paragraph(f"<font color='#047857'><b>{exposure_display}</b></font>", body_style),
+            Paragraph(
+                f"<font color='#047857'><b>{exposure_display}</b></font>", body_style
+            ),
         ],
     ]
     col_w = PRINTABLE_WIDTH / 4.0
-    meta_table = Table(meta_data, colWidths=[col_w * 0.9, col_w * 1.1, col_w * 0.9, col_w * 1.1])
+    meta_table = Table(
+        meta_data, colWidths=[col_w * 0.9, col_w * 1.1, col_w * 0.9, col_w * 1.1]
+    )
     meta_table.setStyle(
-        TableStyle([
-            ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#F8FAFC")),
-            ("BOX", (0, 0), (-1, -1), 0.75, colors.HexColor("#CBD5E1")),
-            ("INNERGRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#E2E8F0")),
-            ("TOPPADDING", (0, 0), (-1, -1), 4),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-            ("LEFTPADDING", (0, 0), (-1, -1), 6),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 6),
-            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ])
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#F8FAFC")),
+                ("BOX", (0, 0), (-1, -1), 0.75, colors.HexColor("#CBD5E1")),
+                ("INNERGRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#E2E8F0")),
+                ("TOPPADDING", (0, 0), (-1, -1), 4),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+                ("LEFTPADDING", (0, 0), (-1, -1), 6),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ]
+        )
     )
     story.append(meta_table)
     story.append(Spacer(1, 10))
@@ -470,14 +495,20 @@ def generate_sar_pdf(case: SARCaseRecord) -> bytes:
     # --------------------------------------------------------------------------
     # 3. Section 1 - Grounds of Suspicion & Legal Narrative
     # --------------------------------------------------------------------------
-    story.append(Paragraph("1. Grounds of Suspicion & Legal Narrative", section_heading_style))
+    story.append(
+        Paragraph("1. Grounds of Suspicion & Legal Narrative", section_heading_style)
+    )
 
     prim_typology = (
         case.grounds_of_suspicion.primary_typology.value
         if hasattr(case.grounds_of_suspicion.primary_typology, "value")
         else str(case.grounds_of_suspicion.primary_typology)
     )
-    rules_joined = ", ".join(case.grounds_of_suspicion.rule_triggers) if case.grounds_of_suspicion.rule_triggers else "PMLA-SEC-12, PMLA-RULE-3"
+    rules_joined = (
+        ", ".join(case.grounds_of_suspicion.rule_triggers)
+        if case.grounds_of_suspicion.rule_triggers
+        else "PMLA-SEC-12, PMLA-RULE-3"
+    )
 
     narrative_box_content = [
         [
@@ -496,16 +527,18 @@ def generate_sar_pdf(case: SARCaseRecord) -> bytes:
     ]
     narrative_table = Table(narrative_box_content, colWidths=[PRINTABLE_WIDTH])
     narrative_table.setStyle(
-        TableStyle([
-            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#EFF6FF")),
-            ("BACKGROUND", (0, 1), (-1, 1), colors.HexColor("#F8FAFC")),
-            ("BOX", (0, 0), (-1, -1), 1.0, colors.HexColor("#93C5FD")),
-            ("LINEBELOW", (0, 0), (-1, 0), 0.5, colors.HexColor("#BFDBFE")),
-            ("TOPPADDING", (0, 0), (-1, -1), 6),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-            ("LEFTPADDING", (0, 0), (-1, -1), 8),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 8),
-        ])
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#EFF6FF")),
+                ("BACKGROUND", (0, 1), (-1, 1), colors.HexColor("#F8FAFC")),
+                ("BOX", (0, 0), (-1, -1), 1.0, colors.HexColor("#93C5FD")),
+                ("LINEBELOW", (0, 0), (-1, 0), 0.5, colors.HexColor("#BFDBFE")),
+                ("TOPPADDING", (0, 0), (-1, -1), 6),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                ("LEFTPADDING", (0, 0), (-1, -1), 8),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+            ]
+        )
     )
     story.append(narrative_table)
     story.append(Spacer(1, 10))
@@ -513,14 +546,18 @@ def generate_sar_pdf(case: SARCaseRecord) -> bytes:
     # --------------------------------------------------------------------------
     # 4. Section 2 - Subject Entity & Counterparty Profiles
     # --------------------------------------------------------------------------
-    story.append(Paragraph("2. Subject Entity & Counterparty Profiles", section_heading_style))
+    story.append(
+        Paragraph("2. Subject Entity & Counterparty Profiles", section_heading_style)
+    )
 
     suspect_tier = (
         case.suspect.kyc_risk_tier.value
         if hasattr(case.suspect.kyc_risk_tier, "value")
         else str(case.suspect.kyc_risk_tier)
     )
-    flags_str = ", ".join(case.suspect.flags) if case.suspect.flags else "HIGH_VELOCITY_TRIGGER"
+    flags_str = (
+        ", ".join(case.suspect.flags) if case.suspect.flags else "HIGH_VELOCITY_TRIGGER"
+    )
 
     profile_data = [
         [
@@ -538,7 +575,9 @@ def generate_sar_pdf(case: SARCaseRecord) -> bytes:
             Paragraph(case.suspect.entity_name or "ANONYMOUS_HOLDER", table_cell_style),
             Paragraph(case.suspect.entity_type, table_cell_style),
             Paragraph(case.suspect.institution_code or "N/A", table_cell_style),
-            Paragraph(f"<font color='#DC2626'><b>{suspect_tier}</b></font>", table_cell_style),
+            Paragraph(
+                f"<font color='#DC2626'><b>{suspect_tier}</b></font>", table_cell_style
+            ),
             Paragraph("YES" if case.suspect.is_pep else "NO", table_cell_style),
         ],
     ]
@@ -549,30 +588,46 @@ def generate_sar_pdf(case: SARCaseRecord) -> bytes:
             if hasattr(case.counterparty.kyc_risk_tier, "value")
             else str(case.counterparty.kyc_risk_tier)
         )
-        profile_data.append([
-            Paragraph("<b>COUNTERPARTY</b>", table_cell_bold),
-            Paragraph(case.counterparty.entity_identifier, table_cell_style),
-            Paragraph(case.counterparty.entity_name or "ANONYMOUS_COUNTERPARTY", table_cell_style),
-            Paragraph(case.counterparty.entity_type, table_cell_style),
-            Paragraph(case.counterparty.institution_code or "N/A", table_cell_style),
-            Paragraph(cp_tier, table_cell_style),
-            Paragraph("YES" if case.counterparty.is_pep else "NO", table_cell_style),
-        ])
+        profile_data.append(
+            [
+                Paragraph("<b>COUNTERPARTY</b>", table_cell_bold),
+                Paragraph(case.counterparty.entity_identifier, table_cell_style),
+                Paragraph(
+                    case.counterparty.entity_name or "ANONYMOUS_COUNTERPARTY",
+                    table_cell_style,
+                ),
+                Paragraph(case.counterparty.entity_type, table_cell_style),
+                Paragraph(
+                    case.counterparty.institution_code or "N/A", table_cell_style
+                ),
+                Paragraph(cp_tier, table_cell_style),
+                Paragraph(
+                    "YES" if case.counterparty.is_pep else "NO", table_cell_style
+                ),
+            ]
+        )
 
     profile_col_widths = [80.0, 115.0, 95.0, 60.0, 83.27, 55.0, 35.0]
     profile_table = Table(profile_data, colWidths=profile_col_widths)
     profile_table.setStyle(
-        TableStyle([
-            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1E293B")),
-            ("BACKGROUND", (0, 1), (-1, -1), colors.HexColor("#FFFFFF")),
-            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.HexColor("#FFFFFF"), colors.HexColor("#F8FAFC")]),
-            ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E1")),
-            ("TOPPADDING", (0, 0), (-1, -1), 4),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-            ("LEFTPADDING", (0, 0), (-1, -1), 5),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 5),
-            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ])
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1E293B")),
+                ("BACKGROUND", (0, 1), (-1, -1), colors.HexColor("#FFFFFF")),
+                (
+                    "ROWBACKGROUNDS",
+                    (0, 1),
+                    (-1, -1),
+                    [colors.HexColor("#FFFFFF"), colors.HexColor("#F8FAFC")],
+                ),
+                ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E1")),
+                ("TOPPADDING", (0, 0), (-1, -1), 4),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+                ("LEFTPADDING", (0, 0), (-1, -1), 5),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ]
+        )
     )
     story.append(profile_table)
     story.append(Spacer(1, 10))
@@ -580,7 +635,9 @@ def generate_sar_pdf(case: SARCaseRecord) -> bytes:
     # --------------------------------------------------------------------------
     # 5. Section 3 - Aggregated Transaction Chronology
     # --------------------------------------------------------------------------
-    story.append(Paragraph("3. Aggregated Transaction Chronology", section_heading_style))
+    story.append(
+        Paragraph("3. Aggregated Transaction Chronology", section_heading_style)
+    )
 
     tx_table_data = [
         [
@@ -602,39 +659,64 @@ def generate_sar_pdf(case: SARCaseRecord) -> bytes:
         if len(tx_id_display) > 22:
             tx_id_display = f"{tx_id_display[:10]}...{tx_id_display[-8:]}"
 
-        from_short = tx.counterparty_from[:20] if len(tx.counterparty_from) > 20 else tx.counterparty_from
-        to_short = tx.counterparty_to[:20] if len(tx.counterparty_to) > 20 else tx.counterparty_to
+        from_short = (
+            tx.counterparty_from[:20]
+            if len(tx.counterparty_from) > 20
+            else tx.counterparty_from
+        )
+        to_short = (
+            tx.counterparty_to[:20]
+            if len(tx.counterparty_to) > 20
+            else tx.counterparty_to
+        )
         flow_cell = f"{from_short}<br/>&rarr; {to_short}"
 
         amt_cell = _format_currency(tx.amount, tx.currency)
 
-        tier_str = "CRITICAL" if tx.risk_score >= 0.85 else ("HIGH" if tx.risk_score >= 0.70 else "ELEVATED")
-        tier_color = "#DC2626" if tier_str == "CRITICAL" else ("#D97706" if tier_str == "HIGH" else "#059669")
+        tier_str = (
+            "CRITICAL"
+            if tx.risk_score >= 0.85
+            else ("HIGH" if tx.risk_score >= 0.70 else "ELEVATED")
+        )
+        tier_color = (
+            "#DC2626"
+            if tier_str == "CRITICAL"
+            else ("#D97706" if tier_str == "HIGH" else "#059669")
+        )
         risk_cell = f"<font color='{tier_color}'><b>{tier_str}</b></font><br/>(p={tx.risk_score:.2f})"
 
-        tx_table_data.append([
-            Paragraph(ts_cell, table_cell_style),
-            Paragraph(rail_cell, table_cell_style),
-            Paragraph(f"<code>{tx_id_display}</code>", table_cell_style),
-            Paragraph(flow_cell, table_cell_style),
-            Paragraph(f"<b>{amt_cell}</b>", table_cell_style),
-            Paragraph(risk_cell, table_cell_style),
-        ])
+        tx_table_data.append(
+            [
+                Paragraph(ts_cell, table_cell_style),
+                Paragraph(rail_cell, table_cell_style),
+                Paragraph(f"<code>{tx_id_display}</code>", table_cell_style),
+                Paragraph(flow_cell, table_cell_style),
+                Paragraph(f"<b>{amt_cell}</b>", table_cell_style),
+                Paragraph(risk_cell, table_cell_style),
+            ]
+        )
 
     # Columns: [Time, Rail, TxID, Flow, Amount, Risk]
     tx_col_widths = [75.0, 38.0, 105.0, 167.27, 80.0, 58.0]
     tx_table = Table(tx_table_data, colWidths=tx_col_widths)
     tx_table.setStyle(
-        TableStyle([
-            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1E293B")),
-            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.HexColor("#FFFFFF"), colors.HexColor("#F8FAFC")]),
-            ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E1")),
-            ("TOPPADDING", (0, 0), (-1, -1), 3.5),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 3.5),
-            ("LEFTPADDING", (0, 0), (-1, -1), 4),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 4),
-            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ])
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1E293B")),
+                (
+                    "ROWBACKGROUNDS",
+                    (0, 1),
+                    (-1, -1),
+                    [colors.HexColor("#FFFFFF"), colors.HexColor("#F8FAFC")],
+                ),
+                ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E1")),
+                ("TOPPADDING", (0, 0), (-1, -1), 3.5),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 3.5),
+                ("LEFTPADDING", (0, 0), (-1, -1), 4),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ]
+        )
     )
     story.append(tx_table)
     story.append(Spacer(1, 10))
@@ -642,17 +724,21 @@ def generate_sar_pdf(case: SARCaseRecord) -> bytes:
     # --------------------------------------------------------------------------
     # 6. Section 4 - ML Forensic Telemetry
     # --------------------------------------------------------------------------
-    story.append(Paragraph("4. Machine Learning Diagnostic Telemetry", section_heading_style))
+    story.append(
+        Paragraph("4. Machine Learning Diagnostic Telemetry", section_heading_style)
+    )
 
     # Format top feature attributions
     feat_items = list(case.ml_telemetry.feature_importance.items())[:6]
     feat_rows = []
     for f_name, f_val in feat_items:
         bar_len = int(min(f_val * 20, 20))
-        feat_rows.append(
-            f"&bull; <b>{f_name}:</b> {f_val:.4f} &nbsp;&nbsp;"
-        )
-    feat_display = "".join(feat_rows) if feat_rows else "High-velocity multi-transaction correlation above baseline."
+        feat_rows.append(f"&bull; <b>{f_name}:</b> {f_val:.4f} &nbsp;&nbsp;")
+    feat_display = (
+        "".join(feat_rows)
+        if feat_rows
+        else "High-velocity multi-transaction correlation above baseline."
+    )
 
     ml_data = [
         [
@@ -663,7 +749,10 @@ def generate_sar_pdf(case: SARCaseRecord) -> bytes:
         ],
         [
             Paragraph("<b>Inference Latency:</b>", body_style),
-            Paragraph(f"{case.ml_telemetry.inference_latency_ms:.2f} ms (sub-50ms SLA)", body_style),
+            Paragraph(
+                f"{case.ml_telemetry.inference_latency_ms:.2f} ms (sub-50ms SLA)",
+                body_style,
+            ),
             Paragraph("<b>Audit Checksum:</b>", body_style),
             Paragraph(f"SHA256-{uuid.uuid4().hex[:12].upper()}", body_style),
         ],
@@ -674,19 +763,23 @@ def generate_sar_pdf(case: SARCaseRecord) -> bytes:
             Paragraph("", body_style),
         ],
     ]
-    ml_table = Table(ml_data, colWidths=[col_w * 0.9, col_w * 1.1, col_w * 0.9, col_w * 1.1])
+    ml_table = Table(
+        ml_data, colWidths=[col_w * 0.9, col_w * 1.1, col_w * 0.9, col_w * 1.1]
+    )
     ml_table.setStyle(
-        TableStyle([
-            ("SPAN", (1, 2), (3, 2)),
-            ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#F8FAFC")),
-            ("BOX", (0, 0), (-1, -1), 0.75, colors.HexColor("#CBD5E1")),
-            ("INNERGRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#E2E8F0")),
-            ("TOPPADDING", (0, 0), (-1, -1), 4),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-            ("LEFTPADDING", (0, 0), (-1, -1), 6),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 6),
-            ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ])
+        TableStyle(
+            [
+                ("SPAN", (1, 2), (3, 2)),
+                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#F8FAFC")),
+                ("BOX", (0, 0), (-1, -1), 0.75, colors.HexColor("#CBD5E1")),
+                ("INNERGRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#E2E8F0")),
+                ("TOPPADDING", (0, 0), (-1, -1), 4),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+                ("LEFTPADDING", (0, 0), (-1, -1), 6),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ]
+        )
     )
     story.append(ml_table)
     story.append(Spacer(1, 10))
@@ -703,7 +796,10 @@ def generate_sar_pdf(case: SARCaseRecord) -> bytes:
 
     sign_data = [
         [
-            Paragraph(f"<b>Statutory Compliance Declaration:</b><br/>{declaration_text}", ParagraphStyle("Decl", parent=body_style, fontSize=7.5, leading=10.5)),
+            Paragraph(
+                f"<b>Statutory Compliance Declaration:</b><br/>{declaration_text}",
+                ParagraphStyle("Decl", parent=body_style, fontSize=7.5, leading=10.5),
+            ),
         ],
         [
             Paragraph(
@@ -716,15 +812,17 @@ def generate_sar_pdf(case: SARCaseRecord) -> bytes:
     ]
     sign_table = Table(sign_data, colWidths=[PRINTABLE_WIDTH])
     sign_table.setStyle(
-        TableStyle([
-            ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#F1F5F9")),
-            ("BOX", (0, 0), (-1, -1), 1.0, colors.HexColor("#94A3B8")),
-            ("LINEBELOW", (0, 0), (-1, 0), 0.5, colors.HexColor("#CBD5E1")),
-            ("TOPPADDING", (0, 0), (-1, -1), 6),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-            ("LEFTPADDING", (0, 0), (-1, -1), 8),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 8),
-        ])
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#F1F5F9")),
+                ("BOX", (0, 0), (-1, -1), 1.0, colors.HexColor("#94A3B8")),
+                ("LINEBELOW", (0, 0), (-1, 0), 0.5, colors.HexColor("#CBD5E1")),
+                ("TOPPADDING", (0, 0), (-1, -1), 6),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                ("LEFTPADDING", (0, 0), (-1, -1), 8),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+            ]
+        )
     )
     story.append(sign_table)
 
@@ -743,7 +841,7 @@ class SARExporter:
     """
 
     @staticmethod
-    def export_fiu_json(case: SARCaseRecord) -> Dict[str, Any]:
+    def export_fiu_json(case: SARCaseRecord) -> dict[str, Any]:
         """Transforms SARCaseRecord into FIU-IND FINnet 2.0 electronic dictionary."""
         return export_fiu_json(case)
 

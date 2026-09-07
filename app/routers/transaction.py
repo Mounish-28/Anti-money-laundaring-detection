@@ -1,5 +1,6 @@
 from fastapi import APIRouter, BackgroundTasks, HTTPException
-from app.schemas import TransactionScoreRequest, ScoreResponse
+
+from app.schemas import ScoreResponse, TransactionScoreRequest
 from app.services.risk_engine import risk_engine
 
 router = APIRouter(prefix="/api/v1/score", tags=["Scoring"])
@@ -19,4 +20,4 @@ async def score_transaction(
         )
         return response
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Inference error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Inference error: {e!s}")

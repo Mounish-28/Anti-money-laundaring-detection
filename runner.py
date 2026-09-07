@@ -27,7 +27,6 @@ import sys
 import threading
 import time
 import urllib.request
-from typing import Dict, List, Optional
 
 # Enable ANSI escape sequence rendering on Windows consoles
 if os.name == "nt":
@@ -37,11 +36,11 @@ if os.name == "nt":
 CLR_RESET = "\033[0m"
 CLR_BOLD = "\033[1m"
 CLR_DIM = "\033[2m"
-CLR_CYAN = "\033[96m"              # [BACKEND] (Cyan)
-CLR_GREEN = "\033[92m"             # [BANKING] (Green)
-CLR_YELLOW = "\033[93m"            # [CRYPTO] (Yellow)
-CLR_MAGENTA = "\033[95m"           # [FRONTEND] (Magenta)
-CLR_WHITE = "\033[1m\033[97m"      # [ORCHESTRATOR] (Bold White)
+CLR_CYAN = "\033[96m"  # [BACKEND] (Cyan)
+CLR_GREEN = "\033[92m"  # [BANKING] (Green)
+CLR_YELLOW = "\033[93m"  # [CRYPTO] (Yellow)
+CLR_MAGENTA = "\033[95m"  # [FRONTEND] (Magenta)
+CLR_WHITE = "\033[1m\033[97m"  # [ORCHESTRATOR] (Bold White)
 CLR_RED = "\033[91m"
 
 SERVICE_CONFIGS = [
@@ -77,7 +76,7 @@ def resolve_python_path() -> str:
     base_dir = os.path.dirname(os.path.abspath(__file__))
     candidates = [
         os.path.join(base_dir, ".venv", "Scripts", "python.exe"),  # Windows venv
-        os.path.join(base_dir, ".venv", "bin", "python"),          # POSIX venv
+        os.path.join(base_dir, ".venv", "bin", "python"),  # POSIX venv
         sys.executable,
     ]
     for candidate in candidates:
@@ -100,14 +99,16 @@ def resolve_npm_path() -> str:
 class ServiceProcess:
     """Manages a single child process with real-time, non-blocking stream demultiplexing."""
 
-    def __init__(self, service_id: str, name: str, color: str, cmd: List[str], cwd: str):
+    def __init__(
+        self, service_id: str, name: str, color: str, cmd: list[str], cwd: str
+    ):
         self.service_id = service_id
         self.name = name
         self.color = color
         self.cmd = cmd
         self.cwd = cwd
-        self.proc: Optional[subprocess.Popen] = None
-        self.reader_thread: Optional[threading.Thread] = None
+        self.proc: subprocess.Popen | None = None
+        self.reader_thread: threading.Thread | None = None
 
     def start(self, log_callback):
         creationflags = 0
@@ -189,7 +190,7 @@ class Orchestrator:
         no_crypto: bool = False,
         no_frontend: bool = False,
         no_color: bool = False,
-        backend_port: Optional[int] = None,
+        backend_port: int | None = None,
     ):
         self.port = backend_port if backend_port is not None else port
         self.streamer_interval = streamer_interval
@@ -202,7 +203,7 @@ class Orchestrator:
         self.python_bin = resolve_python_path()
         self.npm_bin = resolve_npm_path()
 
-        self.processes: Dict[str, ServiceProcess] = {}
+        self.processes: dict[str, ServiceProcess] = {}
         self.is_shutting_down = False
         self.shutdown_event = threading.Event()
 
@@ -224,19 +225,35 @@ class Orchestrator:
             return
         try:
             cmd = f'netstat -ano -p tcp | findstr ":{port} "'
-            output = subprocess.check_output(cmd, shell=True, text=True, stderr=subprocess.DEVNULL)
+            output = subprocess.check_output(
+                cmd, shell=True, text=True, stderr=subprocess.DEVNULL
+            )
             for line in output.strip().splitlines():
                 parts = line.strip().split()
                 if len(parts) >= 5 and "LISTENING" in parts:
                     pid = parts[-1]
                     if pid and pid != "0" and pid != str(os.getpid()):
-                        self.log_system(f"Releasing port {port} by terminating lingering PID {pid}...", CLR_YELLOW)
-                        subprocess.run(["taskkill", "/F", "/T", "/PID", pid], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+                        self.log_system(
+                            f"Releasing port {port} by terminating lingering PID {pid}...",
+                            CLR_YELLOW,
+                        )
+                        subprocess.run(
+                            ["taskkill", "/F", "/T", "/PID", pid],
+                            stdout=subprocess.DEVNULL,
+                            stderr=subprocess.DEVNULL,
+                            check=False,
+                        )
             if wait_release:
                 for _ in range(8):
                     try:
-                        verify_out = subprocess.check_output(cmd, shell=True, text=True, stderr=subprocess.DEVNULL)
-                        listening = [l for l in verify_out.strip().splitlines() if "LISTENING" in l]
+                        verify_out = subprocess.check_output(
+                            cmd, shell=True, text=True, stderr=subprocess.DEVNULL
+                        )
+                        listening = [
+                            l
+                            for l in verify_out.strip().splitlines()
+                            if "LISTENING" in l
+                        ]
                         if not listening:
                             break
                     except subprocess.CalledProcessError:
@@ -245,13 +262,18 @@ class Orchestrator:
         except Exception:
             pass
 
-    def poll_backend_health(self, max_retries: int = 40, delay_sec: float = 0.5) -> bool:
+    def poll_backend_health(
+        self, max_retries: int = 40, delay_sec: float = 0.5
+    ) -> bool:
         """
         Polls the FastAPI /docs endpoint until responsive.
         Default: 40 retries x 0.5s = 20-second timeout.
         """
         target_url = f"http://localhost:{self.port}/docs"
-        self.log_system(f"Polling FastAPI backend accessibility on {target_url} (0.5s cadence, 20s timeout)...", CLR_CYAN)
+        self.log_system(
+            f"Polling FastAPI backend accessibility on {target_url} (0.5s cadence, 20s timeout)...",
+            CLR_CYAN,
+        )
 
         for attempt in range(1, max_retries + 1):
             if self.is_shutting_down:
@@ -278,13 +300,25 @@ class Orchestrator:
             CLR_RED,
         )
         self.log_system("Remediation Guidance:", CLR_BOLD + CLR_WHITE)
-        self.log_system(f"  1. Verify port {self.port} availability: netstat -ano | findstr :{self.port}", CLR_YELLOW)
-        self.log_system("  2. Ensure dependencies are installed: pip install -r requirements.txt", CLR_YELLOW)
-        self.log_system(f"  3. Test backend standalone: {self.python_bin} -m uvicorn app.main:app --port {self.port}", CLR_YELLOW)
-        self.log_system("  4. Verify system event logs for unhandled lifespan initialization faults.", CLR_YELLOW)
+        self.log_system(
+            f"  1. Verify port {self.port} availability: netstat -ano | findstr :{self.port}",
+            CLR_YELLOW,
+        )
+        self.log_system(
+            "  2. Ensure dependencies are installed: pip install -r requirements.txt",
+            CLR_YELLOW,
+        )
+        self.log_system(
+            f"  3. Test backend standalone: {self.python_bin} -m uvicorn app.main:app --port {self.port}",
+            CLR_YELLOW,
+        )
+        self.log_system(
+            "  4. Verify system event logs for unhandled lifespan initialization faults.",
+            CLR_YELLOW,
+        )
         return False
 
-    def build_service_commands(self) -> Dict[str, List[str]]:
+    def build_service_commands(self) -> dict[str, list[str]]:
         """Constructs process execution commands for each service."""
         return {
             "backend": [
@@ -327,7 +361,9 @@ class Orchestrator:
         commands = self.build_service_commands()
 
         # Step 1: Spawn FastAPI Backend
-        self.log_system("Phase 1: Starting FastAPI inference & broadcast hub...", CLR_CYAN)
+        self.log_system(
+            "Phase 1: Starting FastAPI inference & broadcast hub...", CLR_CYAN
+        )
         backend_svc = ServiceProcess(
             service_id="backend",
             name="BACKEND",
@@ -342,12 +378,17 @@ class Orchestrator:
         is_healthy = self.poll_backend_health(max_retries=40, delay_sec=0.5)
 
         if not is_healthy or self.is_shutting_down:
-            self.log_system("Aborting launch sequence due to backend startup failure.", CLR_RED)
+            self.log_system(
+                "Aborting launch sequence due to backend startup failure.", CLR_RED
+            )
             self.shutdown()
             return
 
         # Step 3: Launch Remaining Services Concurrently
-        self.log_system("Phase 2: Backend healthy. Launching concurrent generators & frontend...", CLR_CYAN)
+        self.log_system(
+            "Phase 2: Backend healthy. Launching concurrent generators & frontend...",
+            CLR_CYAN,
+        )
 
         # 3a. Banking Generator
         banking_svc = ServiceProcess(
@@ -372,7 +413,9 @@ class Orchestrator:
             self.processes["crypto"] = crypto_svc
             crypto_svc.start(self.log)
         else:
-            self.log_system("[SKIP] Crypto mempool feed disabled via --no-crypto flag.", CLR_DIM)
+            self.log_system(
+                "[SKIP] Crypto mempool feed disabled via --no-crypto flag.", CLR_DIM
+            )
 
         # 3c. Vite React Frontend (unless disabled)
         if not self.no_frontend:
@@ -387,11 +430,20 @@ class Orchestrator:
                 self.processes["frontend"] = frontend_svc
                 frontend_svc.start(self.log)
             else:
-                self.log_system(f"Warning: Frontend directory '{self.frontend_dir}' not found.", CLR_YELLOW)
+                self.log_system(
+                    f"Warning: Frontend directory '{self.frontend_dir}' not found.",
+                    CLR_YELLOW,
+                )
         else:
-            self.log_system("[SKIP] Frontend UI disabled via --no-frontend flag (headless mode).", CLR_DIM)
+            self.log_system(
+                "[SKIP] Frontend UI disabled via --no-frontend flag (headless mode).",
+                CLR_DIM,
+            )
 
-        self.log_system("All requested QuantumAML Nexus services running. Press Ctrl+C to terminate.", CLR_BOLD + CLR_GREEN)
+        self.log_system(
+            "All requested QuantumAML Nexus services running. Press Ctrl+C to terminate.",
+            CLR_BOLD + CLR_GREEN,
+        )
 
         # Keep main thread alive waiting for shutdown signal
         try:
@@ -407,21 +459,29 @@ class Orchestrator:
         self.is_shutting_down = True
 
         print("\n", flush=True)
-        self.log_system("Intercepted shutdown signal (Ctrl+C). Initiating fail-safe teardown...", CLR_BOLD + CLR_YELLOW)
+        self.log_system(
+            "Intercepted shutdown signal (Ctrl+C). Initiating fail-safe teardown...",
+            CLR_BOLD + CLR_YELLOW,
+        )
 
         # Terminate processes in reverse dependency order
         service_order = ["frontend", "crypto", "banking", "backend"]
         for svc_id in service_order:
             svc = self.processes.get(svc_id)
             if svc and svc.proc:
-                self.log_system(f"Stopping {svc.name} (PID: {svc.proc.pid})...", CLR_DIM)
+                self.log_system(
+                    f"Stopping {svc.name} (PID: {svc.proc.pid})...", CLR_DIM
+                )
                 svc.terminate_tree()
 
         # Ensure ports are freed
         self.free_port(self.port)
         self.free_port(5173)
 
-        self.log_system("Clean process tree purge complete. Ports released. Teardown finished.", CLR_BOLD + CLR_GREEN)
+        self.log_system(
+            "Clean process tree purge complete. Ports released. Teardown finished.",
+            CLR_BOLD + CLR_GREEN,
+        )
         self.shutdown_event.set()
 
     def _print_banner(self):
@@ -431,14 +491,22 @@ class Orchestrator:
         frontend_status = "DISABLED" if self.no_frontend else "ACTIVE"
 
         print(f"\n{CLR_CYAN}{border}{CLR_RESET}")
-        print(f"{CLR_BOLD}{CLR_WHITE}{'QUANTUMAML NEXUS - MULTI-PROCESS ORCHESTRATION RUNNER':^{width}}{CLR_RESET}")
+        print(
+            f"{CLR_BOLD}{CLR_WHITE}{'QUANTUMAML NEXUS - MULTI-PROCESS ORCHESTRATION RUNNER':^{width}}{CLR_RESET}"
+        )
         print(f"{CLR_CYAN}{border}{CLR_RESET}")
         print(f"  Python Binary:   {CLR_DIM}{self.python_bin}{CLR_RESET}")
         print(f"  Backend Port:    {CLR_CYAN}http://localhost:{self.port}{CLR_RESET}")
-        print(f"  WebSocket Hub:   {CLR_CYAN}ws://localhost:{self.port}/ws/live{CLR_RESET}")
-        print(f"  Frontend Status: {CLR_MAGENTA}{frontend_status}{CLR_RESET} ({self.frontend_dir})")
+        print(
+            f"  WebSocket Hub:   {CLR_CYAN}ws://localhost:{self.port}/ws/live{CLR_RESET}"
+        )
+        print(
+            f"  Frontend Status: {CLR_MAGENTA}{frontend_status}{CLR_RESET} ({self.frontend_dir})"
+        )
         print(f"  Crypto Feed:     {CLR_YELLOW}{crypto_status}{CLR_RESET}")
-        print(f"  Streamer Speed:  {CLR_GREEN}{self.streamer_interval}s interval{CLR_RESET}")
+        print(
+            f"  Streamer Speed:  {CLR_GREEN}{self.streamer_interval}s interval{CLR_RESET}"
+        )
         print(f"{CLR_CYAN}{'-' * width}{CLR_RESET}\n")
 
 

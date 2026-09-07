@@ -1,21 +1,22 @@
 from datetime import datetime, timezone
+
 import pytest
 from pydantic import ValidationError
 
 from app.schemas.sar import (
-    ReportingEntityType,
-    PaymentRail,
-    RiskTier,
     CaseStatus,
-    SuspicionTypology,
-    ReportingEntityInfo,
-    SuspectEntityProfile,
-    TransactionAuditRecord,
-    MLTelemetry,
     GroundsOfSuspicion,
-    SARCreateRequest,
+    MLTelemetry,
+    PaymentRail,
+    ReportingEntityInfo,
+    ReportingEntityType,
+    RiskTier,
     SARCaseRecord,
+    SARCreateRequest,
     SARListResponse,
+    SuspectEntityProfile,
+    SuspicionTypology,
+    TransactionAuditRecord,
     calculate_fiu_deadline,
     generate_sar_id,
 )
@@ -24,7 +25,10 @@ from app.schemas.sar import (
 def test_enumerations():
     assert ReportingEntityType.SCHEDULED_COMMERCIAL_BANK == "SCHEDULED_COMMERCIAL_BANK"
     assert ReportingEntityType.PAYMENT_AGGREGATOR == "PAYMENT_AGGREGATOR"
-    assert ReportingEntityType.VIRTUAL_DIGITAL_ASSET_SERVICE_PROVIDER == "VIRTUAL_DIGITAL_ASSET_SERVICE_PROVIDER"
+    assert (
+        ReportingEntityType.VIRTUAL_DIGITAL_ASSET_SERVICE_PROVIDER
+        == "VIRTUAL_DIGITAL_ASSET_SERVICE_PROVIDER"
+    )
 
     assert PaymentRail.UPI == "UPI"
     assert PaymentRail.IMPS == "IMPS"
@@ -181,7 +185,9 @@ def test_sar_create_request():
 
     # Must contain at least one transaction ID
     with pytest.raises(ValidationError):
-        SARCreateRequest(transaction_ids=[], primary_typology=SuspicionTypology.IN_TYP_STRUCT)
+        SARCreateRequest(
+            transaction_ids=[], primary_typology=SuspicionTypology.IN_TYP_STRUCT
+        )
 
 
 def test_sar_case_record_auto_exposure_calculation():

@@ -1,10 +1,11 @@
-import os
-import sys
-import time
 import json
 import logging
+import os
+import sys
 import threading
+import time
 from concurrent.futures import ThreadPoolExecutor
+
 import numpy as np
 
 # Ensure project root is in sys.path
@@ -12,12 +13,15 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 import redis
 from fakeredis import TcpFakeServer
-from tests.test_api_live import TestClient
+
 from app.config import settings
 from app.main import app, engine
-from app.worker import celery_app, dispatch_investigator_alert
+from app.worker import celery_app
+from tests.test_api_live import TestClient
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+)
 logger = logging.getLogger("RuntimeAudit")
 
 
@@ -60,10 +64,7 @@ def run_audit():
 
     def run_worker():
         worker = celery_app.Worker(
-            concurrency=1,
-            pool="solo",
-            loglevel="INFO",
-            perform_ping_check=False
+            concurrency=1, pool="solo", loglevel="INFO", perform_ping_check=False
         )
         worker_ready.set()
         worker.start()
@@ -90,7 +91,7 @@ def run_audit():
         "account_to": "SANCTIONED_DEST_ACC",
         "amount": 999999.99,
         "currency": "US Dollar",
-        "payment_format": "Wire"
+        "payment_format": "Wire",
     }
 
     t0 = time.perf_counter()
@@ -99,8 +100,12 @@ def run_audit():
 
     assert resp_anomaly.status_code == 200, f"Error: {resp_anomaly.text}"
     anomaly_data = resp_anomaly.json()
-    print(f"  [OK] Anomaly Score Request HTTP {resp_anomaly.status_code} in {http_latency_ms:.2f}ms")
-    print(f"       Entity: {anomaly_data['entity_id']} | Risk Score: {anomaly_data['risk_score']} | Tier: {anomaly_data['risk_tier']} | Is Anomaly: {anomaly_data['is_anomaly']}")
+    print(
+        f"  [OK] Anomaly Score Request HTTP {resp_anomaly.status_code} in {http_latency_ms:.2f}ms"
+    )
+    print(
+        f"       Entity: {anomaly_data['entity_id']} | Risk Score: {anomaly_data['risk_score']} | Tier: {anomaly_data['risk_tier']} | Is Anomaly: {anomaly_data['is_anomaly']}"
+    )
 
     # Await async Celery task processing
     time.sleep(1.0)
@@ -115,7 +120,7 @@ def run_audit():
         "account_to": "ACC_RECV_99",
         "amount": 15.50,
         "currency": "US Dollar",
-        "payment_format": "Credit Card"
+        "payment_format": "Credit Card",
     }
 
     t0_benign = time.perf_counter()
@@ -124,13 +129,19 @@ def run_audit():
 
     assert resp_benign.status_code == 200
     benign_data = resp_benign.json()
-    print(f"  [OK] Benign Score Request HTTP {resp_benign.status_code} in {benign_latency_ms:.2f}ms")
-    print(f"       Entity: {benign_data['entity_id']} | Risk Score: {benign_data['risk_score']} | Tier: {benign_data['risk_tier']} | Is Anomaly: {benign_data['is_anomaly']}")
+    print(
+        f"  [OK] Benign Score Request HTTP {resp_benign.status_code} in {benign_latency_ms:.2f}ms"
+    )
+    print(
+        f"       Entity: {benign_data['entity_id']} | Risk Score: {benign_data['risk_score']} | Tier: {benign_data['risk_tier']} | Is Anomaly: {benign_data['is_anomaly']}"
+    )
 
     # --------------------------------------------------------------------------
     # 4. Non-Blocking Concurrency & SLA Audit (Burst of 20 requests)
     # --------------------------------------------------------------------------
-    print("\n[STEP 4/5] Executing Non-Blocking Concurrency & SLA Burst (20 requests)...")
+    print(
+        "\n[STEP 4/5] Executing Non-Blocking Concurrency & SLA Burst (20 requests)..."
+    )
     latencies = []
 
     def send_req(i):
@@ -142,7 +153,7 @@ def run_audit():
             "account_to": f"ACC_DEST_{i}",
             "amount": 50000.0 + (i * 1000.0),
             "currency": "US Dollar",
-            "payment_format": "Wire"
+            "payment_format": "Wire",
         }
         t_req = time.perf_counter()
         res = client.post("/api/v1/score/transaction", json=req_payload)
@@ -164,9 +175,13 @@ def run_audit():
     p99_lat = np.percentile(latencies, 99)
     mean_lat = np.mean(latencies)
 
-    print(f"  [OK] 20/20 Concurrent Requests Succeeded (100% 200 OK)")
-    print(f"       Mean HTTP Latency: {mean_lat:.2f}ms | P95: {p95_lat:.2f}ms | P99: {p99_lat:.2f}ms")
-    print(f"       Total Queue Drain Latency for 20 Alerts: {total_drain_latency:.2f}ms")
+    print("  [OK] 20/20 Concurrent Requests Succeeded (100% 200 OK)")
+    print(
+        f"       Mean HTTP Latency: {mean_lat:.2f}ms | P95: {p95_lat:.2f}ms | P99: {p99_lat:.2f}ms"
+    )
+    print(
+        f"       Total Queue Drain Latency for 20 Alerts: {total_drain_latency:.2f}ms"
+    )
     assert p95_lat < 50.0, f"SLA Breach: P95 {p95_lat:.2f}ms > 50ms"
 
     # --------------------------------------------------------------------------
@@ -183,7 +198,7 @@ def run_audit():
         "p95_latency_ms": round(float(p95_lat), 2),
         "p99_latency_ms": round(float(p99_lat), 2),
         "queue_drain_latency_ms": round(float(total_drain_latency), 2),
-        "ready_for_containerization": True
+        "ready_for_containerization": True,
     }
 
     with open("runtime_audit_results.json", "w") as f:

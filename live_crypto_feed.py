@@ -6,16 +6,15 @@ extracts graph and financial primitives, synthesizes 166-D Elliptic feature tens
 and transmits them to the QuantumAML FastAPI serving layer.
 """
 
+import argparse
+import asyncio
+import json
+import logging
+import math
 import sys
 import time
-import json
-import math
-import random
-import asyncio
-import logging
-import argparse
 from datetime import datetime, timezone
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Any
 
 try:
     import websockets
@@ -85,11 +84,11 @@ class EllipticTensorBuilder:
         out_count: int,
         btc_value: float,
         fee_btc: float,
-        output_values: List[float],
+        output_values: list[float],
         size_bytes: int,
         timestep: int = 49,
-    ) -> List[float]:
-        features: List[float] = [float(timestep)]
+    ) -> list[float]:
+        features: list[float] = [float(timestep)]
 
         # --- Local Features (Indices 1 to 93) ---
         log_val = math.log1p(max(0.0, btc_value))
@@ -115,21 +114,21 @@ class EllipticTensorBuilder:
 
         # Core local vector (first ~30 primitives)
         local_primitives = [
-            math.tanh(log_val - 1.5),                 # 1: Normalized log value
-            math.tanh(log_fee * 10.0 - 1.0),          # 2: Normalized fee
-            math.tanh(fee_ratio * 100.0 - 0.5),       # 3: Fee-to-value ratio
-            (in_count - 2.0) / 4.0,                   # 4: In-degree proxy
-            (out_count - 2.0) / 4.0,                  # 5: Out-degree proxy
-            math.tanh(degree_ratio - 1.0),            # 6: Degree consolidation ratio
-            math.tanh(mean_out - 1.0),                # 7: Mean output value
-            math.tanh(std_out - 0.5),                 # 8: Output value dispersion
-            math.tanh(min_out),                       # 9: Min output value
-            math.tanh(max_out - 2.0),                 # 10: Max output value
-            (byte_per_tx - 150.0) / 100.0,            # 11: Transaction density
-            1.0 if in_count > 5 else -0.5,            # 12: High fan-in indicator
-            1.0 if out_count > 5 else -0.5,           # 13: High fan-out indicator
-            math.sin(btc_value * 2.0 * math.pi),      # 14: Harmonic value proxy
-            math.cos(btc_value * 2.0 * math.pi),      # 15: Cyclical harmonic
+            math.tanh(log_val - 1.5),  # 1: Normalized log value
+            math.tanh(log_fee * 10.0 - 1.0),  # 2: Normalized fee
+            math.tanh(fee_ratio * 100.0 - 0.5),  # 3: Fee-to-value ratio
+            (in_count - 2.0) / 4.0,  # 4: In-degree proxy
+            (out_count - 2.0) / 4.0,  # 5: Out-degree proxy
+            math.tanh(degree_ratio - 1.0),  # 6: Degree consolidation ratio
+            math.tanh(mean_out - 1.0),  # 7: Mean output value
+            math.tanh(std_out - 0.5),  # 8: Output value dispersion
+            math.tanh(min_out),  # 9: Min output value
+            math.tanh(max_out - 2.0),  # 10: Max output value
+            (byte_per_tx - 150.0) / 100.0,  # 11: Transaction density
+            1.0 if in_count > 5 else -0.5,  # 12: High fan-in indicator
+            1.0 if out_count > 5 else -0.5,  # 13: High fan-out indicator
+            math.sin(btc_value * 2.0 * math.pi),  # 14: Harmonic value proxy
+            math.cos(btc_value * 2.0 * math.pi),  # 15: Cyclical harmonic
         ]
 
         # Expand remaining local slots (up to index 93) with deterministic orthogonal scalings
@@ -184,7 +183,7 @@ class BitcoinTxParser:
     """Parses raw JSON packets from live Bitcoin WebSocket feeds."""
 
     @staticmethod
-    def parse_blockchain_info(msg: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def parse_blockchain_info(msg: dict[str, Any]) -> dict[str, Any] | None:
         """Parses wss://ws.blockchain.info/inv unconfirmed transaction objects."""
         if msg.get("op") != "utx":
             return None
@@ -207,7 +206,9 @@ class BitcoinTxParser:
         input_sats = sum(
             v.get("prev_out", {}).get("value", 0)
             for v in vin
-            if isinstance(v, dict) and "prev_out" in v and isinstance(v["prev_out"], dict)
+            if isinstance(v, dict)
+            and "prev_out" in v
+            and isinstance(v["prev_out"], dict)
         )
 
         # Convert Satoshis to BTC
@@ -220,7 +221,9 @@ class BitcoinTxParser:
             fee_sats = tx.get("size", 250) * 15
 
         fee_btc = fee_sats / 1e8
-        output_values_btc = [v.get("value", 0) / 1e8 for v in vout if isinstance(v, dict)]
+        output_values_btc = [
+            v.get("value", 0) / 1e8 for v in vout if isinstance(v, dict)
+        ]
 
         # Extract addresses
         from_address = "bc1q_unresolved_utxo"
@@ -268,7 +271,7 @@ class BitcoinTxParser:
         }
 
     @staticmethod
-    def parse_mempool_space(msg: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def parse_mempool_space(msg: dict[str, Any]) -> dict[str, Any] | None:
         """Parses wss://mempool.space/api/v1/ws transaction structures."""
         tx = msg.get("tx") or msg.get("transaction")
         if not tx and isinstance(msg, dict) and "txid" in msg:
@@ -328,11 +331,13 @@ class BackendDispatcher:
 
     def __init__(self, backend_url: str):
         self.backend_url = backend_url
-        self._client: Optional[Any] = None
+        self._client: Any | None = None
         if httpx is not None:
             self._client = httpx.AsyncClient(timeout=8.0)
 
-    async def dispatch(self, payload: Dict[str, Any]) -> Tuple[bool, Optional[Dict[str, Any]], str]:
+    async def dispatch(
+        self, payload: dict[str, Any]
+    ) -> tuple[bool, dict[str, Any] | None, str]:
         if self._client is not None:
             try:
                 resp = await self._client.post(self.backend_url, json=payload)
@@ -367,7 +372,7 @@ def format_crypto_log(
     btc_value: float,
     in_count: int,
     out_count: int,
-    resp: Optional[Dict[str, Any]],
+    resp: dict[str, Any] | None,
     err: str,
 ) -> str:
     """
@@ -418,12 +423,16 @@ async def run_live_crypto_feed(
     throttles event evaluation to match requested rate limit, and dispatches to FastAPI.
     """
     print("=" * 105)
-    print(f"{BOLD}{MAGENTA} QuantumAML Nexus - Live Bitcoin Mempool Ingestion Engine {RESET}")
+    print(
+        f"{BOLD}{MAGENTA} QuantumAML Nexus - Live Bitcoin Mempool Ingestion Engine {RESET}"
+    )
     print(f" Backend Endpoint : {BOLD}{backend_url}{RESET}")
     print(f" Rate Limiting    : {rate_limit:.1f} tx/sec max")
     print(f" Primary Source   : {PRIMARY_WS_URL} (blockchain.info inv stream)")
     print(f" Fallback Source  : {FALLBACK_WS_URL} (mempool.space stream)")
-    print(f" Total Target     : {'Continuous Infinite Stream (Ctrl+C to stop)' if max_count <= 0 else max_count}")
+    print(
+        f" Total Target     : {'Continuous Infinite Stream (Ctrl+C to stop)' if max_count <= 0 else max_count}"
+    )
     print("=" * 105)
 
     dispatcher = BackendDispatcher(backend_url)
@@ -434,26 +443,36 @@ async def run_live_crypto_feed(
     consecutive_ws_errors = 0
 
     endpoints_to_try = [
-        (PRIMARY_WS_URL, {"op": "unconfirmed_sub"}, BitcoinTxParser.parse_blockchain_info),
+        (
+            PRIMARY_WS_URL,
+            {"op": "unconfirmed_sub"},
+            BitcoinTxParser.parse_blockchain_info,
+        ),
         (FALLBACK_WS_URL, {"action": "init"}, BitcoinTxParser.parse_mempool_space),
     ]
 
     try:
         while True:
             if max_count > 0 and processed_count >= max_count:
-                print(f"\n{GREEN}Completed ingestion target of {max_count} transactions. Exiting.{RESET}")
+                print(
+                    f"\n{GREEN}Completed ingestion target of {max_count} transactions. Exiting.{RESET}"
+                )
                 break
 
             for ws_url, subscribe_payload, parser_fn in endpoints_to_try:
                 try:
-                    logger.info("Connecting to live Bitcoin WebSocket stream at %s...", ws_url)
+                    logger.info(
+                        "Connecting to live Bitcoin WebSocket stream at %s...", ws_url
+                    )
                     async with websockets.connect(
                         ws_url,
                         open_timeout=10.0,
                         ping_interval=20,
                         ping_timeout=20,
                     ) as ws:
-                        logger.info("Connected successfully! Subscribing to mempool unconfirmed feed...")
+                        logger.info(
+                            "Connected successfully! Subscribing to mempool unconfirmed feed..."
+                        )
                         await ws.send(json.dumps(subscribe_payload))
                         consecutive_ws_errors = 0
 
@@ -512,7 +531,9 @@ async def run_live_crypto_feed(
         print(f"\n{YELLOW}Crypto ingestion interrupted by user (Ctrl+C).{RESET}")
     finally:
         await dispatcher.close()
-        print(f"\nSession finished. Processed {processed_count} live Bitcoin transactions.")
+        print(
+            f"\nSession finished. Processed {processed_count} live Bitcoin transactions."
+        )
 
 
 # ------------------------------------------------------------------------------

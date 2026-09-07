@@ -12,18 +12,16 @@ Validates all endpoints and edge cases of the SAR router (/api/v1/sar):
 - Zero state bleed between test runs via autouse cleanup fixtures.
 """
 
-from datetime import datetime, timezone
+from datetime import datetime
+
+import httpx
 import pytest
 import pytest_asyncio
-import httpx
 from httpx import ASGITransport
 
 from app.main import app
 from app.schemas.sar import (
-    CaseStatus,
-    ReportingEntityInfo,
     SuspicionTypology,
-    calculate_fiu_deadline,
 )
 from app.services.sar_service import sar_service
 
@@ -104,12 +102,18 @@ async def test_manual_sar_generation(async_client, sample_sar_payload):
     """Verifies that POST /api/v1/sar/generate creates a valid compliant SARCaseRecord."""
     response = await async_client.post("/api/v1/sar/generate", json=sample_sar_payload)
 
-    assert response.status_code == 201, f"Expected 201 Created, got {response.status_code}: {response.text}"
+    assert response.status_code == 201, (
+        f"Expected 201 Created, got {response.status_code}: {response.text}"
+    )
     data = response.json()
 
     # Schema adherence assertions
-    assert data["sar_id"].startswith("SAR-IND-"), f"Invalid SAR ID format: {data.get('sar_id')}"
-    assert data["status"] == "PENDING_REVIEW", f"Expected PENDING_REVIEW, got {data.get('status')}"
+    assert data["sar_id"].startswith("SAR-IND-"), (
+        f"Invalid SAR ID format: {data.get('sar_id')}"
+    )
+    assert data["status"] == "PENDING_REVIEW", (
+        f"Expected PENDING_REVIEW, got {data.get('status')}"
+    )
     assert data["suspect"]["entity_identifier"] == "mule.smurf99@okhdfcbank"
     assert data["assigned_analyst"] == "INV-PMLA-42"
 
@@ -117,7 +121,9 @@ async def test_manual_sar_generation(async_client, sample_sar_payload):
     deadline_dt = datetime.fromisoformat(data["fiu_deadline"])
     created_dt = datetime.fromisoformat(data["created_at"])
     diff_days = (deadline_dt - created_dt).days
-    assert 6 <= diff_days <= 12, f"Statutory deadline should be roughly 7-11 calendar days out, got {diff_days}"
+    assert 6 <= diff_days <= 12, (
+        f"Statutory deadline should be roughly 7-11 calendar days out, got {diff_days}"
+    )
 
 
 # ------------------------------------------------------------------------------
@@ -128,7 +134,9 @@ async def test_validation_handling_on_generation(async_client):
     """Verifies that invalid payloads are rejected with 422 Unprocessable Entity."""
     # Empty body
     res_empty = await async_client.post("/api/v1/sar/generate", json={})
-    assert res_empty.status_code == 422, f"Expected 422 for empty payload, got {res_empty.status_code}"
+    assert res_empty.status_code == 422, (
+        f"Expected 422 for empty payload, got {res_empty.status_code}"
+    )
 
     # Invalid typology string
     res_bad_typo = await async_client.post(
@@ -138,7 +146,9 @@ async def test_validation_handling_on_generation(async_client):
             "primary_typology": "INVALID_TYPOLOGY_CODE",
         },
     )
-    assert res_bad_typo.status_code == 422, f"Expected 422 for invalid typology, got {res_bad_typo.status_code}"
+    assert res_bad_typo.status_code == 422, (
+        f"Expected 422 for invalid typology, got {res_bad_typo.status_code}"
+    )
 
 
 # ------------------------------------------------------------------------------
@@ -148,15 +158,35 @@ async def test_validation_handling_on_generation(async_client):
 async def test_list_and_filter_sars(async_client):
     """Verifies list pagination, typology filtering, and keyword search."""
     # Seed 3 distinct cases: two IN_TYP_STRUCT, one IN_TYP_HAWALA
-    id1 = await seed_sar_case("UTR-STRUCT-01", "mule_alpha@oksbi", SuspicionTypology.IN_TYP_STRUCT, 48000.0, "Alpha Traders")
-    id2 = await seed_sar_case("UTR-STRUCT-02", "mule_beta@oksbi", SuspicionTypology.IN_TYP_STRUCT, 49000.0, "Beta Enterprises")
-    id3 = await seed_sar_case("UTR-HAWALA-01", "hawala_corp@swift", SuspicionTypology.IN_TYP_HAWALA, 2500000.0, "Golden Bullion Global")
+    id1 = await seed_sar_case(
+        "UTR-STRUCT-01",
+        "mule_alpha@oksbi",
+        SuspicionTypology.IN_TYP_STRUCT,
+        48000.0,
+        "Alpha Traders",
+    )
+    id2 = await seed_sar_case(
+        "UTR-STRUCT-02",
+        "mule_beta@oksbi",
+        SuspicionTypology.IN_TYP_STRUCT,
+        49000.0,
+        "Beta Enterprises",
+    )
+    id3 = await seed_sar_case(
+        "UTR-HAWALA-01",
+        "hawala_corp@swift",
+        SuspicionTypology.IN_TYP_HAWALA,
+        2500000.0,
+        "Golden Bullion Global",
+    )
 
     # 1. Default listing
     resp_all = await async_client.get("/api/v1/sar/list")
     assert resp_all.status_code == 200
     all_data = resp_all.json()
-    assert all_data["total_count"] == 3, f"Expected 3 cases, got {all_data['total_count']}"
+    assert all_data["total_count"] == 3, (
+        f"Expected 3 cases, got {all_data['total_count']}"
+    )
     assert all_data["page"] == 1
     assert all_data["page_size"] == 20
     assert len(all_data["items"]) == 3
@@ -165,7 +195,9 @@ async def test_list_and_filter_sars(async_client):
     resp_hawala = await async_client.get("/api/v1/sar/list?typology=IN_TYP_HAWALA")
     assert resp_hawala.status_code == 200
     hawala_data = resp_hawala.json()
-    assert hawala_data["total_count"] == 1, f"Expected 1 Hawala case, got {hawala_data['total_count']}"
+    assert hawala_data["total_count"] == 1, (
+        f"Expected 1 Hawala case, got {hawala_data['total_count']}"
+    )
     assert hawala_data["items"][0]["sar_id"] == id3
 
     # 3. Search filter by partial entity name
@@ -188,7 +220,9 @@ async def test_list_and_filter_sars(async_client):
 @pytest.mark.asyncio
 async def test_retrieve_sar_by_id(async_client):
     """Verifies fetching an existing SAR returns 200, and non-existent returns 404."""
-    sar_id = await seed_sar_case("UTR-FETCH-01", "target_account@paytm", SuspicionTypology.IN_TYP_STRUCT, 49500.0)
+    sar_id = await seed_sar_case(
+        "UTR-FETCH-01", "target_account@paytm", SuspicionTypology.IN_TYP_STRUCT, 49500.0
+    )
 
     # 1. Existing ID -> 200 OK
     resp_ok = await async_client.get(f"/api/v1/sar/{sar_id}")
@@ -211,7 +245,9 @@ async def test_retrieve_sar_by_id(async_client):
 async def test_status_transitions_and_eviction(async_client):
     """Verifies status transitions to FILED_WITH_FIU and active ring index eviction."""
     suspect_entity = "active_ring_suspect@oksbi"
-    sar_id = await seed_sar_case("UTR-RING-01", suspect_entity, SuspicionTypology.IN_TYP_STRUCT, 48000.0)
+    sar_id = await seed_sar_case(
+        "UTR-RING-01", suspect_entity, SuspicionTypology.IN_TYP_STRUCT, 48000.0
+    )
 
     # Confirm suspect is registered in active ring index
     assert suspect_entity in sar_service._active_ring_index
@@ -222,25 +258,35 @@ async def test_status_transitions_and_eviction(async_client):
         "analyst_id": "ANALYST-42",
         "resolution_notes": "Filed electronic STR report to FIU-IND FINnet gateway.",
     }
-    patch_resp = await async_client.patch(f"/api/v1/sar/{sar_id}/status", json=patch_payload)
+    patch_resp = await async_client.patch(
+        f"/api/v1/sar/{sar_id}/status", json=patch_payload
+    )
     assert patch_resp.status_code == 200, f"Expected 200, got {patch_resp.status_code}"
     data = patch_resp.json()
     assert data["status"] == "FILED_WITH_FIU"
     assert data["assigned_analyst"] == "ANALYST-42"
 
     # 2. Verify that the suspect was evicted from _active_ring_index
-    assert suspect_entity not in sar_service._active_ring_index, "Closed case suspect must be evicted from active ring index"
+    assert suspect_entity not in sar_service._active_ring_index, (
+        "Closed case suspect must be evicted from active ring index"
+    )
 
     # 3. Subsequent transaction from the same suspect must create a NEW case instead of aggregating
-    new_sar_id = await seed_sar_case("UTR-RING-02", suspect_entity, SuspicionTypology.IN_TYP_STRUCT, 47000.0)
-    assert new_sar_id != sar_id, f"Expected fresh SAR ID after eviction, got duplicate {new_sar_id}"
+    new_sar_id = await seed_sar_case(
+        "UTR-RING-02", suspect_entity, SuspicionTypology.IN_TYP_STRUCT, 47000.0
+    )
+    assert new_sar_id != sar_id, (
+        f"Expected fresh SAR ID after eviction, got duplicate {new_sar_id}"
+    )
 
     # 4. Attempt to update non-existent SAR ID -> 404 Not Found
     resp_404 = await async_client.patch(
         "/api/v1/sar/SAR-IND-00000000-000000/status",
         json={"new_status": "DISMISSED", "analyst_id": "ANALYST-42"},
     )
-    assert resp_404.status_code == 404, f"Expected 404 for missing SAR ID, got {resp_404.status_code}"
+    assert resp_404.status_code == 404, (
+        f"Expected 404 for missing SAR ID, got {resp_404.status_code}"
+    )
 
 
 # ------------------------------------------------------------------------------
@@ -249,16 +295,22 @@ async def test_status_transitions_and_eviction(async_client):
 @pytest.mark.asyncio
 async def test_json_export_endpoint(async_client):
     """Verifies FINnet 2.0 JSON export with proper headers and hierarchy."""
-    sar_id = await seed_sar_case("UTR-EXP-JSON", "export_target@upi", SuspicionTypology.IN_TYP_STRUCT, 48900.0)
+    sar_id = await seed_sar_case(
+        "UTR-EXP-JSON", "export_target@upi", SuspicionTypology.IN_TYP_STRUCT, 48900.0
+    )
 
     resp = await async_client.get(f"/api/v1/sar/{sar_id}/export?format=json")
     assert resp.status_code == 200, f"Expected 200, got {resp.status_code}"
 
     # Headers
     content_type = resp.headers.get("content-type", "")
-    assert "application/json" in content_type, f"Expected application/json, got {content_type}"
+    assert "application/json" in content_type, (
+        f"Expected application/json, got {content_type}"
+    )
     content_disp = resp.headers.get("content-disposition", "")
-    assert f'attachment; filename="{sar_id}_FINNET2.json"' in content_disp, f"Missing attachment header: {content_disp}"
+    assert f'attachment; filename="{sar_id}_FINNET2.json"' in content_disp, (
+        f"Missing attachment header: {content_disp}"
+    )
 
     # JSON structure verification
     data = resp.json()
@@ -277,20 +329,28 @@ async def test_json_export_endpoint(async_client):
 @pytest.mark.asyncio
 async def test_pdf_export_endpoint(async_client):
     """Verifies streaming forensic PDF dossier export with standard PDF headers and magic bytes."""
-    sar_id = await seed_sar_case("UTR-EXP-PDF", "export_pdf_target@upi", SuspicionTypology.IN_TYP_STRUCT, 49200.0)
+    sar_id = await seed_sar_case(
+        "UTR-EXP-PDF", "export_pdf_target@upi", SuspicionTypology.IN_TYP_STRUCT, 49200.0
+    )
 
     resp = await async_client.get(f"/api/v1/sar/{sar_id}/export?format=pdf")
     assert resp.status_code == 200, f"Expected 200, got {resp.status_code}"
 
     # Headers
     content_type = resp.headers.get("content-type", "")
-    assert "application/pdf" in content_type, f"Expected application/pdf, got {content_type}"
+    assert "application/pdf" in content_type, (
+        f"Expected application/pdf, got {content_type}"
+    )
     content_disp = resp.headers.get("content-disposition", "")
-    assert f'attachment; filename="{sar_id}.pdf"' in content_disp, f"Missing attachment header: {content_disp}"
+    assert f'attachment; filename="{sar_id}.pdf"' in content_disp, (
+        f"Missing attachment header: {content_disp}"
+    )
 
     # PDF Binary signature
     assert len(resp.content) > 1000, "PDF content must be non-empty"
-    assert resp.content.startswith(b"%PDF-"), "Response content must start with PDF magic bytes %PDF-"
+    assert resp.content.startswith(b"%PDF-"), (
+        "Response content must start with PDF magic bytes %PDF-"
+    )
 
 
 # ------------------------------------------------------------------------------
@@ -302,4 +362,6 @@ async def test_invalid_export_format(async_client):
     sar_id = await seed_sar_case("UTR-EXP-ERR", "export_err@upi")
 
     resp = await async_client.get(f"/api/v1/sar/{sar_id}/export?format=docx")
-    assert resp.status_code == 422, f"Expected 422 Unprocessable Entity for format=docx, got {resp.status_code}"
+    assert resp.status_code == 422, (
+        f"Expected 422 Unprocessable Entity for format=docx, got {resp.status_code}"
+    )
