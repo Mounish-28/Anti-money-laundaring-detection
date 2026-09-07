@@ -1,0 +1,12 @@
+{
+    "Dataset": "SAML-D",
+    "Architecture": "Regularized XGBoost (False-Alarm Pruned)",
+    "Best_Threshold": 0.7820000000000007,
+    "Test_Accuracy": 0.99979799793509,
+    "Precision": 0.9958437240232751,
+    "Recall": 0.8089128966914247,
+    "F1_Score": 0.8926974664679582,
+    "PR_AUC": 0.8679898227611618,
+    "ROC_AUC": 0.9947368957072317,
+    "Target_Met": "YES"
+}

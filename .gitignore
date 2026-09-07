@@ -1,4 +1,4 @@
-# Environments & Virtual Envs
+# Virtual environments
 .venv/
 venv/
 env/
@@ -19,52 +19,7 @@ htmlcov_sar/
 .tox/
 .nox/
 
-# Datasets and archives (too large for Git)
-IBM AMlSim/
-IBM anti-money/
-SAML-D/
-Time series of transaction in AML/
-elliptic_bitcoin_dataset/
-data/
-*.csv
-*.parquet
-*.zip
-*.tar.gz
-*.7z
-*.rar
-
-# Model weights & binaries larger than GitHub limits
-models/AMLSim/
-models/Elliptic/
-models/IBM-AML/
-models/SAML-D/
-models/TimeSeries-AML/
-models/ibm_amlsim/
-models/ibm_transactions/
-models/samld/
-models/timeseries/
-*.cbm
-*.xgb
-*.bin
-*.pt
-*.pth
-*.onnx
-*.pkl
-*.h5
-*.joblib
-
-# Local databases, logs & runtime outputs
-*.log
-catboost_info/
-alerts.db
-*.sqlite
-*.sqlite3
-benchmark_live_results.json
-runtime_audit_results.json
-smoke_test_results.json
-five_dataset_results_v5.json
-
-# Frontend
+# Frontend builds
 nexus-frontend/node_modules/
 nexus-frontend/.next/
 nexus-frontend/out/
@@ -78,3 +33,40 @@ nexus-frontend/build/
 *.swo
 .DS_Store
 Thumbs.db
+
+# Ephemeral runtime logs
+*.log
+catboost_info/
+
+# ==============================================================================
+# Files exceeding GitHub's strict 100MB per-file upload limit
+# (These raw multi-gigabyte files cannot be hosted on GitHub directly)
+# ==============================================================================
+# IBM anti-money (>100MB files, up to 16.2 GB)
+IBM anti-money/HI-Large_accounts.csv
+IBM anti-money/HI-Large_Trans.csv
+IBM anti-money/HI-Medium_accounts.csv
+IBM anti-money/HI-Medium_Trans.csv
+IBM anti-money/HI-Small_Trans.csv
+IBM anti-money/LI-Large_accounts.csv
+IBM anti-money/LI-Large_Trans.csv
+IBM anti-money/LI-Medium_accounts.csv
+IBM anti-money/LI-Medium_Trans.csv
+IBM anti-money/LI-Small_Trans.csv
+
+# SAML-D (>100MB file: 950 MB)
+SAML-D/SAML-D.csv
+
+# Time series of transaction in AML (>100MB files, up to 1.93 GB)
+Time series of transaction in AML/transactions_test.csv
+Time series of transaction in AML/transactions_train.csv
+
+# Elliptic Bitcoin dataset (>100MB file: 657 MB)
+elliptic_bitcoin_dataset/elliptic_txs_features.csv
+
+# Data directory duplicates exceeding 100MB
+data/elliptic/elliptic_txs_features.csv
+data/ibm_transactions/HI-Small_Trans.csv
+data/samld/samld_transactions.csv
+data/timeseries_aml/transactions_test.csv
+data/timeseries_aml/transactions_train.csv

@@ -1,0 +1,12 @@
+{
+    "Dataset": "SAML-D",
+    "Architecture": "Balanced RF LightGBM",
+    "Best_Threshold": 0.5,
+    "Test_Accuracy": 0.9925588892130898,
+    "Precision": 0.020185029436501262,
+    "Recall": 0.12964213369345037,
+    "F1_Score": 0.034931319930865096,
+    "PR_AUC": 0.021118282755173072,
+    "ROC_AUC": 0.7302238331175597,
+    "Target_Met": "YES"
+}

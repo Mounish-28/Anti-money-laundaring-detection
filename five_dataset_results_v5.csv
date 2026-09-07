@@ -1,0 +1,6 @@
+Dataset,Architecture,Best_Threshold,Test_Accuracy,Precision,Recall,F1_Score,PR_AUC,ROC_AUC,Target_Met
+IBM Transactions,CatBoost SymmetricTree + Balanced Class Weights,0.995647,0.999124,0.871200,0.834500,0.852400,0.814200,0.982471,YES
+SAML-D,Regularized XGBoost (False-Alarm Pruned),0.782000,0.999798,0.995844,0.808913,0.892697,0.867990,0.994737,YES
+Elliptic Bitcoin,Optimized Topological XGBoost (166-Feature Exact),0.570000,0.973905,0.847639,0.729455,0.784119,0.791449,0.918302,YES
+IBM AMLSim,GCN + Graph Metrics + LGBM,0.597000,0.997333,0.945455,0.981132,0.962963,0.944828,0.999048,YES
+Time-Series AML,Dual-Engine Ensemble (XGBoost + CatBoost Lossguide),0.658000,0.973267,0.970859,0.987045,0.978885,0.999147,0.998463,YES
