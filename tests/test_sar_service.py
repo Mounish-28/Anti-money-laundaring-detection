@@ -359,9 +359,11 @@ def test_list_sars_filtering_and_pagination():
                     "entity_name": f"Corporate Target {i}",
                 },
                 ml_result={"risk_score": 0.85 + i * 0.02, "latency_ms": 6.0},
-                typology=SuspicionTypology.IN_TYP_STRUCT
-                if i % 2 == 0
-                else SuspicionTypology.IN_TYP_HAWALA,
+                typology=(
+                    SuspicionTypology.IN_TYP_STRUCT
+                    if i % 2 == 0
+                    else SuspicionTypology.IN_TYP_HAWALA
+                ),
             )
 
         # 1. Total count & pagination
