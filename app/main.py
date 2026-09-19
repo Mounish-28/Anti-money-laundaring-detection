@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import socket
 import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -31,7 +32,7 @@ from app.schemas.sar import (
 )
 from app.services.inference_engine import UnifiedInferenceEngine
 from app.services.sar_service import sar_service
-from app.worker import dispatch_investigator_alert
+from app.worker import dispatch_investigator_alert, log_investigator_alert
 
 # Observability Configuration
 logger = logging.getLogger("QuantumAML-API")
@@ -107,16 +108,39 @@ def _record_metrics(
         aml_anomalies_detected_total.labels(dataset_model=dataset_model).inc()
 
 
+_redis_probe_cache = {"status": None, "expires_at": 0.0}
+
+
+def _is_redis_available() -> bool:
+    now = time.monotonic()
+    if _redis_probe_cache["status"] is not None and now < _redis_probe_cache["expires_at"]:
+        return _redis_probe_cache["status"]
+    try:
+        with socket.create_connection(("127.0.0.1", 6379), timeout=0.005):
+            _redis_probe_cache["status"] = True
+            _redis_probe_cache["expires_at"] = now + 300.0
+            return True
+    except Exception:
+        _redis_probe_cache["status"] = False
+        _redis_probe_cache["expires_at"] = now + 300.0
+        return False
+
+
+_is_redis_available()  # Pre-warm Redis probe cache at module load
+
+
 def queue_alert(res: dict):
     """Enqueues alert task to Celery broker with fallback to direct invocation."""
-    try:
-        dispatch_investigator_alert.delay(res)
-    except Exception as e:
-        logger.warning(
-            "Failed to queue alert via Celery broker (%s), falling back to local dispatch.",
-            e,
-        )
-        dispatch_investigator_alert(res)
+    if _is_redis_available():
+        try:
+            dispatch_investigator_alert.apply_async(args=[res], retry=False)
+            return
+        except Exception as e:
+            logger.warning(
+                "Failed to queue alert via Celery broker (%s), falling back to local dispatch.",
+                e,
+            )
+    log_investigator_alert(res)
 
 
 # ------------------------------------------------------------------------------
@@ -477,7 +501,7 @@ async def score_transaction(
 
 
 @app.post("/api/v1/score/timeseries", response_model=RiskEvaluationResponse)
-def score_timeseries(payload: TimeSeriesInput, background_tasks: BackgroundTasks):
+async def score_timeseries(payload: TimeSeriesInput, background_tasks: BackgroundTasks):
     try:
         t0 = time.perf_counter()
         res = engine.score_timeseries(payload.model_dump())
@@ -582,7 +606,7 @@ async def score_crypto(payload: EllipticNodeInput, background_tasks: BackgroundT
 
 
 @app.post("/api/v1/score/samld", response_model=RiskEvaluationResponse)
-def score_samld(payload: SAMLDInput, background_tasks: BackgroundTasks):
+async def score_samld(payload: SAMLDInput, background_tasks: BackgroundTasks):
     try:
         t0 = time.perf_counter()
         res = engine.score_samld(payload.model_dump())
@@ -598,7 +622,7 @@ def score_samld(payload: SAMLDInput, background_tasks: BackgroundTasks):
 
 
 @app.post("/api/v1/score/amlsim", response_model=RiskEvaluationResponse)
-def score_amlsim(payload: TransactionInput, background_tasks: BackgroundTasks):
+async def score_amlsim(payload: TransactionInput, background_tasks: BackgroundTasks):
     try:
         t0 = time.perf_counter()
         res = engine.score_amlsim(payload.model_dump())

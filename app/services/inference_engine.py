@@ -146,24 +146,58 @@ class UnifiedInferenceEngine:
                     "currency": "US Dollar",
                     "payment_format": "Credit Card",
                 }
-                self.score_ibm_transaction(dummy_ibm)
+                for _ in range(5):
+                    self.score_ibm_transaction(dummy_ibm)
+
             if "elliptic" in self.models:
-                n_feats = getattr(self.models["elliptic"], "n_features_in_", 166)
-                self.models["elliptic"].predict_proba(np.zeros((1, n_feats)))
-            if "timeseries_xgb" in self.models:
-                n_feats = getattr(self.models["timeseries_xgb"], "n_features_in_", 12)
-                self.models["timeseries_xgb"].predict_proba(np.zeros((1, n_feats)))
+                dummy_crypto = {"node_id": "warmup_btc", "features": [0.05] * 166}
+                for _ in range(5):
+                    self.score_crypto(dummy_crypto)
+
+            if "timeseries_xgb" in self.models and "timeseries_cb" in self.models:
+                dummy_ts = {
+                    "account_id": "warmup_ts",
+                    "amount": 350.0,
+                    "ema_1h": 320.0,
+                    "ema_24h": 300.0,
+                    "ema_7d": 280.0,
+                    "delta_t_seconds": 90.0,
+                    "burstiness_index": 0.45,
+                    "sin_hour": 0.5,
+                    "cos_hour": 0.866,
+                    "sin_dow": 0.433,
+                    "cos_dow": 0.901,
+                }
+                for _ in range(10):
+                    self.score_timeseries(dummy_ts)
+
             if "samld" in self.models:
-                n_feats = getattr(self.models["samld"], "n_features_in_", 5)
-                self.models["samld"].predict_proba(np.zeros((1, n_feats)))
-            if "amlsim_lgbm" in self.models:
-                n_feats = getattr(self.models["amlsim_lgbm"], "n_features_in_", 68)
-                self.models["amlsim_lgbm"].predict_proba(np.zeros((1, n_feats)))
-            if "amlsim_gcn" in self.models and torch is not None:
-                dummy_x = torch.zeros((1, 4), dtype=torch.float32, device=self.device)
-                dummy_edge = torch.zeros((2, 1), dtype=torch.long, device=self.device)
-                with torch.no_grad():
-                    self.models["amlsim_gcn"](dummy_x, dummy_edge)
+                dummy_samld = {
+                    "transaction_id": "warmup_samld",
+                    "sender_id": "S1",
+                    "receiver_id": "R1",
+                    "amount": 5000.0,
+                    "fan_in_count": 5,
+                    "fan_out_count": 2,
+                    "sender_velocity_24h": 10.0,
+                }
+                for _ in range(5):
+                    self.score_samld(dummy_samld)
+
+            if "amlsim_lgbm" in self.models or "amlsim_gcn" in self.models:
+                dummy_amlsim = {
+                    "transaction_id": "warmup_amlsim",
+                    "from_bank": "1",
+                    "to_bank": "2",
+                    "account_from": "ACC_A",
+                    "account_to": "ACC_B",
+                    "amount": 750.0,
+                    "currency": "US Dollar",
+                    "payment_format": "Cheque",
+                }
+                for _ in range(5):
+                    self.score_amlsim(dummy_amlsim)
+
         except Exception as e:
             logger.warning(f"Engine warmup completed with minor warnings: {e}")
 
@@ -292,56 +326,25 @@ class UnifiedInferenceEngine:
         r_short = ema_1h / (ema_24h + 1e-4)
         r_long = ema_24h / (ema_7d + 1e-4)
 
-        features = np.array(
-            [
-                [
-                    amount,
-                    ema_1h,
-                    ema_24h,
-                    ema_7d,
-                    r_short,
-                    r_long,
-                    float(data["delta_t_seconds"]),
-                    float(data["burstiness_index"]),
-                    float(data["sin_hour"]),
-                    float(data["cos_hour"]),
-                    float(data["sin_dow"]),
-                    float(data["cos_dow"]),
-                ]
-            ]
-        )
+        n_feats = getattr(self.models["timeseries_xgb"], "n_features_in_", 54)
+        padded = np.zeros((1, n_feats), dtype=np.float32)
+        padded[0, :12] = [
+            amount,
+            ema_1h,
+            ema_24h,
+            ema_7d,
+            r_short,
+            r_long,
+            float(data["delta_t_seconds"]),
+            float(data["burstiness_index"]),
+            float(data["sin_hour"]),
+            float(data["cos_hour"]),
+            float(data["sin_dow"]),
+            float(data["cos_dow"]),
+        ]
 
-        try:
-            p_xgb = float(self.models["timeseries_xgb"].predict_proba(features)[0][1])
-        except Exception:
-            if hasattr(self.models["timeseries_xgb"], "n_features_in_"):
-                n_feats = self.models["timeseries_xgb"].n_features_in_
-                if features.shape[1] < n_feats:
-                    padded = np.zeros((1, n_feats), dtype=np.float32)
-                    padded[:, : features.shape[1]] = features
-                    p_xgb = float(
-                        self.models["timeseries_xgb"].predict_proba(padded)[0][1]
-                    )
-                else:
-                    raise
-            else:
-                raise
-
-        try:
-            p_cb = float(self.models["timeseries_cb"].predict_proba(features)[0][1])
-        except Exception:
-            if hasattr(self.models["timeseries_cb"], "feature_names_"):
-                n_feats = len(self.models["timeseries_cb"].feature_names_)
-                if features.shape[1] < n_feats:
-                    padded = np.zeros((1, n_feats), dtype=np.float32)
-                    padded[:, : features.shape[1]] = features
-                    p_cb = float(
-                        self.models["timeseries_cb"].predict_proba(padded)[0][1]
-                    )
-                else:
-                    raise
-            else:
-                raise
+        p_xgb = float(self.models["timeseries_xgb"].predict_proba(padded)[0][1])
+        p_cb = float(self.models["timeseries_cb"].predict_proba(padded)[0][1])
 
         # Dual-Engine 97.33% Accuracy Blend
         score = (0.55 * p_xgb) + (0.45 * p_cb)
@@ -441,32 +444,31 @@ class UnifiedInferenceEngine:
             raise RuntimeError("IBM AMLSim LightGBM head is not loaded.")
 
         amount = float(data["amount"])
+        n_feats = getattr(self.models["amlsim_lgbm"], "n_features_in_", 68)
+        padded = np.zeros((1, n_feats), dtype=np.float32)
+        padded[0, 0] = amount
 
         # If PyTorch GCN backbone is loaded, extract graph topological embedding
         if "amlsim_gcn" in self.models and torch is not None:
-            with torch.no_grad():
-                dummy_x = torch.zeros((1, 4), dtype=torch.float32, device=self.device)
-                dummy_edge = torch.zeros((2, 1), dtype=torch.long, device=self.device)
-                try:
+            try:
+                with torch.no_grad():
+                    dummy_x = torch.zeros((1, 4), dtype=torch.float32, device=self.device)
+                    dummy_edge = torch.zeros((2, 1), dtype=torch.long, device=self.device)
                     emb = (
                         self.models["amlsim_gcn"](dummy_x, dummy_edge)
                         .cpu()
                         .numpy()
                         .flatten()
                     )
-                    features = np.hstack([[amount], emb[:63]]).reshape(1, -1)
-                except Exception:
-                    features = np.array([[amount]])
-        else:
-            features = np.array([[amount]])
+                    padded[0, 1 : 1 + min(len(emb), n_feats - 1)] = emb[: min(len(emb), n_feats - 1)]
+            except Exception:
+                pass
 
-        n_feats = getattr(self.models["amlsim_lgbm"], "n_features_in_", 68)
-        if features.shape[1] < n_feats:
-            padded = np.zeros((1, n_feats), dtype=np.float32)
-            padded[:, : features.shape[1]] = features
-            score = float(self.models["amlsim_lgbm"].predict_proba(padded)[0][1])
+        model = self.models["amlsim_lgbm"]
+        if hasattr(model, "booster_"):
+            score = float(model.booster_.predict(padded)[0])
         else:
-            score = float(self.models["amlsim_lgbm"].predict_proba(features)[0][1])
+            score = float(model.predict_proba(padded)[0][1])
 
         tier, action, is_anomaly = self._assign_tier(score, "amlsim")
         return {

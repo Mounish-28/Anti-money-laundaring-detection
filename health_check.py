@@ -408,8 +408,9 @@ class HealthChecker:
                         passed=False,
                         details=f"Timeout (> {WS_DELIVERY_TIMEOUT_S}s Window)",
                         error_diagnostic=(
-                            f"WebSocket client did not receive broadcast for transaction {test_tx_id} within {WS_DELIVERY_TIMEOUT_S}s. "
-                            "Check ConnectionManager.broadcast() execution in app/main.py and websocket connection tracking."
+                            f"WebSocket client did not receive broadcast for transaction {test_tx_id} "
+                            f"within {WS_DELIVERY_TIMEOUT_S}s. Check ConnectionManager.broadcast() execution in "
+                            "app/main.py and websocket connection tracking."
                         ),
                     )
 
@@ -420,11 +421,8 @@ class HealthChecker:
                 endpoint=f"WS {target_endpoint}",
                 latency_ms=elapsed_ms,
                 passed=False,
-                details=f"Handshake Failed ({type(ex).__name__})",
-                error_diagnostic=(
-                    f"Failed to connect to WebSocket hub at {self.base_ws_url}: {ex}. "
-                    "Ensure FastAPI is running and @app.websocket('/ws/live') endpoint is properly mounted."
-                ),
+                details=f"Transport Error: {str(ex)[:35]}",
+                error_diagnostic=f"Exception during WebSocket verification: {ex}",
             )
 
     # --------------------------------------------------------------------------
@@ -481,8 +479,8 @@ class HealthChecker:
                 is_warning = self.allow_idle_streamers
                 diag_msg = (
                     f"No autonomous streaming events observed during {self.stream_timeout:.1f}s sample window. "
-                    "Ensure background streamer processes are active: "
-                    "Run 'python streamer.py' for Indian Banking Switch traffic and/or 'python live_crypto_feed.py' for Bitcoin Mempool ingestion."
+                    "Ensure background streamer processes are active: Run 'python streamer.py' for Indian "
+                    "Banking Switch traffic and/or 'python live_crypto_feed.py' for Bitcoin Mempool ingestion."
                 )
                 return DiagnosticResult(
                     name="Live Ingestion Streamers",
@@ -574,7 +572,6 @@ class HealthChecker:
         col_endp_w = 34
         col_lat_w = 12
         col_stat_w = 10
-        col_det_w = 40
 
         header_line = (
             f"  {'COMPONENT / SERVICE NAME':<{col_name_w}}"

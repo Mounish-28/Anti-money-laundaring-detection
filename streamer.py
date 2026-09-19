@@ -576,8 +576,7 @@ def format_log_line(
     is_anomaly = "ANOMALY" in tag or tag != "BASELINE_LEGITIMATE"
 
     if err:
-        status_color = RED
-        status_text = f"ERR: {err[:35]}"
+        status_text = f"{RED}ERR: {err[:35]}{RESET}"
     elif resp:
         tier = resp.get("risk_tier", "LOW")
         score = resp.get("risk_score", 0.0)

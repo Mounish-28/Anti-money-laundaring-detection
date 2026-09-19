@@ -177,9 +177,10 @@ class SARService:
             )
 
         # Fallback compliant narrative
+        typ_val = typology.value if hasattr(typology, "value") else typology
         return (
             f"Suspicious activity alert: {num_txs} transactions aggregating to "
-            f"\u20b9{total_inr_formatted} flagged under typology {typology.value if hasattr(typology, 'value') else typology}. "
+            f"\u20b9{total_inr_formatted} flagged under typology {typ_val}. "
             f"Suspect entity: {suspect.entity_identifier}. Model confidence: {avg_risk_score:.2f}."
         )
 
@@ -712,7 +713,9 @@ class SARService:
                     "payment_format": "BTC",
                     "rail": "BTC",
                     "flags": ["VDA_UNHOSTED_PEEL", "ANOMALY", "CRITICAL_SAR"],
-                    "investigator_notes": f"On-demand regulatory dossier synthesized for crypto transaction {raw_unprefixed}.",
+                    "investigator_notes": (
+                        f"On-demand regulatory dossier synthesized for crypto transaction {raw_unprefixed}."
+                    ),
                 }
                 ml_res = {
                     "risk_score": 0.96,
@@ -732,7 +735,9 @@ class SARService:
                     "payment_format": "RTGS",
                     "rail": "RTGS",
                     "flags": ["HAWALA_WIRE", "CRITICAL_SAR"],
-                    "investigator_notes": f"On-demand regulatory dossier synthesized for high-value corporate wire {raw_unprefixed}.",
+                    "investigator_notes": (
+                        f"On-demand regulatory dossier synthesized for high-value corporate wire {raw_unprefixed}."
+                    ),
                 }
                 ml_res = {
                     "risk_score": 0.94,
@@ -752,7 +757,10 @@ class SARService:
                     "payment_format": "UPI",
                     "rail": "UPI",
                     "flags": ["PAN_STRUCTURING_EVASION", "CRITICAL_SAR"],
-                    "investigator_notes": f"On-demand regulatory dossier synthesized for transaction {raw_unprefixed} below statutory \u20b950,000 threshold.",
+                    "investigator_notes": (
+                        f"On-demand regulatory dossier synthesized for transaction {raw_unprefixed} "
+                        "below statutory \u20b950,000 threshold."
+                    ),
                 }
                 ml_res = {
                     "risk_score": 0.92,

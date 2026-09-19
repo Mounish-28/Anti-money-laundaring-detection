@@ -139,6 +139,10 @@ class ReportingEntityInfo(BaseModel):
         description="Designated Principal Officer Registration ID",
     )
 
+    @property
+    def reporting_entity_id(self) -> str:
+        return self.fiureid
+
 
 class SuspectEntityProfile(BaseModel):
     """Subject/Counterparty Entity Compliance Profile."""
@@ -258,6 +262,16 @@ class MLTelemetry(BaseModel):
     feature_importance: dict[str, float] = Field(
         default_factory=dict,
         description="Top predictive feature attributions (e.g. 'amount_p99_ratio': 0.38)",
+    )
+    risk_score: float | None = Field(
+        default=None,
+        ge=0.0,
+        le=1.0,
+        description="Calibrated probability risk score",
+    )
+    risk_tier: RiskTier | str | None = Field(
+        default=None,
+        description="Assigned risk triage tier",
     )
 
 

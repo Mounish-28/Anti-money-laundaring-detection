@@ -619,7 +619,8 @@ async def run_live_crypto_feed(
             except (websockets.exceptions.ConnectionClosed, Exception) as ws_err:
                 consecutive_ws_errors += 1
                 logger.warning(
-                    "Live Bitcoin stream connection dropped (%s). Retrying live feed (seamlessly streaming synthetic mempool traffic in the meantime)...",
+                    "Live Bitcoin stream connection dropped (%s). "
+                    "Retrying live feed (seamlessly streaming synthetic mempool traffic in the meantime)...",
                     ws_err,
                 )
 
