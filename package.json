@@ -1,0 +1,14 @@
+{
+  "name": "quantumaml-nexus",
+  "version": "1.0.0",
+  "private": true,
+  "description": "QuantumAML Nexus - Real-Time Anti-Money Laundering Detection Engine",
+  "scripts": {
+    "dev": "npm --prefix nexus-frontend run dev",
+    "dev:all": "powershell -ExecutionPolicy Bypass -File ./run_all.ps1",
+    "all": "powershell -ExecutionPolicy Bypass -File ./run_all.ps1",
+    "start": "powershell -ExecutionPolicy Bypass -File ./run_all.ps1",
+    "build": "npm --prefix nexus-frontend run build",
+    "preflight": "powershell -ExecutionPolicy Bypass -File ./run_preflight_checks.ps1"
+  }
+}
