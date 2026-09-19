@@ -78,10 +78,11 @@ export default function App() {
   // Alert toast state for immediate critical notifications
   const [activeToast, setActiveToast] = useState(null);
 
-  // SAR Investigation Modal & Alert Banner states
+  // SAR Investigation Modal & Separate Alert Banner states
   const [isSarModalOpen, setIsSarModalOpen] = useState(false);
   const [selectedSarId, setSelectedSarId] = useState(null);
-  const [activeAlertBanner, setActiveAlertBanner] = useState(null);
+  const [activeFiatAlertBanner, setActiveFiatAlertBanner] = useState(null);
+  const [activeCryptoAlertBanner, setActiveCryptoAlertBanner] = useState(null);
   const [sarMetrics, setSarMetrics] = useState({
     totalSarsGenerated: 0,
     pendingReviewCount: 0,
@@ -116,12 +117,18 @@ export default function App() {
       liveFeed.updateTransactionStatus(sarId, newStatus);
     }
 
-    // Dismiss active banner if it matches this resolved case
+    // Dismiss active banners if matching this resolved case
     if (
-      activeAlertBanner?.sar_id === sarId &&
+      activeFiatAlertBanner?.sar_id === sarId &&
       (newStatus === 'FILED_WITH_FIU' || newStatus === 'DISMISSED')
     ) {
-      setActiveAlertBanner(null);
+      setActiveFiatAlertBanner(null);
+    }
+    if (
+      activeCryptoAlertBanner?.sar_id === sarId &&
+      (newStatus === 'FILED_WITH_FIU' || newStatus === 'DISMISSED')
+    ) {
+      setActiveCryptoAlertBanner(null);
     }
 
     setActiveToast({
@@ -137,6 +144,11 @@ export default function App() {
   useEffect(() => {
     if (liveFeed.lastSarDispatched) {
       const data = liveFeed.lastSarDispatched;
+      const isCrypto =
+        data.engine === 'CRYPTO_FORENSICS' ||
+        data.rail === 'BTC' ||
+        data.currency === 'BTC' ||
+        Boolean(data.exposure_btc);
 
       // Increment SAR metrics in KPI header
       setSarMetrics((prev) => ({
@@ -144,16 +156,24 @@ export default function App() {
         pendingReviewCount: prev.pendingReviewCount + 1,
       }));
 
-      // Update activeAlertBanner with payload details
-      setActiveAlertBanner({
+      const bannerData = {
         sar_id: data.sar_id,
-        typology: data.typology || 'Automated PMLA Ring Dispatched',
-        amount: data.exposure_inr || data.exposure_btc || 0,
-        exposure_inr: data.exposure_inr,
-        exposure_btc: data.exposure_btc,
-        suspect: data.suspect || 'Automated Surveillance Target',
+        transaction_id: data.triggering_tx_id || data.sar_id,
+        typology: data.typology || (isCrypto ? 'On-Chain VDA Anomaly' : 'Automated PMLA Ring Dispatched'),
+        amount: isCrypto ? data.exposure_btc : (data.exposure_inr || 0),
+        exposure_inr: data.exposure_inr || 0,
+        exposure_btc: data.exposure_btc || 0,
+        currency: isCrypto ? 'BTC' : 'INR',
+        rail: data.rail || (isCrypto ? 'BTC' : 'UPI'),
+        suspect: data.suspect || (isCrypto ? 'Unhosted Wallet Target' : 'Automated Surveillance Target'),
         timestamp: data.timestamp || data.receivedAt || new Date().toISOString(),
-      });
+      };
+
+      if (isCrypto) {
+        setActiveCryptoBanner(bannerData);
+      } else {
+        setActiveFiatBanner(bannerData);
+      }
 
       // Retroactively link triggering transaction in circular ledger
       if (liveFeed.updateTransactionSar) {
@@ -165,41 +185,67 @@ export default function App() {
     }
   }, [liveFeed.lastSarDispatched]);
 
-  // Critical Alert Banner hook for incoming live feed CRITICAL_SAR events
+  // Separate Critical Alert Banner hook for Indian Banking events
   useEffect(() => {
     if (
-      liveFeed.activeAlert &&
-      (liveFeed.activeAlert.risk_tier === 'CRITICAL_SAR' ||
-        liveFeed.activeAlert.risk_tier === 'CRITICAL')
+      liveFeed.activeFiatAlert &&
+      (liveFeed.activeFiatAlert.risk_tier === 'CRITICAL_SAR' ||
+        liveFeed.activeFiatAlert.risk_tier === 'CRITICAL')
     ) {
-      const flags = liveFeed.activeAlert.flags || [];
+      const alert = liveFeed.activeFiatAlert;
+      const flags = alert.flags || [];
       const typStr =
-        flags.length > 0 ? flags.join(', ') : 'High-Risk Laundering Signature';
+        flags.length > 0 ? flags.join(', ') : 'High-Risk Banking Laundering Signature';
 
-      setActiveAlertBanner((prev) => {
-        // Prefer explicit SAR_DISPATCHED case if one already active
+      setActiveFiatAlertBanner((prev) => {
         if (prev?.sar_id && prev.sar_id.startsWith('SAR-IND')) return prev;
         return {
-          sar_id:
-            liveFeed.activeAlert.sar_id ||
-            `SAR-${liveFeed.activeAlert.transaction_id}`,
+          sar_id: alert.sar_id || `SAR-${alert.transaction_id}`,
+          transaction_id: alert.transaction_id,
+          rail: alert.rail || 'UPI',
           typology: typStr,
-          amount: liveFeed.activeAlert.amount,
-          exposure_inr:
-            liveFeed.activeAlert.currency === 'BTC'
-              ? 0
-              : liveFeed.activeAlert.amount,
-          exposure_btc:
-            liveFeed.activeAlert.currency === 'BTC'
-              ? liveFeed.activeAlert.amount
-              : 0,
-          currency: liveFeed.activeAlert.currency || 'INR',
-          suspect: liveFeed.activeAlert.from_entity || 'Unknown Suspect',
-          timestamp: liveFeed.activeAlert.timestamp || new Date().toISOString(),
+          amount: alert.amount || 0,
+          exposure_inr: alert.amount || 0,
+          currency: 'INR',
+          from_entity: alert.from_entity,
+          to_entity: alert.to_entity,
+          suspect: alert.from_entity || 'Unknown Remitter',
+          timestamp: alert.timestamp || new Date().toISOString(),
         };
       });
     }
-  }, [liveFeed.activeAlert]);
+  }, [liveFeed.activeFiatAlert]);
+
+  // Separate Critical Alert Banner hook for Crypto Forensics events
+  useEffect(() => {
+    if (
+      liveFeed.activeCryptoAlert &&
+      (liveFeed.activeCryptoAlert.risk_tier === 'CRITICAL_SAR' ||
+        liveFeed.activeCryptoAlert.risk_tier === 'CRITICAL')
+    ) {
+      const alert = liveFeed.activeCryptoAlert;
+      const flags = alert.flags || [];
+      const typStr =
+        flags.length > 0 ? flags.join(', ') : 'High-Entropy Darknet / Whale Signature';
+
+      setActiveCryptoAlertBanner((prev) => {
+        if (prev?.sar_id && prev.sar_id.startsWith('SAR-IND')) return prev;
+        return {
+          sar_id: alert.sar_id || `SAR-${alert.transaction_id}`,
+          transaction_id: alert.transaction_id,
+          rail: alert.rail || 'BTC',
+          typology: typStr,
+          amount: alert.amount || 0,
+          exposure_btc: alert.amount || 0,
+          currency: 'BTC',
+          from_entity: alert.from_entity,
+          to_entity: alert.to_entity,
+          suspect: alert.from_entity || 'bc1q_unresolved',
+          timestamp: alert.timestamp || new Date().toISOString(),
+        };
+      });
+    }
+  }, [liveFeed.activeCryptoAlert]);
 
   // Appends newly scored entity to session history ledger and triggers toast if critical
   const handleScored = (result) => {
@@ -214,16 +260,31 @@ export default function App() {
         action: result.recommended_action,
       });
 
-      // Hook critical alert banner for manual scoring triages
+      const isCrypto =
+        result.dataset?.toLowerCase().includes('elliptic') ||
+        result.dataset?.toLowerCase().includes('crypto') ||
+        result.currency === 'BTC' ||
+        result.rail === 'BTC';
+
+      const bannerData = {
+        sar_id: result.sar_id || result.entity_id,
+        transaction_id: result.transaction_id || result.entity_id,
+        typology: result.recommended_action || 'Critical Anomaly Detected',
+        amount: result.amount || 0,
+        exposure_inr: !isCrypto ? (result.amount || 0) : 0,
+        exposure_btc: isCrypto ? (result.amount || 0) : 0,
+        currency: isCrypto ? 'BTC' : 'INR',
+        rail: result.payment_format || result.rail || (isCrypto ? 'BTC' : 'UPI'),
+        suspect: result.account_from || result.from_address || result.entity_id,
+        timestamp: result.timestamp || new Date().toISOString(),
+      };
+
       if (result.risk_tier === 'CRITICAL_SAR') {
-        setActiveAlertBanner({
-          sar_id: result.sar_id || result.entity_id,
-          typology: result.recommended_action || 'Critical Anomaly Detected',
-          amount: result.amount || 0,
-          exposure_inr: result.amount || 0,
-          suspect: result.account_from || result.entity_id,
-          timestamp: result.timestamp || new Date().toISOString(),
-        });
+        if (isCrypto) {
+          setActiveCryptoAlertBanner(bannerData);
+        } else {
+          setActiveFiatAlertBanner(bannerData);
+        }
       }
 
       // Auto-dismiss toast after 6 seconds
@@ -385,50 +446,35 @@ export default function App() {
         </div>
       </nav>
 
-      {/* Critical Threat & SAR Dispatched Banner */}
-      {activeAlertBanner && (
-        <div className="border-b border-rose-500/40 bg-rose-950/80 text-rose-100 backdrop-blur-md px-4 lg:px-8 py-3 sticky top-[113px] z-30 shadow-2xl shadow-rose-950/70 animate-fade-in">
+      {/* 1. Indian Banking Critical Compliance Alert Banner */}
+      {activeFiatAlertBanner && (
+        <div className="border-b border-rose-500/50 bg-gradient-to-r from-obsidian-950 via-rose-950/80 to-obsidian-950 text-rose-100 backdrop-blur-md px-4 lg:px-8 py-3 sticky top-[113px] z-30 shadow-2xl shadow-rose-950/70 animate-fade-in">
           <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
             <div className="flex items-center gap-3.5">
-              <div className="relative flex items-center justify-center p-2 rounded-xl bg-rose-500/20 text-rose-400 border border-rose-500/40 shrink-0">
-                <span className="animate-ping absolute inline-flex h-3 w-3 rounded-full bg-rose-400 opacity-75" />
-                <span className="relative text-base">🔴</span>
+              <div className="relative flex items-center justify-center p-2 rounded-xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 shrink-0">
+                <span className="animate-ping absolute inline-flex h-3 w-3 rounded-full bg-cyan-400 opacity-75" />
+                <span className="relative text-base">🇮🇳</span>
               </div>
               <div className="flex flex-col sm:flex-row sm:items-center flex-wrap gap-2 text-xs font-mono">
-                <span className="font-black text-rose-300 tracking-wider uppercase flex items-center gap-1.5">
-                  CRITICAL COMPLIANCE ALERT // SAR AUTOMATICALLY DISPATCHED
+                <span className="font-black text-cyan-300 tracking-wider uppercase flex items-center gap-1.5">
+                  INDIAN BANKING // FIU-IND PMLA CRITICAL ALERT
                 </span>
                 <span className="text-slate-500 hidden sm:inline">—</span>
                 <span className="px-2 py-0.5 rounded bg-rose-900/60 text-rose-200 border border-rose-700/60 font-semibold">
-                  {activeAlertBanner.typology}
+                  {activeFiatAlertBanner.typology}
                 </span>
-                {activeAlertBanner.sar_id && (
-                  <span className="text-slate-300">
-                    Target SAR ID:{' '}
-                    <strong className="text-cyan-300 font-bold">
-                      {activeAlertBanner.sar_id}
-                    </strong>
-                  </span>
-                )}
-                <span className="text-emerald-300 font-bold">
-                  Exposure:{' '}
-                  {activeAlertBanner.exposure_btc
-                    ? `${Number(activeAlertBanner.exposure_btc).toFixed(4)} BTC`
-                    : `₹${Number(
-                        activeAlertBanner.exposure_inr ||
-                          activeAlertBanner.amount ||
-                          0
-                      ).toLocaleString('en-IN', {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}`}
+                <span className="text-slate-300">
+                  UTR: <strong className="text-cyan-300 font-bold">{activeFiatAlertBanner.transaction_id || activeFiatAlertBanner.sar_id}</strong>
                 </span>
-                {activeAlertBanner.suspect && (
+                <span className="px-1.5 py-0.5 rounded bg-slate-800 text-cyan-300 border border-slate-700 font-bold">
+                  {activeFiatAlertBanner.rail || 'UPI'}
+                </span>
+                <span className="text-rose-400 font-bold">
+                  Exposure: ₹{Number(activeFiatAlertBanner.exposure_inr || activeFiatAlertBanner.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                </span>
+                {activeFiatAlertBanner.suspect && (
                   <span className="text-slate-400 hidden xl:inline">
-                    Suspect:{' '}
-                    <strong className="text-slate-200">
-                      {activeAlertBanner.suspect}
-                    </strong>
+                    Suspect: <strong className="text-slate-200">{activeFiatAlertBanner.suspect}</strong>
                   </span>
                 )}
               </div>
@@ -436,16 +482,73 @@ export default function App() {
 
             <div className="flex items-center gap-2 self-end md:self-center shrink-0">
               <button
-                onClick={() => openSarModal(activeAlertBanner.sar_id)}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-slate-50 text-xs font-mono font-bold transition-all shadow-glow-rose hover:scale-[1.02]"
+                onClick={() => openSarModal(activeFiatAlertBanner.sar_id)}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-slate-950 text-xs font-mono font-bold transition-all shadow-glow-cyan hover:scale-[1.02]"
               >
-                <FileWarning className="w-3.5 h-3.5" />
-                <span>Investigate Dossier</span>
+                <FileWarning className="w-3.5 h-3.5 text-slate-950" />
+                <span>Investigate FIU-IND STR</span>
               </button>
               <button
-                onClick={() => setActiveAlertBanner(null)}
+                onClick={() => setActiveFiatAlertBanner(null)}
                 className="p-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
-                title="Dismiss Alert Banner"
+                title="Dismiss Indian Banking Alert"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2. Crypto Forensics Critical On-Chain Alert Banner */}
+      {activeCryptoAlertBanner && (
+        <div className={cn(
+          "border-b border-amber-500/50 bg-gradient-to-r from-obsidian-950 via-amber-950/80 to-obsidian-950 text-amber-100 backdrop-blur-md px-4 lg:px-8 py-3 z-30 shadow-2xl shadow-amber-950/70 animate-fade-in",
+          activeFiatAlertBanner ? "relative" : "sticky top-[113px]"
+        )}>
+          <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
+            <div className="flex items-center gap-3.5">
+              <div className="relative flex items-center justify-center p-2 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/40 shrink-0">
+                <span className="animate-ping absolute inline-flex h-3 w-3 rounded-full bg-amber-400 opacity-75" />
+                <span className="relative text-base">⚡</span>
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center flex-wrap gap-2 text-xs font-mono">
+                <span className="font-black text-amber-300 tracking-wider uppercase flex items-center gap-1.5">
+                  CRYPTO FORENSICS // ON-CHAIN VDA ANOMALY ALERT
+                </span>
+                <span className="text-slate-500 hidden sm:inline">—</span>
+                <span className="px-2 py-0.5 rounded bg-amber-900/60 text-amber-200 border border-amber-700/60 font-semibold">
+                  {activeCryptoAlertBanner.typology}
+                </span>
+                <span className="text-slate-300">
+                  Tx Hash: <strong className="text-amber-300 font-bold">{String(activeCryptoAlertBanner.transaction_id || '').slice(0, 14)}...</strong>
+                </span>
+                <span className="px-1.5 py-0.5 rounded bg-slate-800 text-amber-300 border border-slate-700 font-bold">
+                  BTC MEMPOOL
+                </span>
+                <span className="text-amber-400 font-bold">
+                  Exposure: {Number(activeCryptoAlertBanner.exposure_btc || activeCryptoAlertBanner.amount || 0).toFixed(4)} BTC
+                </span>
+                {activeCryptoAlertBanner.suspect && (
+                  <span className="text-slate-400 hidden xl:inline">
+                    Target: <strong className="text-slate-200">{String(activeCryptoAlertBanner.suspect).slice(0, 20)}...</strong>
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 self-end md:self-center shrink-0">
+              <button
+                onClick={() => openSarModal(activeCryptoAlertBanner.sar_id)}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-mono font-bold transition-all shadow-glow-amber hover:scale-[1.02]"
+              >
+                <FileWarning className="w-3.5 h-3.5 text-slate-950" />
+                <span>Investigate Crypto SAR</span>
+              </button>
+              <button
+                onClick={() => setActiveCryptoAlertBanner(null)}
+                className="p-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
+                title="Dismiss Crypto Forensics Alert"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -464,7 +567,11 @@ export default function App() {
             onTogglePause={liveFeed.togglePause}
             onClearFeed={liveFeed.clearFeed}
             activeAlert={liveFeed.activeAlert}
+            activeFiatAlert={liveFeed.activeFiatAlert}
+            activeCryptoAlert={liveFeed.activeCryptoAlert}
             onDismissAlert={liveFeed.dismissAlert}
+            onDismissFiatAlert={liveFeed.dismissFiatAlert}
+            onDismissCryptoAlert={liveFeed.dismissCryptoAlert}
             wsStatus={liveFeed.connectionStatus}
             onOpenSarModal={openSarModal}
             openSarModal={openSarModal}

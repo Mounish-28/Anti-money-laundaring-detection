@@ -30,7 +30,11 @@ export function LiveAuditLedger({
   onTogglePause,
   onClearFeed,
   activeAlert,
+  activeFiatAlert,
+  activeCryptoAlert,
   onDismissAlert,
+  onDismissFiatAlert,
+  onDismissCryptoAlert,
   wsStatus,
   onOpenSarModal,
   openSarModal,
@@ -38,7 +42,7 @@ export function LiveAuditLedger({
   sarMetrics,
   onSarGenerated,
 }) {
-  const [activeFilter, setActiveFilter] = useState('ALL'); // 'ALL' | 'FIAT' | 'CRYPTO' | 'SARS'
+  const [activeFilter, setActiveFilter] = useState('ALL'); // 'ALL' | 'FIAT' | 'CRYPTO' | 'FIAT_SARS' | 'CRYPTO_SARS' | 'SARS'
   const [selectedTxForSar, setSelectedTxForSar] = useState(null);
   const [sarFiledSuccess, setSarFiledSuccess] = useState(false);
   const [generatingTxId, setGeneratingTxId] = useState(null);
@@ -64,11 +68,14 @@ export function LiveAuditLedger({
               'AUTO_FLAG_SAR',
               'CRITICAL_SAR',
               'ANOMALY',
+              'WHALE_TRANSFER',
             ].includes(String(f).toUpperCase())
           ));
 
       if (activeFilter === 'FIAT') return !isCrypto;
       if (activeFilter === 'CRYPTO') return isCrypto;
+      if (activeFilter === 'FIAT_SARS') return !isCrypto && isSar;
+      if (activeFilter === 'CRYPTO_SARS') return isCrypto && isSar;
       if (activeFilter === 'SARS') return isSar;
       return true;
     });
@@ -79,6 +86,8 @@ export function LiveAuditLedger({
     let fiat = 0;
     let crypto = 0;
     let sars = 0;
+    let fiatSars = 0;
+    let cryptoSars = 0;
     for (const tx of transactions) {
       const isCrypto =
         tx.engine === 'CRYPTO_FORENSICS' || tx.rail === 'BTC' || tx.currency === 'BTC';
@@ -101,11 +110,16 @@ export function LiveAuditLedger({
               'AUTO_FLAG_SAR',
               'CRITICAL_SAR',
               'ANOMALY',
+              'WHALE_TRANSFER',
             ].includes(String(f).toUpperCase())
           ));
-      if (isSar) sars++;
+      if (isSar) {
+        sars++;
+        if (isCrypto) cryptoSars++;
+        else fiatSars++;
+      }
     }
-    return { all: transactions.length, fiat, crypto, sars };
+    return { all: transactions.length, fiat, crypto, sars, fiatSars, cryptoSars };
   }, [transactions]);
 
   const handleGenerateSar = (tx) => {
@@ -289,9 +303,165 @@ export function LiveAuditLedger({
   return (
     <div className="space-y-6">
       {/* ------------------------------------------------------------------------ */}
-      {/* Flashing Critical Alert Banner (Requirement 6) */}
+      {/* 1. Indian Banking Critical Alert Card */}
       {/* ------------------------------------------------------------------------ */}
-      {activeAlert && (
+      {activeFiatAlert && (
+        <div className="relative overflow-hidden rounded-2xl border-2 border-rose-500/90 bg-gradient-to-r from-rose-950/90 via-obsidian-950 to-cyan-950/80 p-4 lg:p-5 shadow-glow-rose animate-fade-in">
+          <div className="absolute top-0 right-0 left-0 h-1 bg-gradient-to-r from-cyan-400 via-rose-500 to-amber-400 animate-pulse" />
+
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-start gap-3.5">
+              <div className="p-2.5 rounded-xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/50 animate-pulse shrink-0">
+                <Flame className="w-6 h-6 text-rose-400" />
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center flex-wrap gap-2">
+                  <span className="text-xs font-mono font-black tracking-wider uppercase px-2 py-0.5 rounded bg-rose-600 text-slate-50">
+                    🇮🇳 INDIAN BANKING // FIU-IND PMLA CRITICAL ALERT
+                  </span>
+                  <span className="text-xs font-mono font-bold text-cyan-400">
+                    UTR: {activeFiatAlert.transaction_id}
+                  </span>
+                  <span className="px-1.5 py-0.5 rounded bg-slate-800 text-cyan-300 border border-slate-700 font-bold text-[10px]">
+                    {activeFiatAlert.rail || 'UPI'}
+                  </span>
+                  <span className="text-[11px] font-mono text-slate-400">
+                    {formatClockTime(activeFiatAlert.timestamp)}
+                  </span>
+                </div>
+
+                <p className="text-xs sm:text-sm text-slate-200 font-mono">
+                  Suspicious domestic banking transfer of{' '}
+                  <strong className="text-rose-300 font-bold">{formatAmount(activeFiatAlert)}</strong>{' '}
+                  detected on rail <strong className="text-cyan-400 font-bold">{activeFiatAlert.rail}</strong>.
+                  Statutory laundering signature triggered FIU-IND regulatory pipeline.
+                </p>
+
+                <div className="flex items-center gap-2 text-xs font-mono text-slate-400 pt-0.5 flex-wrap">
+                  <span className="text-slate-300">
+                    {activeFiatAlert.from_entity}
+                  </span>
+                  <ArrowRight className="w-3 h-3 text-rose-400 shrink-0" />
+                  <span className="text-slate-300">
+                    {activeFiatAlert.to_entity}
+                  </span>
+                  {activeFiatAlert.flags && activeFiatAlert.flags.length > 0 && (
+                    <span className="text-[10px] px-2 py-0.5 rounded bg-rose-900/60 text-rose-300 border border-rose-800">
+                      {activeFiatAlert.flags.join(', ')}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 self-end md:self-center shrink-0">
+              <button
+                onClick={() => {
+                  const openFn = openSarModal || onOpenSarModal;
+                  if (openFn) {
+                    openFn(activeFiatAlert.sar_id || activeFiatAlert.transaction_id);
+                  } else {
+                    handleGenerateSar(activeFiatAlert);
+                  }
+                }}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-slate-950 text-xs font-mono font-bold transition-all shadow-lg hover:shadow-cyan-600/40"
+              >
+                <FileText className="w-4 h-4 text-slate-950" />
+                <span>Open FIU-IND Dossier</span>
+              </button>
+              <button
+                onClick={onDismissFiatAlert || onDismissAlert}
+                className="p-2 rounded-xl border border-slate-800 hover:border-slate-700 bg-slate-900/80 text-slate-400 hover:text-slate-200 transition-colors"
+                title="Dismiss Indian Banking Alert"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ------------------------------------------------------------------------ */}
+      {/* 2. Crypto Forensics Critical Alert Card */}
+      {/* ------------------------------------------------------------------------ */}
+      {activeCryptoAlert && (
+        <div className="relative overflow-hidden rounded-2xl border-2 border-amber-500/90 bg-gradient-to-r from-amber-950/90 via-obsidian-950 to-purple-950/80 p-4 lg:p-5 shadow-glow-amber animate-fade-in">
+          <div className="absolute top-0 right-0 left-0 h-1 bg-gradient-to-r from-amber-400 via-orange-500 to-purple-500 animate-pulse" />
+
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-start gap-3.5">
+              <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/50 animate-pulse shrink-0">
+                <Flame className="w-6 h-6 text-amber-400" />
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center flex-wrap gap-2">
+                  <span className="text-xs font-mono font-black tracking-wider uppercase px-2 py-0.5 rounded bg-amber-500 text-slate-950">
+                    ⚡ CRYPTO FORENSICS // ON-CHAIN VDA ANOMALY ALERT
+                  </span>
+                  <span className="text-xs font-mono font-bold text-amber-400">
+                    TX: {String(activeCryptoAlert.transaction_id || '').slice(0, 16)}...
+                  </span>
+                  <span className="px-1.5 py-0.5 rounded bg-slate-800 text-amber-300 border border-slate-700 font-bold text-[10px]">
+                    BTC MEMPOOL
+                  </span>
+                  <span className="text-[11px] font-mono text-slate-400">
+                    {formatClockTime(activeCryptoAlert.timestamp)}
+                  </span>
+                </div>
+
+                <p className="text-xs sm:text-sm text-slate-200 font-mono">
+                  High-entropy on-chain transfer of{' '}
+                  <strong className="text-amber-300 font-bold">{formatAmount(activeCryptoAlert)}</strong>{' '}
+                  detected on <strong className="text-amber-400 font-bold">Bitcoin Network</strong>.
+                  Topological graph features indicate Darknet Mixer, Whale Outlier, or Peeling Chain hop.
+                </p>
+
+                <div className="flex items-center gap-2 text-xs font-mono text-slate-400 pt-0.5 flex-wrap">
+                  <span className="text-slate-300">
+                    {String(activeCryptoAlert.from_entity || '').slice(0, 24)}...
+                  </span>
+                  <ArrowRight className="w-3 h-3 text-amber-400 shrink-0" />
+                  <span className="text-slate-300">
+                    {String(activeCryptoAlert.to_entity || '').slice(0, 24)}...
+                  </span>
+                  {activeCryptoAlert.flags && activeCryptoAlert.flags.length > 0 && (
+                    <span className="text-[10px] px-2 py-0.5 rounded bg-amber-900/60 text-amber-300 border border-amber-800">
+                      {activeCryptoAlert.flags.join(', ')}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 self-end md:self-center shrink-0">
+              <button
+                onClick={() => {
+                  const openFn = openSarModal || onOpenSarModal;
+                  if (openFn) {
+                    openFn(activeCryptoAlert.sar_id || activeCryptoAlert.transaction_id);
+                  } else {
+                    handleGenerateSar(activeCryptoAlert);
+                  }
+                }}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-mono font-bold transition-all shadow-lg hover:shadow-amber-500/40"
+              >
+                <FileText className="w-4 h-4 text-slate-950" />
+                <span>Open Crypto Dossier</span>
+              </button>
+              <button
+                onClick={onDismissCryptoAlert || onDismissAlert}
+                className="p-2 rounded-xl border border-slate-800 hover:border-slate-700 bg-slate-900/80 text-slate-400 hover:text-slate-200 transition-colors"
+                title="Dismiss Crypto Forensics Alert"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Fallback alert if neither specific alert set */}
+      {!activeFiatAlert && !activeCryptoAlert && activeAlert && (
         <div className="relative overflow-hidden rounded-2xl border-2 border-rose-500/90 bg-gradient-to-r from-rose-950/90 via-obsidian-950 to-rose-950/90 p-4 lg:p-5 shadow-glow-rose animate-fade-in">
           <div className="absolute top-0 right-0 left-0 h-1 bg-gradient-to-r from-rose-500 via-amber-400 to-rose-500 animate-pulse" />
 
@@ -306,7 +476,7 @@ export function LiveAuditLedger({
                     CRITICAL SAR ALERT TRIGGERED
                   </span>
                   <span className="text-xs font-mono font-bold text-rose-400">
-                    UTR: {activeAlert.transaction_id}
+                    ID: {activeAlert.transaction_id}
                   </span>
                   <span className="text-[11px] font-mono text-slate-400">
                     {formatClockTime(activeAlert.timestamp)}
@@ -314,26 +484,10 @@ export function LiveAuditLedger({
                 </div>
 
                 <p className="text-xs sm:text-sm text-slate-200 font-mono">
-                  Suspicious high-velocity transfer of{' '}
+                  Suspicious transfer of{' '}
                   <strong className="text-rose-300 font-bold">{formatAmount(activeAlert)}</strong>{' '}
                   detected on rail <strong className="text-cyan-400 font-bold">{activeAlert.rail}</strong>.
-                  Scheme typology indicates potential structuring or darknet clustering.
                 </p>
-
-                <div className="flex items-center gap-2 text-xs font-mono text-slate-400 pt-0.5">
-                  <span className="text-slate-300 truncate max-w-[200px] sm:max-w-none">
-                    {activeAlert.from_entity}
-                  </span>
-                  <ArrowRight className="w-3 h-3 text-rose-400 shrink-0" />
-                  <span className="text-slate-300 truncate max-w-[200px] sm:max-w-none">
-                    {activeAlert.to_entity}
-                  </span>
-                  {activeAlert.flags && activeAlert.flags.length > 0 && (
-                    <span className="text-[10px] px-2 py-0.5 rounded bg-rose-900/60 text-rose-300 border border-rose-800">
-                      {activeAlert.flags.join(', ')}
-                    </span>
-                  )}
-                </div>
               </div>
             </div>
 
@@ -522,7 +676,7 @@ export function LiveAuditLedger({
               )}
             >
               <CreditCard className="w-3.5 h-3.5 text-cyan-400" />
-              <span>Indian Banking (Fiat)</span>
+              <span>Indian Banking</span>
               <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-cyan-950 text-cyan-400">
                 {counts.fiat}
               </span>
@@ -544,18 +698,53 @@ export function LiveAuditLedger({
               </span>
             </button>
 
+            {/* Separate Indian Banking Critical Filter */}
             <button
-              onClick={() => setActiveFilter('SARS')}
+              onClick={() => setActiveFilter('FIAT_SARS')}
               className={cn(
                 'flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono font-semibold transition-all',
-                activeFilter === 'SARS'
+                activeFilter === 'FIAT_SARS'
                   ? 'bg-rose-950/80 text-rose-300 border border-rose-500/60 shadow-glow-rose'
                   : 'text-slate-400 hover:text-rose-300 hover:bg-slate-800/50'
               )}
             >
               <ShieldAlert className="w-3.5 h-3.5 text-rose-400" />
-              <span>Alerts Only (SARs)</span>
-              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-rose-950 text-rose-400">
+              <span>Banking Critical (SARs)</span>
+              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-rose-950 text-rose-400 font-bold">
+                {counts.fiatSars}
+              </span>
+            </button>
+
+            {/* Separate Crypto Forensics Critical Filter */}
+            <button
+              onClick={() => setActiveFilter('CRYPTO_SARS')}
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono font-semibold transition-all',
+                activeFilter === 'CRYPTO_SARS'
+                  ? 'bg-amber-950/80 text-amber-300 border border-amber-500/60 shadow-glow-amber'
+                  : 'text-slate-400 hover:text-amber-300 hover:bg-slate-800/50'
+              )}
+            >
+              <Zap className="w-3.5 h-3.5 text-amber-400" />
+              <span>Crypto Critical (SARs)</span>
+              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-amber-950 text-amber-400 font-bold">
+                {counts.cryptoSars}
+              </span>
+            </button>
+
+            {/* All Critical Alerts Filter */}
+            <button
+              onClick={() => setActiveFilter('SARS')}
+              className={cn(
+                'flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-mono font-semibold transition-all',
+                activeFilter === 'SARS'
+                  ? 'bg-purple-950/80 text-purple-300 border border-purple-500/60 shadow-glow-purple'
+                  : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/50'
+              )}
+              title="View all critical alerts across both Indian Banking and Crypto"
+            >
+              <span>All SARs</span>
+              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-slate-400">
                 {counts.sars}
               </span>
             </button>

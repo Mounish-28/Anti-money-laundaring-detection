@@ -252,9 +252,17 @@ async def process_sar_background(
         status_val = (
             case.status.value if hasattr(case.status, "value") else str(case.status)
         )
+        is_crypto_sar = bool(
+            (case.total_exposure_btc and case.total_exposure_btc > 0)
+            or tx_payload.get("rail") == "BTC"
+            or tx_payload.get("currency") == "BTC"
+            or tx_payload.get("engine") == "CRYPTO_FORENSICS"
+        )
         sar_alert_packet = {
             "event": "SAR_DISPATCHED",
             "sar_id": case.sar_id,
+            "engine": "CRYPTO_FORENSICS" if is_crypto_sar else "FIAT_BANKING",
+            "rail": "BTC" if is_crypto_sar else tx_payload.get("payment_format", tx_payload.get("rail", "INR")),
             "exposure_inr": float(case.total_exposure_inr or 0.0),
             "exposure_btc": float(case.total_exposure_btc or 0.0),
             "status": status_val,
@@ -267,12 +275,16 @@ async def process_sar_background(
                 if case.suspect
                 else (
                     tx_payload.get("account_from")
+                    or tx_payload.get("from_address")
                     or tx_payload.get("node_id")
                     or "Unknown Suspect"
                 )
             ),
-            "triggering_tx_id": tx_payload.get("transaction_id")
-            or tx_payload.get("node_id"),
+            "triggering_tx_id": (
+                tx_payload.get("transaction_id")
+                or tx_payload.get("tx_hash")
+                or tx_payload.get("node_id")
+            ),
             "timestamp": (
                 case.created_at.isoformat()
                 if hasattr(case.created_at, "isoformat")

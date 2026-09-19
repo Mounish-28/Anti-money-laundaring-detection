@@ -11,6 +11,8 @@ export function useLiveFeed(apiUrl) {
   const [transactions, setTransactions] = useState([]);
   const [isPaused, setIsPaused] = useState(false);
   const [activeAlert, setActiveAlert] = useState(null);
+  const [activeFiatAlert, setActiveFiatAlert] = useState(null);
+  const [activeCryptoAlert, setActiveCryptoAlert] = useState(null);
   const [lastSarDispatched, setLastSarDispatched] = useState(null);
   const [dispatchedSarCount, setDispatchedSarCount] = useState(0);
 
@@ -72,8 +74,13 @@ export function useLiveFeed(apiUrl) {
           });
           setDispatchedSarCount((prev) => prev + 1);
 
-          // Update activeAlert if it matches this dispatched SAR
-          setActiveAlert((prev) => {
+          const isCryptoSar =
+            payload.engine === 'CRYPTO_FORENSICS' ||
+            payload.rail === 'BTC' ||
+            payload.currency === 'BTC' ||
+            Boolean(payload.exposure_btc);
+
+          const updateAlertWithSar = (prev) => {
             if (!prev) return prev;
             const matchesTxId =
               payload.triggering_tx_id && prev.transaction_id === payload.triggering_tx_id;
@@ -88,7 +95,15 @@ export function useLiveFeed(apiUrl) {
               };
             }
             return prev;
-          });
+          };
+
+          // Update general and separate alerts
+          setActiveAlert(updateAlertWithSar);
+          if (isCryptoSar) {
+            setActiveCryptoAlert(updateAlertWithSar);
+          } else {
+            setActiveFiatAlert(updateAlertWithSar);
+          }
 
           // If the triggering transaction already exists in the 100-item circular ledger, update that row's data object with sar_id
           setTransactions((prev) =>
@@ -142,6 +157,7 @@ export function useLiveFeed(apiUrl) {
                   'AUTO_FLAG_SAR',
                   'CRITICAL_SAR',
                   'ANOMALY',
+                  'WHALE_TRANSFER',
                 ].includes(String(f).toUpperCase())
               ));
           const isCrypto =
@@ -163,16 +179,27 @@ export function useLiveFeed(apiUrl) {
           };
         });
 
-        // Trigger critical alert banner if CRITICAL_SAR or CRITICAL
+        const isCrypto =
+          payload.engine === 'CRYPTO_FORENSICS' ||
+          payload.currency === 'BTC' ||
+          payload.rail === 'BTC';
+
+        // Trigger separate critical alert banners if CRITICAL_SAR or CRITICAL
         if (
           payload.risk_tier === 'CRITICAL_SAR' ||
           payload.risk_tier === 'CRITICAL' ||
           Boolean(payload.sar_id)
         ) {
-          setActiveAlert({
+          const alertData = {
             ...payload,
             alertId: `${payload.transaction_id}-${Date.now()}`,
-          });
+          };
+          setActiveAlert(alertData);
+          if (isCrypto) {
+            setActiveCryptoAlert(alertData);
+          } else {
+            setActiveFiatAlert(alertData);
+          }
         }
 
         // Only buffer onto sliding window if not paused (bounded circular buffer: max 100 entries)
@@ -221,6 +248,16 @@ export function useLiveFeed(apiUrl) {
 
   const dismissAlert = useCallback(() => {
     setActiveAlert(null);
+    setActiveFiatAlert(null);
+    setActiveCryptoAlert(null);
+  }, []);
+
+  const dismissFiatAlert = useCallback(() => {
+    setActiveFiatAlert(null);
+  }, []);
+
+  const dismissCryptoAlert = useCallback(() => {
+    setActiveCryptoAlert(null);
   }, []);
 
   const updateTransactionSar = useCallback((sarId, matchKey) => {
@@ -265,7 +302,11 @@ export function useLiveFeed(apiUrl) {
     togglePause,
     clearFeed,
     activeAlert,
+    activeFiatAlert,
+    activeCryptoAlert,
     dismissAlert,
+    dismissFiatAlert,
+    dismissCryptoAlert,
     lastSarDispatched,
     dispatchedSarCount,
     updateTransactionSar,
