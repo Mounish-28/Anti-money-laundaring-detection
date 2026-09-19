@@ -7,16 +7,13 @@ import {
   X,
   AlertCircle,
   Clock,
-  ArrowRight,
   Copy,
   Check,
   Loader2,
   RefreshCw,
   User,
-  Building2,
   Scale,
   Layers,
-  Activity,
 } from 'lucide-react';
 import { DEFAULT_API_URL } from '../services/api';
 import { cn } from '../utils/cn';

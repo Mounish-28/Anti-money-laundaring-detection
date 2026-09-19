@@ -5,27 +5,14 @@ import {
   CreditCard,
   Bitcoin,
   Search,
-  Filter,
   ArrowRight,
   FileWarning,
-  FileText,
-  FileJson,
-  Download,
   Copy,
   CheckCircle2,
-  ExternalLink,
   Layers,
-  Activity,
   Zap,
-  Clock,
-  ChevronRight,
   Eye,
-  AlertTriangle,
   X,
-  IndianRupee,
-  Scale,
-  Hash,
-  User,
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 
@@ -226,6 +213,104 @@ export function CriticalAlertsPortal({
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {/* Real-time Incoming Critical Incident Banners */}
+      {(activeFiatAlert || activeCryptoAlert) && (
+        <div className="space-y-3">
+          {activeFiatAlert && (
+            <div className="relative overflow-hidden rounded-2xl border-2 border-rose-500 bg-gradient-to-r from-rose-950/90 via-obsidian-950 to-cyan-950/80 p-4 shadow-glow-rose animate-fade-in">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-start gap-3">
+                  <div className="p-2.5 rounded-xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/50 shrink-0">
+                    <CreditCard className="w-5 h-5 text-cyan-400" />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center flex-wrap gap-2">
+                      <span className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-rose-600 text-slate-50">
+                        🇮🇳 ACTIVE CRITICAL BANKING INCIDENT
+                      </span>
+                      <span className="text-xs font-mono font-bold text-cyan-300">
+                        UTR: {activeFiatAlert.transaction_id}
+                      </span>
+                      <span className="text-[10px] font-mono text-slate-400">
+                        Rail: {activeFiatAlert.rail}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-200 font-mono">
+                      Domestic transfer of <strong className="text-rose-300">₹{Number(activeFiatAlert.amount || 0).toLocaleString('en-IN')}</strong> triggered statutory threshold evasion or hawala topology.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 self-end md:self-center shrink-0">
+                  <button
+                    onClick={() => {
+                      const fn = openSarModal || onOpenSarModal;
+                      if (fn) fn(activeFiatAlert.sar_id || activeFiatAlert.transaction_id);
+                    }}
+                    className="px-3 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-slate-950 text-xs font-mono font-bold transition-all shadow-md"
+                  >
+                    Open FIU Dossier
+                  </button>
+                  {onDismissFiatAlert && (
+                    <button
+                      onClick={onDismissFiatAlert}
+                      className="p-2 rounded-xl border border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
+                      title="Dismiss Alert"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeCryptoAlert && (
+            <div className="relative overflow-hidden rounded-2xl border-2 border-amber-500 bg-gradient-to-r from-amber-950/90 via-obsidian-950 to-purple-950/80 p-4 shadow-glow-amber animate-fade-in">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-start gap-3">
+                  <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/50 shrink-0">
+                    <Bitcoin className="w-5 h-5 text-amber-400" />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center flex-wrap gap-2">
+                      <span className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-amber-500 text-slate-950">
+                        ⚡ ACTIVE ON-CHAIN VDA INCIDENT
+                      </span>
+                      <span className="text-xs font-mono font-bold text-amber-300">
+                        TX: {String(activeCryptoAlert.transaction_id || '').slice(0, 16)}...
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-200 font-mono">
+                      On-chain transaction of <strong className="text-amber-300">{Number(activeCryptoAlert.amount || 0).toFixed(4)} BTC</strong> flagged for Darknet Mixer / Whale anomaly.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 self-end md:self-center shrink-0">
+                  <button
+                    onClick={() => {
+                      const fn = openSarModal || onOpenSarModal;
+                      if (fn) fn(activeCryptoAlert.sar_id || activeCryptoAlert.transaction_id);
+                    }}
+                    className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-mono font-bold transition-all shadow-md"
+                  >
+                    Open Crypto Dossier
+                  </button>
+                  {onDismissCryptoAlert && (
+                    <button
+                      onClick={onDismissCryptoAlert}
+                      className="p-2 rounded-xl border border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
+                      title="Dismiss Alert"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ------------------------------------------------------------------------ */}
       {/* 1. Header & Dual Dashboard Mode Selector */}
       {/* ------------------------------------------------------------------------ */}

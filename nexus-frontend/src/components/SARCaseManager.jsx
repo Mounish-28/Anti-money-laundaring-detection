@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   FileWarning,
   Search,
@@ -26,7 +26,6 @@ import {
   Scale,
   Activity,
   Zap,
-  Copy,
   ChevronDown,
 } from 'lucide-react';
 import { cn } from '../utils/cn';
