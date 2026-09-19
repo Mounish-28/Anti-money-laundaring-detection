@@ -17,6 +17,7 @@ import { CryptoTriage } from './components/CryptoTriage';
 import { BatchPortal } from './components/BatchPortal';
 import { ObservabilityPortal } from './components/ObservabilityPortal';
 import { LiveAuditLedger } from './components/LiveAuditLedger';
+import { CriticalAlertsPortal } from './components/CriticalAlertsPortal';
 import { SARCaseManager } from './components/SARCaseManager';
 import { SARInvestigationModal } from './components/SARInvestigationModal';
 import { useLiveFeed } from './hooks/useLiveFeed';
@@ -323,6 +324,18 @@ export default function App() {
       isLive: true,
     },
     {
+      id: 'critical_hub',
+      label: 'Critical Alert Center',
+      sublabel: 'Dual Banking & Crypto Hub',
+      icon: Flame,
+      color: 'text-rose-400',
+      badge:
+        liveFeed.telemetry.threatFlagsCount > 0
+          ? liveFeed.telemetry.threatFlagsCount
+          : undefined,
+      isThreatHub: true,
+    },
+    {
       id: 'transactions',
       label: 'Banking Transactions',
       sublabel: 'IBM CatBoost',
@@ -394,7 +407,9 @@ export default function App() {
                   className={cn(
                     'flex items-center gap-2.5 px-3.5 py-2 rounded-xl text-xs font-mono font-semibold transition-all whitespace-nowrap',
                     isActive
-                      ? tab.isLive
+                      ? tab.isThreatHub
+                        ? 'bg-gradient-to-r from-rose-950/90 via-purple-950/80 to-amber-950/90 text-rose-200 border border-rose-500/80 shadow-glow-rose'
+                        : tab.isLive
                         ? 'bg-rose-950/50 text-rose-200 border border-rose-500/50 shadow-glow-rose'
                         : 'bg-slate-800 text-slate-100 border border-cyan-500/40 shadow-glow-cyan'
                       : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 border border-transparent'
@@ -590,6 +605,17 @@ export default function App() {
                 action: `SAR Dossier ${newCase.sar_id} initialized`,
               });
             }}
+          />
+        )}
+        {activeTab === 'critical_hub' && (
+          <CriticalAlertsPortal
+            transactions={liveFeed.transactions}
+            openSarModal={openSarModal}
+            onOpenSarModal={openSarModal}
+            activeFiatAlert={liveFeed.activeFiatAlert}
+            activeCryptoAlert={liveFeed.activeCryptoAlert}
+            onDismissFiatAlert={liveFeed.dismissFiatAlert}
+            onDismissCryptoAlert={liveFeed.dismissCryptoAlert}
           />
         )}
         {activeTab === 'transactions' && (
