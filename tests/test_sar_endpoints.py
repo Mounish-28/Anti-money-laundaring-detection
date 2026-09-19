@@ -237,6 +237,19 @@ async def test_retrieve_sar_by_id(async_client):
     assert resp_404.status_code == 404, f"Expected 404, got {resp_404.status_code}"
     assert "not found" in resp_404.json()["detail"].lower()
 
+    # 3. Retrieve by transaction UTR directly
+    resp_utr = await async_client.get("/api/v1/sar/UTR-FETCH-01")
+    assert resp_utr.status_code == 200
+    assert resp_utr.json()["sar_id"] == sar_id
+
+    # 4. On-demand dynamic dossier instantiation by arbitrary transaction UTR
+    resp_dynamic = await async_client.get("/api/v1/sar/UTR-20260919-50287456")
+    assert resp_dynamic.status_code == 200
+    dynamic_case = resp_dynamic.json()
+    assert dynamic_case["sar_id"].startswith("SAR-IND-")
+    assert any(tx["transaction_id"] == "UTR-20260919-50287456" for tx in dynamic_case["transactions"])
+
+
 
 # ------------------------------------------------------------------------------
 # 6. Test 5: Status State Transitions & Eviction (PATCH /api/v1/sar/{sar_id}/status)

@@ -340,8 +340,9 @@ export function LiveAuditLedger({
             <div className="flex items-center gap-2 self-end md:self-center shrink-0">
               <button
                 onClick={() => {
-                  if (onOpenSarModal) {
-                    onOpenSarModal(activeAlert.sar_id || activeAlert.transaction_id);
+                  const openFn = openSarModal || onOpenSarModal;
+                  if (openFn) {
+                    openFn(activeAlert.sar_id || activeAlert.transaction_id);
                   } else {
                     handleGenerateSar(activeAlert);
                   }

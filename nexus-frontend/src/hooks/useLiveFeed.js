@@ -72,6 +72,24 @@ export function useLiveFeed(apiUrl) {
           });
           setDispatchedSarCount((prev) => prev + 1);
 
+          // Update activeAlert if it matches this dispatched SAR
+          setActiveAlert((prev) => {
+            if (!prev) return prev;
+            const matchesTxId =
+              payload.triggering_tx_id && prev.transaction_id === payload.triggering_tx_id;
+            const matchesSuspect =
+              payload.suspect &&
+              (prev.from_entity === payload.suspect || prev.to_entity === payload.suspect);
+            if (matchesTxId || matchesSuspect || !prev.sar_id) {
+              return {
+                ...prev,
+                sar_id: payload.sar_id,
+                sar_status: payload.status || 'PENDING_REVIEW',
+              };
+            }
+            return prev;
+          });
+
           // If the triggering transaction already exists in the 100-item circular ledger, update that row's data object with sar_id
           setTransactions((prev) =>
             prev.map((tx) => {

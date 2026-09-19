@@ -98,6 +98,29 @@ export function SARInvestigationModal({
       });
 
       if (!response.ok) {
+        // If not found and identifier is a transaction UTR or non-canonical ID, auto-generate case on-demand
+        if (response.status === 404 && !sarId.startsWith('SAR-IND-')) {
+          const rawId = sarId.replace(/^SAR-/, '');
+          const isBtc = sarId.startsWith('0x') || sarId.includes('BTC') || sarId.startsWith('node_');
+          const isHawala = sarId.includes('HAW') || sarId.includes('WIRE');
+          const typology = isBtc ? 'IN_TYP_VDA_MIX' : isHawala ? 'IN_TYP_HAWALA' : 'IN_TYP_STRUCT';
+
+          const genRes = await fetch(`${cleanUrl}/api/v1/sar/generate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify({
+              transaction_ids: [rawId],
+              primary_typology: typology,
+              investigator_notes: `Initiated from Live Audit Ledger for transaction ${rawId}.`,
+              assigned_investigator: 'COMPLIANCE-ANALYST-01',
+            }),
+          });
+          if (genRes.ok) {
+            const genData = await genRes.json();
+            setCaseData(genData);
+            return;
+          }
+        }
         throw new Error(`Server returned HTTP ${response.status}: ${response.statusText}`);
       }
 
@@ -304,11 +327,16 @@ export function SARInvestigationModal({
               <div className="text-[11px] font-mono font-bold tracking-wider text-amber-400 uppercase">
                 FIU-IND FORM STR // REGULATORY DOSSIER
               </div>
-              <div className="flex items-center gap-2 mt-0.5">
+              <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                 <h2 className="text-base sm:text-lg font-mono font-bold text-slate-100">
-                  {sarId || 'SAR-IND-CASE'}
+                  {caseData?.sar_id || sarId || 'SAR-IND-CASE'}
                 </h2>
-                {sarId && (
+                {caseData?.sar_id && sarId && caseData.sar_id !== sarId && (
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-950/80 text-cyan-300 border border-cyan-800">
+                    Ref: {sarId}
+                  </span>
+                )}
+                {(caseData?.sar_id || sarId) && (
                   <button
                     onClick={handleCopyId}
                     className="p-1 rounded text-slate-400 hover:text-cyan-300 hover:bg-slate-800 transition-colors"

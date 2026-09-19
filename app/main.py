@@ -242,6 +242,11 @@ async def process_sar_background(
             case.total_exposure_inr,
             typology.value if hasattr(typology, "value") else typology,
         )
+        # Index transaction ID directly to case.sar_id for instantaneous reverse lookup
+        trigger_id = tx_payload.get("transaction_id") or tx_payload.get("node_id") or tx_payload.get("tx_hash")
+        if trigger_id:
+            async with sar_service._lock:
+                sar_service._active_ring_index[str(trigger_id)] = case.sar_id
 
         # Broadcast real-time SAR alert packet to connected monitoring dashboards
         status_val = (
