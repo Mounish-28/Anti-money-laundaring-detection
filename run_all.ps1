@@ -34,8 +34,8 @@ param (
     [switch]$NoFrontend
 )
 
-# Enforce strict error-handling
-$ErrorActionPreference = "Stop"
+# Resilient error handling for long-running orchestration
+$ErrorActionPreference = "Continue"
 $repoRoot = $PSScriptRoot
 
 # ------------------------------------------------------------------------------
@@ -152,7 +152,7 @@ try {
     Write-Host "`n[1/4] Starting FastAPI Backend Core on port $BackendPort..." -ForegroundColor Cyan
     $backendPsi = New-Object System.Diagnostics.ProcessStartInfo
     $backendPsi.FileName = $pythonExe
-    $backendPsi.Arguments = "-m uvicorn app.main:app --port $BackendPort --reload"
+    $backendPsi.Arguments = "-m uvicorn app.main:app --host 0.0.0.0 --port $BackendPort"
     $backendPsi.WorkingDirectory = $repoRoot
     $backendPsi.UseShellExecute = $false
 
@@ -162,7 +162,7 @@ try {
     # --------------------------------------------------------------------------
     # Phase 2: Health Check Polling (0.5s interval, 20s timeout)
     # --------------------------------------------------------------------------
-    $docsUrl = "http://localhost:$BackendPort/docs"
+    $docsUrl = "http://127.0.0.1:$BackendPort/docs"
     Write-Host "  -> Health-gating: polling $docsUrl (0.5s interval, 20s timeout)..." -ForegroundColor Yellow
     $healthy = $false
     $maxAttempts = 40  # 40 * 0.5s = 20s
@@ -225,7 +225,7 @@ try {
             Write-Host "[4/4] Starting Vite React UI ($npmCmd run dev)..." -ForegroundColor Magenta
             $frontendPsi = New-Object System.Diagnostics.ProcessStartInfo
             $frontendPsi.FileName = "cmd.exe"
-            $frontendPsi.Arguments = "/c `"$npmCmd run dev`""
+            $frontendPsi.Arguments = "/c `"`"$npmCmd`" run dev`""
             $frontendPsi.WorkingDirectory = $frontendDir
             $frontendPsi.UseShellExecute = $false
             $frontendProc = [System.Diagnostics.Process]::Start($frontendPsi)
