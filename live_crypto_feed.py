@@ -538,7 +538,7 @@ async def run_live_crypto_feed(
     print(f" Rate Limiting    : {rate_limit:.1f} tx/sec max")
     print(f" Anomaly Injection: {anomaly_rate * 100:.1f}% stochastic darknet / whale / peeling anomalies")
     print(f" Primary Source   : {PRIMARY_WS_URL} (blockchain.info inv stream)")
-    print(f" Fallback Source  : Synthetic Mempool Generator (automatic on WS outage)")
+    print(" Fallback Source  : Synthetic Mempool Generator (automatic on WS outage)")
     print(
         f" Total Target     : {'Continuous Infinite Stream (Ctrl+C to stop)' if max_count <= 0 else max_count}"
     )
