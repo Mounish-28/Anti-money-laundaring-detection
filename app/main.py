@@ -492,17 +492,29 @@ async def score_crypto(payload: EllipticNodeInput, background_tasks: BackgroundT
             flags.insert(0, "ANOMALY")
 
         # Asynchronous SAR Generation / Ring Aggregation Pipeline for Crypto
-        raw_tier = str(res.get("risk_tier", "")).upper()
+        raw_tier = str(res.get("risk_tier", "LOW")).upper()
         score_val = float(res.get("risk_score", 0.0))
-        btc_val = float(payload.btc_value) if payload.btc_value is not None else 0.0
+        effective_btc = (
+            float(payload.btc_value)
+            if payload.btc_value is not None
+            else (float(payload.features[0]) if payload.features else 0.0)
+        )
         is_crypto_threat = (
             raw_tier in ("CRITICAL_SAR", "CRITICAL")
-            or score_val >= 0.80
-            or btc_val >= 10.0
-            or (payload.features and abs(payload.features[0]) >= 10.0)
+            or score_val >= 0.88
+            or effective_btc >= 10.0
             or bool(res.get("is_anomaly"))
         )
+
         if is_crypto_threat:
+            if raw_tier in ("LOW", "LOW_RISK", "ELEVATED", "MEDIUM"):
+                res["risk_tier"] = "CRITICAL_SAR"
+                res["is_anomaly"] = True
+                if "ANOMALY" not in flags:
+                    flags.insert(0, "ANOMALY")
+                if effective_btc >= 10.0 and "WHALE_TRANSFER" not in flags:
+                    flags.append("WHALE_TRANSFER")
+
             crypto_dict = payload.model_dump()
             background_tasks.add_task(
                 process_sar_background,
@@ -525,8 +537,6 @@ async def score_crypto(payload: EllipticNodeInput, background_tasks: BackgroundT
         to_entity = payload.to_address or f"cluster_{payload.node_id[:8]}"
 
         broadcast_tier = str(res.get("risk_tier", "LOW"))
-        if is_crypto_threat and broadcast_tier in ("LOW", "LOW_RISK", "ELEVATED", "MEDIUM"):
-            broadcast_tier = "CRITICAL_SAR"
 
         result_payload = {
             "engine": "CRYPTO_FORENSICS",
