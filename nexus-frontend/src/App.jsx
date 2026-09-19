@@ -170,9 +170,9 @@ export default function App() {
       };
 
       if (isCrypto) {
-        setActiveCryptoBanner(bannerData);
+        setActiveCryptoAlertBanner(bannerData);
       } else {
-        setActiveFiatBanner(bannerData);
+        setActiveFiatAlertBanner(bannerData);
       }
 
       // Retroactively link triggering transaction in circular ledger
