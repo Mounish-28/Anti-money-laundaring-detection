@@ -50,9 +50,9 @@ async def run_benchmark():
             "features": [0.12] * 165,
         }
         res_crypto = await client.post("/api/v1/score/crypto", json=crypto_payload)
-        assert res_crypto.status_code == 200, (
-            f"Crypto scoring failed: {res_crypto.text}"
-        )
+        assert (
+            res_crypto.status_code == 200
+        ), f"Crypto scoring failed: {res_crypto.text}"
         crypto_data = res_crypto.json()
         print(
             f"Crypto Score: {crypto_data['risk_score']}, Percentile: {crypto_data['percentile']}%, Tier: {crypto_data['risk_tier']}, Latency: {crypto_data['latency_ms']}ms"
@@ -255,12 +255,12 @@ async def run_benchmark():
             f"  [Check 3] Mean Latency Under 10ms: {mean_latency:.2f} ms (Assertion: < 10.0ms) -> {'PASS' if mean_latency < 10.0 else 'FAIL'}"
         )
 
-        assert normal_low_risk_pct >= 90.0, (
-            f"Normal traffic low-risk routing failed: {normal_low_risk_pct}% < 90%"
-        )
-        assert anomalous_flagged_pct >= 95.0, (
-            f"Anomalous traffic detection failed: {anomalous_flagged_pct}% < 95%"
-        )
+        assert (
+            normal_low_risk_pct >= 90.0
+        ), f"Normal traffic low-risk routing failed: {normal_low_risk_pct}% < 90%"
+        assert (
+            anomalous_flagged_pct >= 95.0
+        ), f"Anomalous traffic detection failed: {anomalous_flagged_pct}% < 95%"
         assert mean_latency < 10.0, f"Latency SLA breached: {mean_latency}ms >= 10ms"
 
         # 5. Check Audit Alerts Persistence

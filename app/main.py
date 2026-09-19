@@ -268,9 +268,11 @@ async def process_sar_background(
             ),
             "triggering_tx_id": tx_payload.get("transaction_id")
             or tx_payload.get("node_id"),
-            "timestamp": case.created_at.isoformat()
-            if hasattr(case.created_at, "isoformat")
-            else str(case.created_at),
+            "timestamp": (
+                case.created_at.isoformat()
+                if hasattr(case.created_at, "isoformat")
+                else str(case.created_at)
+            ),
         }
         await manager.broadcast(sar_alert_packet)
     except Exception as e:
