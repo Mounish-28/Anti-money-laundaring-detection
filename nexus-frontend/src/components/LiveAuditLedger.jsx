@@ -48,7 +48,24 @@ export function LiveAuditLedger({
     return transactions.filter((tx) => {
       const isCrypto =
         tx.engine === 'CRYPTO_FORENSICS' || tx.rail === 'BTC' || tx.currency === 'BTC';
-      const isSar = tx.risk_tier === 'CRITICAL_SAR' || tx.risk_tier === 'HIGH';
+      const isSar =
+        Boolean(tx.sar_id) ||
+        tx.risk_tier === 'CRITICAL_SAR' ||
+        tx.risk_tier === 'CRITICAL' ||
+        tx.risk_tier === 'HIGH' ||
+        tx.risk_tier === 'HIGH_RISK' ||
+        Number(tx.risk_score) >= 0.80 ||
+        (Array.isArray(tx.flags) &&
+          tx.flags.some((f) =>
+            [
+              'PAN_STRUCTURING_EVASION',
+              'HAWALA_WIRE',
+              'MULE_BURST',
+              'AUTO_FLAG_SAR',
+              'CRITICAL_SAR',
+              'ANOMALY',
+            ].includes(String(f).toUpperCase())
+          ));
 
       if (activeFilter === 'FIAT') return !isCrypto;
       if (activeFilter === 'CRYPTO') return isCrypto;
@@ -67,7 +84,26 @@ export function LiveAuditLedger({
         tx.engine === 'CRYPTO_FORENSICS' || tx.rail === 'BTC' || tx.currency === 'BTC';
       if (isCrypto) crypto++;
       else fiat++;
-      if (tx.risk_tier === 'CRITICAL_SAR' || tx.risk_tier === 'HIGH') sars++;
+
+      const isSar =
+        Boolean(tx.sar_id) ||
+        tx.risk_tier === 'CRITICAL_SAR' ||
+        tx.risk_tier === 'CRITICAL' ||
+        tx.risk_tier === 'HIGH' ||
+        tx.risk_tier === 'HIGH_RISK' ||
+        Number(tx.risk_score) >= 0.80 ||
+        (Array.isArray(tx.flags) &&
+          tx.flags.some((f) =>
+            [
+              'PAN_STRUCTURING_EVASION',
+              'HAWALA_WIRE',
+              'MULE_BURST',
+              'AUTO_FLAG_SAR',
+              'CRITICAL_SAR',
+              'ANOMALY',
+            ].includes(String(f).toUpperCase())
+          ));
+      if (isSar) sars++;
     }
     return { all: transactions.length, fiat, crypto, sars };
   }, [transactions]);

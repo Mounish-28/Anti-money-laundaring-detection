@@ -391,11 +391,29 @@ async def score_transaction(
             or "PAN_STRUCTURING_EVASION" in flags
             or "smurf" in str(payload.account_from).lower()
         )
-        if (
+        is_hawala_candidate = (
+            float(payload.amount) >= 2500000.0 or "HAWALA_WIRE" in flags
+        )
+        is_mule_candidate = (
+            "MULE_BURST" in flags or "draining" in str(payload.account_from).lower()
+        )
+
+        is_threat = (
             raw_tier in ("CRITICAL_SAR", "CRITICAL")
             or score_val >= 0.85
             or is_structuring_candidate
-        ):
+            or is_hawala_candidate
+            or is_mule_candidate
+        )
+
+        if is_threat:
+            if is_structuring_candidate and "PAN_STRUCTURING_EVASION" not in flags:
+                flags.append("PAN_STRUCTURING_EVASION")
+            if is_hawala_candidate and "HAWALA_WIRE" not in flags:
+                flags.append("HAWALA_WIRE")
+            if is_mule_candidate and "MULE_BURST" not in flags:
+                flags.append("MULE_BURST")
+
             txn_dict = payload.model_dump()
             typology = _resolve_typology("FIAT_BANKING", flags, txn_dict)
             background_tasks.add_task(
@@ -404,6 +422,11 @@ async def score_transaction(
                 res,
                 typology,
             )
+
+        # Ensure broadcast tier reflects SAR threat tier
+        broadcast_tier = str(res.get("risk_tier", "LOW"))
+        if is_threat and broadcast_tier in ("LOW", "LOW_RISK", "ELEVATED", "MEDIUM"):
+            broadcast_tier = "CRITICAL_SAR"
 
         result_payload = {
             "engine": "FIAT_BANKING",
@@ -415,7 +438,7 @@ async def score_transaction(
             "amount": float(payload.amount),
             "currency": "INR",
             "risk_score": float(res.get("risk_score", 0.0)),
-            "risk_tier": str(res.get("risk_tier", "LOW")),
+            "risk_tier": broadcast_tier,
             "latency_ms": float(res.get("latency_ms", round(duration * 1000, 2))),
             "flags": flags,
         }
@@ -466,7 +489,15 @@ async def score_crypto(payload: EllipticNodeInput, background_tasks: BackgroundT
         # Asynchronous SAR Generation / Ring Aggregation Pipeline for Crypto
         raw_tier = str(res.get("risk_tier", "")).upper()
         score_val = float(res.get("risk_score", 0.0))
-        if raw_tier in ("CRITICAL_SAR", "CRITICAL") or score_val >= 0.80:
+        btc_val = float(payload.btc_value) if payload.btc_value is not None else 0.0
+        is_crypto_threat = (
+            raw_tier in ("CRITICAL_SAR", "CRITICAL")
+            or score_val >= 0.80
+            or btc_val >= 10.0
+            or (payload.features and abs(payload.features[0]) >= 10.0)
+            or bool(res.get("is_anomaly"))
+        )
+        if is_crypto_threat:
             crypto_dict = payload.model_dump()
             background_tasks.add_task(
                 process_sar_background,
@@ -488,6 +519,10 @@ async def score_crypto(payload: EllipticNodeInput, background_tasks: BackgroundT
         from_entity = payload.from_address or f"node_{payload.node_id}"
         to_entity = payload.to_address or f"cluster_{payload.node_id[:8]}"
 
+        broadcast_tier = str(res.get("risk_tier", "LOW"))
+        if is_crypto_threat and broadcast_tier in ("LOW", "LOW_RISK", "ELEVATED", "MEDIUM"):
+            broadcast_tier = "CRITICAL_SAR"
+
         result_payload = {
             "engine": "CRYPTO_FORENSICS",
             "transaction_id": payload.tx_hash or payload.node_id,
@@ -498,7 +533,7 @@ async def score_crypto(payload: EllipticNodeInput, background_tasks: BackgroundT
             "amount": float(btc_amount),
             "currency": "BTC",
             "risk_score": float(res.get("risk_score", 0.0)),
-            "risk_tier": str(res.get("risk_tier", "LOW")),
+            "risk_tier": broadcast_tier,
             "latency_ms": float(res.get("latency_ms", round(duration * 1000, 2))),
             "flags": flags,
         }

@@ -93,6 +93,7 @@ export function useLiveFeed(apiUrl) {
                   ...tx,
                   sar_id: payload.sar_id,
                   sar_status: payload.status || 'PENDING_REVIEW',
+                  risk_tier: 'CRITICAL_SAR',
                 };
               }
               return tx;
@@ -108,7 +109,23 @@ export function useLiveFeed(apiUrl) {
           const lat =
             typeof payload.latency_ms === 'number' ? payload.latency_ms : 12.0;
           const isThreat =
-            payload.risk_tier === 'CRITICAL_SAR' || payload.risk_tier === 'HIGH';
+            Boolean(payload.sar_id) ||
+            payload.risk_tier === 'CRITICAL_SAR' ||
+            payload.risk_tier === 'CRITICAL' ||
+            payload.risk_tier === 'HIGH' ||
+            payload.risk_tier === 'HIGH_RISK' ||
+            Number(payload.risk_score) >= 0.80 ||
+            (Array.isArray(payload.flags) &&
+              payload.flags.some((f) =>
+                [
+                  'PAN_STRUCTURING_EVASION',
+                  'HAWALA_WIRE',
+                  'MULE_BURST',
+                  'AUTO_FLAG_SAR',
+                  'CRITICAL_SAR',
+                  'ANOMALY',
+                ].includes(String(f).toUpperCase())
+              ));
           const isCrypto =
             payload.engine === 'CRYPTO_FORENSICS' ||
             payload.currency === 'BTC' ||
@@ -128,8 +145,12 @@ export function useLiveFeed(apiUrl) {
           };
         });
 
-        // Trigger critical alert banner if CRITICAL_SAR
-        if (payload.risk_tier === 'CRITICAL_SAR') {
+        // Trigger critical alert banner if CRITICAL_SAR or CRITICAL
+        if (
+          payload.risk_tier === 'CRITICAL_SAR' ||
+          payload.risk_tier === 'CRITICAL' ||
+          Boolean(payload.sar_id)
+        ) {
           setActiveAlert({
             ...payload,
             alertId: `${payload.transaction_id}-${Date.now()}`,
