@@ -419,18 +419,72 @@ class SyntheticCryptoTxGenerator:
     """Generates realistic Bitcoin mempool transactions during public WebSocket outages."""
 
     @staticmethod
-    def generate() -> dict[str, Any]:
+    def generate_critical() -> dict[str, Any]:
+        """
+        Generates a standalone, randomized critical Bitcoin transaction
+        matching one of three high-risk forensic AML patterns:
+        - Darknet CoinJoin Mixer Cluster (High fan-in 12-24, high fan-out 30-80, high entropy)
+        - High-Value Whale Outlier (> 12.0 BTC to 68.0 BTC)
+        - Peeling Chain Rapid Hop (Rapid unhosted split UTXO)
+        """
         tx_hash = secrets.token_hex(32)
-        # 15% probability of anomalous mixing / peeling chain pattern
-        is_anomaly = random.random() < 0.15
-        if is_anomaly:
-            in_count = random.choice([8, 12, 16, 24])
-            out_count = random.choice([10, 20, 50, 80])
-            btc_value = round(random.uniform(5.0, 45.0), 4)
+        pattern = random.choice(["mixer", "whale", "peeling"])
+
+        if pattern == "mixer":
+            in_count = random.choice([12, 16, 24, 32])
+            out_count = random.choice([20, 40, 60, 80])
+            btc_value = round(random.uniform(4.5, 18.0), 4)
+            from_addr = f"bc1q_mixer_{secrets.token_hex(12)}"
+            to_addr = f"bc1q_darknet_{secrets.token_hex(12)}"
+        elif pattern == "whale":
+            in_count = random.choice([2, 3, 4, 6])
+            out_count = random.choice([1, 2, 3])
+            btc_value = round(random.uniform(12.5, 68.0), 4)
+            from_addr = f"bc1q_whale_{secrets.token_hex(12)}"
+            to_addr = f"bc1q_coldstorage_{secrets.token_hex(12)}"
         else:
-            in_count = random.choices([1, 2, 3, 4], weights=[0.6, 0.25, 0.1, 0.05])[0]
-            out_count = random.choices([1, 2, 3], weights=[0.3, 0.65, 0.05])[0]
-            btc_value = round(random.expovariate(1.5) * 0.05 + 0.0001, 6)
+            in_count = random.choice([1, 2])
+            out_count = random.choice([2, 3])
+            btc_value = round(random.uniform(8.5, 24.0), 4)
+            from_addr = f"bc1q_peel_hop_{secrets.token_hex(12)}"
+            to_addr = f"bc1q_unhosted_{secrets.token_hex(12)}"
+
+        fee_btc = round(min(0.002, btc_value * random.uniform(0.0005, 0.003) + 0.0001), 8)
+        output_values = [round(btc_value / max(1, out_count), 8)] * out_count
+        size_bytes = 148 * in_count + 34 * out_count + 10
+
+        features = EllipticTensorBuilder.build_tensor(
+            in_count=in_count,
+            out_count=out_count,
+            btc_value=btc_value,
+            fee_btc=fee_btc,
+            output_values=output_values,
+            size_bytes=size_bytes,
+            timestep=49,
+        )
+
+        return {
+            "tx_hash": tx_hash,
+            "node_id": tx_hash,
+            "timestep": 49,
+            "features": features,
+            "btc_value": btc_value,
+            "from_address": from_addr,
+            "to_address": to_addr,
+            "in_count": in_count,
+            "out_count": out_count,
+            "fee_btc": fee_btc,
+        }
+
+    @staticmethod
+    def generate(force_anomaly: bool = False) -> dict[str, Any]:
+        if force_anomaly or random.random() < 0.22:
+            return SyntheticCryptoTxGenerator.generate_critical()
+
+        tx_hash = secrets.token_hex(32)
+        in_count = random.choices([1, 2, 3, 4], weights=[0.6, 0.25, 0.1, 0.05])[0]
+        out_count = random.choices([1, 2, 3], weights=[0.3, 0.65, 0.05])[0]
+        btc_value = round(random.expovariate(1.5) * 0.05 + 0.0001, 6)
 
         fee_btc = round(min(0.0005, btc_value * random.uniform(0.0001, 0.005) + 0.00001), 8)
         output_values = [round(btc_value / max(1, out_count), 8)] * out_count
@@ -469,6 +523,7 @@ class SyntheticCryptoTxGenerator:
 async def run_live_crypto_feed(
     backend_url: str,
     rate_limit: float,
+    anomaly_rate: float = 0.20,
     max_count: int = 0,
 ):
     """
@@ -481,6 +536,7 @@ async def run_live_crypto_feed(
     )
     print(f" Backend Endpoint : {BOLD}{backend_url}{RESET}")
     print(f" Rate Limiting    : {rate_limit:.1f} tx/sec max")
+    print(f" Anomaly Injection: {anomaly_rate * 100:.1f}% stochastic darknet / whale / peeling anomalies")
     print(f" Primary Source   : {PRIMARY_WS_URL} (blockchain.info inv stream)")
     print(f" Fallback Source  : Synthetic Mempool Generator (automatic on WS outage)")
     print(
@@ -523,15 +579,19 @@ async def run_live_crypto_feed(
                         if max_count > 0 and processed_count >= max_count:
                             break
 
-                        msg_raw = await ws.recv()
-                        try:
-                            msg = json.loads(msg_raw)
-                        except Exception:
-                            continue
+                        # Stochastic Critical Anomaly Injection (Random manner, not sequential/order-wise)
+                        if random.random() < anomaly_rate:
+                            payload = SyntheticCryptoTxGenerator.generate_critical()
+                        else:
+                            msg_raw = await ws.recv()
+                            try:
+                                msg = json.loads(msg_raw)
+                            except Exception:
+                                continue
 
-                        payload = BitcoinTxParser.parse_blockchain_info(msg)
-                        if not payload:
-                            continue
+                            payload = BitcoinTxParser.parse_blockchain_info(msg)
+                            if not payload:
+                                continue
 
                         # Rate limiting / backpressure regulation
                         now = time.perf_counter()
@@ -630,12 +690,19 @@ def main():
         default=0,
         help="Number of transactions to ingest before exiting (default: 0 for continuous)",
     )
+    parser.add_argument(
+        "--anomaly-rate",
+        type=float,
+        default=0.20,
+        help="Fraction of crypto transactions triggering forensic crime anomalies (default: 0.20)",
+    )
 
     args = parser.parse_args()
     asyncio.run(
         run_live_crypto_feed(
             backend_url=args.backend_url,
             rate_limit=args.rate_limit,
+            anomaly_rate=args.anomaly_rate,
             max_count=args.count,
         )
     )

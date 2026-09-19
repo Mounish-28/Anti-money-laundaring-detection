@@ -428,10 +428,15 @@ async def score_transaction(
                 typology,
             )
 
-        # Ensure broadcast tier reflects SAR threat tier
+        # Ensure risk tier and broadcast reflect SAR threat tier
+        if is_threat:
+            if res.get("risk_tier") in ("LOW", "LOW_RISK", "ELEVATED", "MEDIUM"):
+                res["risk_tier"] = "CRITICAL_SAR"
+            res["is_anomaly"] = True
+            if not res.get("recommended_action") or res["recommended_action"] == "AUTO_CLEARED":
+                res["recommended_action"] = "AUTO_FLAG_SAR"
+
         broadcast_tier = str(res.get("risk_tier", "LOW"))
-        if is_threat and broadcast_tier in ("LOW", "LOW_RISK", "ELEVATED", "MEDIUM"):
-            broadcast_tier = "CRITICAL_SAR"
 
         result_payload = {
             "engine": "FIAT_BANKING",

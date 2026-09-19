@@ -439,6 +439,79 @@ def generate_typology_c_velocity_draining() -> list[tuple[dict[str, Any], str]]:
     return sequence
 
 
+def generate_random_critical_transaction() -> tuple[dict[str, Any], str]:
+    """
+    Generates a standalone, randomized critical transaction chosen stochastically
+    from one of three statutory Indian AML crime typologies:
+    - Structuring / Smurfing (UPI strictly below ₹50,000 threshold to aggregator VPA)
+    - Hawala Wire Anomaly (High-value RTGS ₹28L to ₹1.5Cr between shell entities)
+    - Mule Account Draining (Compromised account velocity drain via IMPS)
+    """
+    typology = random.choice(["STRUCTURING", "HAWALA", "MULE"])
+
+    if typology == "STRUCTURING":
+        mule_name = EntityGenerator.generate_person_name()
+        mule_vpa = f"{mule_name.lower()}.smurf{random.randint(10, 99)}@oksbi"
+        aggregator_vpa = (
+            f"aggregator.{random.choice(INDIAN_LAST_NAMES).lower()}{random.randint(10, 99)}@paytm"
+        )
+        _, from_bank = EntityGenerator.generate_bank()
+        _, to_bank = EntityGenerator.generate_bank()
+        amount = round(random.uniform(48100.0, 49950.0), 2)
+        tx = {
+            "transaction_id": EntityGenerator.generate_utr(),
+            "timestamp": EntityGenerator.get_iso_timestamp(),
+            "from_bank": from_bank,
+            "to_bank": to_bank,
+            "account_from": mule_vpa,
+            "account_to": aggregator_vpa,
+            "amount": amount,
+            "currency": "INR",
+            "payment_format": "UPI",
+        }
+        return tx, f"PAN_STRUCTURING_SMURFING [₹{amount:,.2f} -> {aggregator_vpa}]"
+
+    elif typology == "HAWALA":
+        _, from_bank = EntityGenerator.generate_bank(high_risk=True)
+        _, to_bank = EntityGenerator.generate_bank(high_risk=True)
+        from_corp = f"{random.choice(HAWALA_SHELL_ENTITIES)} ({EntityGenerator.generate_account_number()})"
+        to_corp = f"{random.choice(HAWALA_SHELL_ENTITIES)} ({EntityGenerator.generate_account_number()})"
+        amount = round(random.uniform(2800000.0, 14500000.0), 2)
+        tx = {
+            "transaction_id": EntityGenerator.generate_utr(),
+            "timestamp": EntityGenerator.get_iso_timestamp(),
+            "from_bank": from_bank,
+            "to_bank": to_bank,
+            "account_from": from_corp,
+            "account_to": to_corp,
+            "amount": amount,
+            "currency": "INR",
+            "payment_format": "RTGS",
+        }
+        return tx, f"HIGH_VALUE_HAWALA_RTGS [₹{amount:,.2f}]"
+
+    else:
+        victim_name = EntityGenerator.generate_person_name()
+        victim_account = f"{victim_name} (draining_{EntityGenerator.generate_account_number()})"
+        beneficiary_name = EntityGenerator.generate_person_name()
+        beneficiary_acc = f"{beneficiary_name} ({EntityGenerator.generate_account_number()})"
+        _, from_bank = EntityGenerator.generate_bank()
+        _, to_bank = EntityGenerator.generate_bank()
+        amount = round(random.uniform(14000.0, 24900.0), 2)
+        tx = {
+            "transaction_id": EntityGenerator.generate_utr(),
+            "timestamp": EntityGenerator.get_iso_timestamp(),
+            "from_bank": from_bank,
+            "to_bank": to_bank,
+            "account_from": victim_account,
+            "account_to": beneficiary_acc,
+            "amount": amount,
+            "currency": "INR",
+            "payment_format": "IMPS",
+        }
+        return tx, f"VELOCITY_MULE_DRAINING [₹{amount:,.2f} -> {beneficiary_name}]"
+
+
 # ------------------------------------------------------------------------------
 # HTTP Network Client & Dispatcher
 # ------------------------------------------------------------------------------
@@ -571,36 +644,39 @@ def run_streamer(
                 )
                 break
 
-            # If anomaly burst has pending items, drain them with rapid inter-transaction delays
-            if pending_queue:
+            # If an anomaly burst has pending items, interleave them stochastically with baseline transactions
+            if pending_queue and random.random() < 0.65:
                 tx_payload, tag, delay = pending_queue.pop(0)
                 time.sleep(delay)
             else:
-                # Decide whether to inject an anomaly burst
+                # Stochastic Anomaly Injection (Random manner, not sequential/order-wise)
                 if random.random() < anomaly_rate:
-                    typology = random.choice(["A", "B", "C"])
-                    if typology == "A":
-                        burst = generate_typology_a_structuring()
-                        # Inter-transaction delay ~0.4s to 0.9s (under 15s total for 4-8 txs)
-                        for item in burst:
-                            pending_queue.append(
-                                (item[0], item[1], random.uniform(0.4, 0.9))
-                            )
-                    elif typology == "B":
-                        burst = generate_typology_b_hawala_rtgs()
-                        for item in burst:
-                            pending_queue.append(
-                                (item[0], item[1], random.uniform(1.0, 1.8))
-                            )
+                    # 60% chance: single random standalone critical anomaly (Hawala, Structuring, or Mule Drain)
+                    # 40% chance: initiate a multi-transaction coordinated ring (which is randomly interleaved)
+                    if random.random() < 0.60:
+                        tx_payload, tag = generate_random_critical_transaction()
                     else:
-                        burst = generate_typology_c_velocity_draining()
-                        # Rapid draining ~0.2s to 0.6s (under 10s total for 6-10 txs)
-                        for item in burst:
-                            pending_queue.append(
-                                (item[0], item[1], random.uniform(0.2, 0.6))
-                            )
+                        typology = random.choice(["A", "B", "C"])
+                        if typology == "A":
+                            burst = generate_typology_a_structuring()
+                            for item in burst:
+                                pending_queue.append(
+                                    (item[0], item[1], random.uniform(0.3, 0.7))
+                                )
+                        elif typology == "B":
+                            burst = generate_typology_b_hawala_rtgs()
+                            for item in burst:
+                                pending_queue.append(
+                                    (item[0], item[1], random.uniform(0.6, 1.2))
+                                )
+                        else:
+                            burst = generate_typology_c_velocity_draining()
+                            for item in burst:
+                                pending_queue.append(
+                                    (item[0], item[1], random.uniform(0.2, 0.5))
+                                )
 
-                    tx_payload, tag, _ = pending_queue.pop(0)
+                        tx_payload, tag, _ = pending_queue.pop(0)
                 else:
                     # Baseline legitimate traffic
                     tx_payload, tag = generate_baseline_transaction()
@@ -666,8 +742,8 @@ def main():
     parser.add_argument(
         "--anomaly-rate",
         type=float,
-        default=0.15,
-        help="Fraction of transactions triggering crime typologies (default: 0.15)",
+        default=0.22,
+        help="Fraction of transactions triggering crime typologies (default: 0.22)",
     )
     parser.add_argument(
         "--count",
