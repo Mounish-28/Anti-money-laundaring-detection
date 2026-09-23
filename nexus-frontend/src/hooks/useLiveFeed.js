@@ -28,6 +28,7 @@ export function useLiveFeed(apiUrl) {
   const wsRef = useRef(null);
   const reconnectAttemptRef = useRef(0);
   const reconnectTimeoutRef = useRef(null);
+  const pingIntervalRef = useRef(null);
   const isPausedRef = useRef(false);
   isPausedRef.current = isPaused;
 
@@ -59,12 +60,26 @@ export function useLiveFeed(apiUrl) {
     ws.onopen = () => {
       setConnectionStatus('CONNECTED');
       reconnectAttemptRef.current = 0;
+      // Start 15s keepalive ping interval
+      if (pingIntervalRef.current) clearInterval(pingIntervalRef.current);
+      pingIntervalRef.current = setInterval(() => {
+        if (ws.readyState === WebSocket.OPEN) {
+          try {
+            ws.send(JSON.stringify({ type: 'ping' }));
+          } catch {
+            // Socket error will trigger onclose
+          }
+        }
+      }, 15000);
     };
 
     ws.onmessage = (event) => {
       try {
         const payload = JSON.parse(event.data);
         if (!payload) return;
+
+        // Handle keepalive pong and dispatch ack responses
+        if (payload.type === 'pong' || payload.type === 'DISPATCH_ACK') return;
 
         // Catch incoming real-time SAR_DISPATCHED regulatory alert events
         if (payload.event === 'SAR_DISPATCHED') {
@@ -203,8 +218,14 @@ export function useLiveFeed(apiUrl) {
         }
 
         // Only buffer onto sliding window if not paused (bounded circular buffer: max 100 entries)
+        // Deduplicate incoming items by transaction_id
         if (!isPausedRef.current) {
-          setTransactions((prev) => [payload, ...prev.slice(0, 99)]);
+          setTransactions((prev) => {
+            if (prev.some((tx) => tx.transaction_id === payload.transaction_id)) {
+              return prev;
+            }
+            return [payload, ...prev.slice(0, 99)];
+          });
         }
       } catch (err) {
         console.warn('Error processing WebSocket message:', err);
@@ -217,8 +238,12 @@ export function useLiveFeed(apiUrl) {
 
     ws.onclose = () => {
       setConnectionStatus('DISCONNECTED');
-      // Exponential backoff reconnection: 2s, 4s, 8s, up to 16s
-      const delay = Math.min(16000, 2000 * Math.pow(2, reconnectAttemptRef.current));
+      if (pingIntervalRef.current) {
+        clearInterval(pingIntervalRef.current);
+      }
+      // Exponential backoff reconnection with jitter: 2s, 4s, 8s, up to 16s + jitter
+      const jitter = Math.floor(Math.random() * 1000);
+      const delay = Math.min(16000, 2000 * Math.pow(2, reconnectAttemptRef.current)) + jitter;
       reconnectAttemptRef.current += 1;
       reconnectTimeoutRef.current = setTimeout(connect, delay);
     };
@@ -228,6 +253,9 @@ export function useLiveFeed(apiUrl) {
     connect();
 
     return () => {
+      if (pingIntervalRef.current) {
+        clearInterval(pingIntervalRef.current);
+      }
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
       }
@@ -282,6 +310,114 @@ export function useLiveFeed(apiUrl) {
     );
   }, []);
 
+  /**
+   * Dispatches a manual transaction or custom AML event over the /ws/live duplex
+   * stream with immediate zero-reload optimistic UI update and REST fallback.
+   */
+  const dispatchTransaction = useCallback(
+    async (eventData) => {
+      if (!eventData) return null;
+
+      const isCrypto =
+        eventData.rail === 'BTC' ||
+        eventData.currency === 'BTC' ||
+        eventData.engine === 'CRYPTO_FORENSICS';
+
+      const txId =
+        eventData.transaction_id ||
+        (isCrypto
+          ? `btc_live_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`
+          : `TX_UPI_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`);
+
+      const payload = {
+        transaction_id: txId,
+        rail: eventData.rail || (isCrypto ? 'BTC' : 'UPI'),
+        currency: eventData.currency || (isCrypto ? 'BTC' : 'INR'),
+        amount: Number(eventData.amount || (isCrypto ? 1.5 : 49500)),
+        from_entity:
+          eventData.from_entity ||
+          (isCrypto ? 'bc1q_unhosted_target' : 'remitter_account_901'),
+        to_entity:
+          eventData.to_entity ||
+          (isCrypto ? 'bc1q_mixer_cluster' : 'beneficiary_aggregator_11'),
+        risk_tier: eventData.risk_tier || 'CRITICAL_SAR',
+        risk_score: Number(eventData.risk_score !== undefined ? eventData.risk_score : 0.985),
+        flags: Array.isArray(eventData.flags)
+          ? eventData.flags
+          : [eventData.flag || 'PAN_STRUCTURING_EVASION'],
+        engine: isCrypto ? 'CRYPTO_FORENSICS' : 'FIAT_BANKING',
+        latency_ms: 0.8,
+        timestamp: new Date().toISOString(),
+        auto_trigger_sar: Boolean(eventData.auto_trigger_sar),
+        is_manual_dispatch: true,
+      };
+
+      // 1. Immediate optimistic UI update (zero-reload)
+      setTransactions((prev) => {
+        if (prev.some((tx) => tx.transaction_id === payload.transaction_id)) return prev;
+        return [payload, ...prev.slice(0, 99)];
+      });
+
+      // Update telemetry
+      setTelemetry((prev) => ({
+        ...prev,
+        totalScreened: prev.totalScreened + 1,
+        threatFlagsCount:
+          payload.risk_tier === 'CRITICAL_SAR' || payload.risk_tier === 'CRITICAL'
+            ? prev.threatFlagsCount + 1
+            : prev.threatFlagsCount,
+        fiatCount: !isCrypto ? prev.fiatCount + 1 : prev.fiatCount,
+        cryptoCount: isCrypto ? prev.cryptoCount + 1 : prev.cryptoCount,
+      }));
+
+      // Trigger local alert banner immediately if critical
+      if (payload.risk_tier === 'CRITICAL_SAR' || payload.risk_tier === 'CRITICAL') {
+        const alertData = {
+          ...payload,
+          alertId: `${payload.transaction_id}-${Date.now()}`,
+        };
+        setActiveAlert(alertData);
+        if (isCrypto) {
+          setActiveCryptoAlert(alertData);
+        } else {
+          setActiveFiatAlert(alertData);
+        }
+      }
+
+      // 2. Persistent duplex WebSocket transmission over /ws/live
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        try {
+          wsRef.current.send(
+            JSON.stringify({
+              type: 'DISPATCH',
+              transaction: payload,
+            })
+          );
+          return payload;
+        } catch (err) {
+          console.warn('Live WebSocket dispatch failed, using REST fallback:', err);
+        }
+      }
+
+      // 3. Fallback async REST endpoint dispatch
+      try {
+        const res = await fetch(`${apiUrl}/api/v1/live/dispatch`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) {
+          throw new Error(`REST dispatch failed with HTTP ${res.status}`);
+        }
+      } catch (err) {
+        console.error('Failed to dispatch manual event via REST fallback:', err);
+      }
+
+      return payload;
+    },
+    [apiUrl]
+  );
+
   // Compute rolling average latency
   const avgLatency =
     telemetry.rollingLatencies.length > 0
@@ -311,5 +447,6 @@ export function useLiveFeed(apiUrl) {
     dispatchedSarCount,
     updateTransactionSar,
     updateTransactionStatus,
+    dispatchTransaction,
   };
 }

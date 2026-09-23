@@ -1,7 +1,9 @@
 import asyncio
+import json
 import logging
 import socket
 import time
+import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import Any
@@ -147,62 +149,75 @@ def queue_alert(res: dict):
 # WebSocket Real-Time Broadcast Hub
 # ------------------------------------------------------------------------------
 class ConnectionManager:
-    """Thread-safe asynchronous WebSocket connection manager for real-time inference streaming."""
+    """
+    Thread-safe asynchronous WebSocket connection manager for real-time inference streaming
+    and investigator war-room collaboration with concurrent zero-reload dispatch.
+    """
 
     def __init__(self):
-        self.active_connections: list[WebSocket] = []
+        self.channels: dict[str, set[WebSocket]] = {"live": set()}
         self._lock = asyncio.Lock()
 
-    async def connect(self, websocket: WebSocket):
-        """Accepts the WebSocket handshake and registers the socket in the active pool."""
+    @property
+    def active_connections(self) -> list[WebSocket]:
+        """Backward-compatible property returning list of connected live sockets."""
+        return list(self.channels.get("live", set()))
+
+    async def connect(self, websocket: WebSocket, channel: str = "live"):
+        """Accepts the WebSocket handshake and registers the socket in the specified channel pool."""
         await websocket.accept()
         async with self._lock:
-            self.active_connections.append(websocket)
+            if channel not in self.channels:
+                self.channels[channel] = set()
+            self.channels[channel].add(websocket)
         logger.info(
-            "WebSocket client connected. Active connections: %d",
-            len(self.active_connections),
+            "WebSocket client connected to [%s]. Active channel size: %d",
+            channel,
+            len(self.channels[channel]),
         )
 
-    def disconnect(self, websocket: WebSocket):
-        """Safely removes the socket from active connections if present."""
-        if websocket in self.active_connections:
-            self.active_connections.remove(websocket)
+    def disconnect(self, websocket: WebSocket, channel: str = "live"):
+        """Safely removes the socket from the specified channel pool."""
+        if channel in self.channels and websocket in self.channels[channel]:
+            self.channels[channel].remove(websocket)
             logger.info(
-                "WebSocket client disconnected. Active connections: %d",
-                len(self.active_connections),
+                "WebSocket client disconnected from [%s]. Remaining in channel: %d",
+                channel,
+                len(self.channels[channel]),
             )
 
-    async def broadcast(self, payload: dict):
+    async def broadcast(self, payload: dict, channel: str = "live"):
         """
-        Iterates through all active connections and transmits JSON payload.
-        Catches closed/stale client sockets, collects dead connections, and
-        purges them immediately without blocking or throwing unhandled exceptions.
+        Asynchronously iterates across active connections in the channel and transmits JSON payload
+        concurrently using asyncio.gather(..., return_exceptions=True).
+        Stale/closed client sockets are collected and purged immediately without blocking.
         """
-        if not self.active_connections:
+        targets = list(self.channels.get(channel, set()))
+        if not targets:
             return
 
-        async with self._lock:
-            snapshot = list(self.active_connections)
+        # Concurrent broadcast across all active sockets in channel
+        results = await asyncio.gather(
+            *(conn.send_json(payload) for conn in targets),
+            return_exceptions=True,
+        )
 
         dead_connections: list[WebSocket] = []
-        for connection in snapshot:
-            try:
-                await connection.send_json(payload)
-            except Exception as e:
-                logger.warning(
-                    "Error sending WebSocket payload, scheduling socket cleanup: %s", e
-                )
-                dead_connections.append(connection)
+        for conn, res in zip(targets, results, strict=False):
+            if isinstance(res, Exception):
+                logger.warning("Error transmitting WebSocket payload to client: %s", res)
+                dead_connections.append(conn)
 
         if dead_connections:
             async with self._lock:
                 for dead_conn in dead_connections:
-                    if dead_conn in self.active_connections:
-                        self.active_connections.remove(dead_conn)
+                    if channel in self.channels and dead_conn in self.channels[channel]:
+                        self.channels[channel].remove(dead_conn)
             logger.info(
-                "Purged %d stale WebSocket connection(s). Remaining: %d",
+                "Purged %d stale socket(s) from [%s]. Remaining: %d",
                 len(dead_connections),
-                len(self.active_connections),
+                channel,
+                len(self.channels.get(channel, set())),
             )
 
 
@@ -358,6 +373,8 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:5173",
         "http://127.0.0.1:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5174",
         "http://localhost:3000",
         "http://127.0.0.1:3000",
     ],
@@ -384,23 +401,149 @@ def health_check():
 
 
 # ------------------------------------------------------------------------------
-# WebSocket Route (/ws/live)
+# WebSocket Routes (/ws/live and /ws/chat)
 # ------------------------------------------------------------------------------
 @app.websocket("/ws/live")
 async def websocket_live(websocket: WebSocket):
     """
     Persistent WebSocket hub streaming live AML inference scoring events
-    directly to connected frontend monitoring clients.
+    directly to connected frontend monitoring clients with ping-pong keepalives
+    and bidirectional manual transaction/event dispatching without page reloads.
     """
-    await manager.connect(websocket)
+    await manager.connect(websocket, channel="live")
     try:
         while True:
-            await websocket.receive_text()
+            data = await websocket.receive_text()
+            try:
+                parsed = json.loads(data)
+                if isinstance(parsed, dict):
+                    # Keepalive frame
+                    if parsed.get("type") == "ping":
+                        await websocket.send_json({
+                            "type": "pong",
+                            "timestamp": datetime.now(timezone.utc).isoformat(),
+                        })
+                        continue
+
+                    # Duplex manual transaction / event dispatch over /ws/live
+                    if (
+                        parsed.get("type") in ("DISPATCH", "MANUAL_DISPATCH", "TRANSACTION")
+                        or "transaction_id" in parsed
+                        or "transaction" in parsed
+                    ):
+                        tx_data = parsed.get("transaction", parsed)
+                        if isinstance(tx_data, dict):
+                            if "timestamp" not in tx_data:
+                                tx_data["timestamp"] = datetime.now(timezone.utc).isoformat()
+                            if "transaction_id" not in tx_data:
+                                tx_data["transaction_id"] = f"TX_MANUAL_{uuid.uuid4().hex[:8]}"
+                            if "latency_ms" not in tx_data:
+                                tx_data["latency_ms"] = 0.8
+
+                            # Ensure entity fields are normalized
+                            if "from_entity" not in tx_data and "account_from" in tx_data:
+                                tx_data["from_entity"] = tx_data["account_from"]
+                            if "to_entity" not in tx_data and "account_to" in tx_data:
+                                tx_data["to_entity"] = tx_data["account_to"]
+
+                            # Send instantaneous acknowledgment back to dispatcher
+                            await websocket.send_json({
+                                "type": "DISPATCH_ACK",
+                                "status": "BROADCASTED",
+                                "transaction_id": tx_data.get("transaction_id"),
+                                "timestamp": datetime.now(timezone.utc).isoformat(),
+                            })
+
+                            # Concurrently broadcast to all live surveillance dashboards
+                            await manager.broadcast(tx_data, channel="live")
+
+                            # Automated SAR Alert trigger for critical / threat transactions
+                            raw_tier = str(tx_data.get("risk_tier", "")).upper()
+                            score_val = float(tx_data.get("risk_score", 0.0) or 0.0)
+                            if (
+                                raw_tier in ("CRITICAL", "CRITICAL_SAR")
+                                or score_val >= 0.85
+                                or tx_data.get("auto_trigger_sar")
+                            ):
+                                is_crypto = (
+                                    tx_data.get("rail") == "BTC"
+                                    or tx_data.get("currency") == "BTC"
+                                    or tx_data.get("engine") == "CRYPTO_FORENSICS"
+                                )
+                                engine_type = "CRYPTO_FORENSICS" if is_crypto else "FIAT_BANKING"
+                                flags = list(tx_data.get("flags", []))
+                                if "AUTO_FLAG_SAR" not in flags and raw_tier in ("CRITICAL", "CRITICAL_SAR"):
+                                    flags.append("AUTO_FLAG_SAR")
+                                typology = _resolve_typology(engine_type, flags, tx_data)
+                                asyncio.create_task(
+                                    process_sar_background(
+                                        tx_payload=tx_data,
+                                        result_payload=tx_data,
+                                        typology=typology,
+                                    )
+                                )
+            except Exception as e:
+                logger.warning("Error processing incoming frame on /ws/live: %s", e)
     except WebSocketDisconnect:
-        manager.disconnect(websocket)
+        manager.disconnect(websocket, channel="live")
     except Exception as e:
-        logger.warning("WebSocket client connection closed: %s", e)
-        manager.disconnect(websocket)
+        logger.warning("WebSocket client connection closed on /ws/live: %s", e)
+        manager.disconnect(websocket, channel="live")
+
+
+@app.post("/api/v1/live/dispatch")
+async def dispatch_live_event(event: dict[str, Any]):
+    """
+    Dispatches custom transaction or incident events immediately to all
+    connected /ws/live clients without requiring page reloads, and automatically
+    triggers real-time SAR alerts for critical/structuring signatures.
+    """
+    if "timestamp" not in event:
+        event["timestamp"] = datetime.now(timezone.utc).isoformat()
+    if "transaction_id" not in event:
+        event["transaction_id"] = f"TX_MANUAL_{uuid.uuid4().hex[:8]}"
+    if "latency_ms" not in event:
+        event["latency_ms"] = 0.8
+
+    if "from_entity" not in event and "account_from" in event:
+        event["from_entity"] = event["account_from"]
+    if "to_entity" not in event and "account_to" in event:
+        event["to_entity"] = event["account_to"]
+
+    await manager.broadcast(event, channel="live")
+
+    # Automated SAR Alert trigger for critical / threat transactions
+    raw_tier = str(event.get("risk_tier", "")).upper()
+    score_val = float(event.get("risk_score", 0.0) or 0.0)
+    if (
+        raw_tier in ("CRITICAL", "CRITICAL_SAR")
+        or score_val >= 0.85
+        or event.get("auto_trigger_sar")
+    ):
+        is_crypto = (
+            event.get("rail") == "BTC"
+            or event.get("currency") == "BTC"
+            or event.get("engine") == "CRYPTO_FORENSICS"
+        )
+        engine_type = "CRYPTO_FORENSICS" if is_crypto else "FIAT_BANKING"
+        flags = list(event.get("flags", []))
+        if "AUTO_FLAG_SAR" not in flags and raw_tier in ("CRITICAL", "CRITICAL_SAR"):
+            flags.append("AUTO_FLAG_SAR")
+        typology = _resolve_typology(engine_type, flags, event)
+        asyncio.create_task(
+            process_sar_background(
+                tx_payload=event,
+                result_payload=event,
+                typology=typology,
+            )
+        )
+
+    return {
+        "status": "DISPATCHED",
+        "event_id": event.get("transaction_id"),
+        "transaction_id": event.get("transaction_id"),
+        "data": event,
+    }
 
 
 # ------------------------------------------------------------------------------

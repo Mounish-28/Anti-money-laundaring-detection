@@ -25,6 +25,8 @@ nexus-frontend/.next/
 nexus-frontend/out/
 nexus-frontend/dist/
 nexus-frontend/build/
+quantumaml-investigation/node_modules/
+quantumaml-investigation/dist/
 
 # IDE & OS files
 .vscode/

@@ -14,6 +14,10 @@ import {
   CreditCard,
   Bitcoin,
   CheckCircle2,
+  Send,
+  Sparkles,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { generateSar, DEFAULT_API_URL } from '../services/api';
@@ -30,11 +34,24 @@ export function LiveAuditLedger({
   apiUrl = DEFAULT_API_URL,
   sarMetrics,
   onSarGenerated,
+  onDispatchTransaction,
 }) {
   const [activeFilter, setActiveFilter] = useState('ALL'); // 'ALL' | 'FIAT' | 'CRYPTO' | 'FIAT_SARS' | 'CRYPTO_SARS' | 'SARS'
   const [selectedTxForSar, setSelectedTxForSar] = useState(null);
   const [sarFiledSuccess, setSarFiledSuccess] = useState(false);
   const [generatingTxId, setGeneratingTxId] = useState(null);
+  const [isDispatchOpen, setIsDispatchOpen] = useState(false);
+  const [dispatchSuccessMsg, setDispatchSuccessMsg] = useState(null);
+  const [customDispatch, setCustomDispatch] = useState({
+    rail: 'UPI',
+    amount: '49500',
+    from_entity: 'mule_account_alpha',
+    to_entity: 'aggregator_shell_99',
+    risk_tier: 'CRITICAL_SAR',
+    risk_score: '0.985',
+    flag: 'PAN_STRUCTURING_EVASION',
+    auto_trigger_sar: true,
+  });
 
   // Filtered transactions based on active pill
   const filteredTransactions = useMemo(() => {
@@ -549,6 +566,26 @@ export function LiveAuditLedger({
               )}
             </button>
 
+            {/* Manual Dispatch Channel Toggle */}
+            <button
+              onClick={() => setIsDispatchOpen(!isDispatchOpen)}
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono font-semibold border transition-all',
+                isDispatchOpen
+                  ? 'bg-cyan-600 text-slate-950 border-cyan-400 shadow-glow-cyan'
+                  : 'bg-cyan-950/50 text-cyan-300 border-cyan-500/50 hover:bg-cyan-900/60 shadow-sm'
+              )}
+              title="Open Manual Live AML Event Dispatcher"
+            >
+              <Send className="w-3.5 h-3.5" />
+              <span>Manual Dispatch</span>
+              {isDispatchOpen ? (
+                <ChevronUp className="w-3 h-3 ml-0.5" />
+              ) : (
+                <ChevronDown className="w-3 h-3 ml-0.5" />
+              )}
+            </button>
+
             {/* Clear Feed Button */}
             <button
               onClick={onClearFeed}
@@ -561,6 +598,322 @@ export function LiveAuditLedger({
             </button>
           </div>
         </div>
+
+        {/* ------------------------------------------------------------------------ */}
+        {/* Collapsible Manual Dispatch Channel Panel (/ws/live) */}
+        {/* ------------------------------------------------------------------------ */}
+        {isDispatchOpen && (
+          <div className="p-4 border-b border-cyan-500/30 bg-gradient-to-r from-obsidian-950 via-slate-900/90 to-obsidian-950 text-xs font-mono space-y-4 animate-fade-in">
+            {/* Header row */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span className="p-1.5 rounded-lg bg-cyan-500/20 text-cyan-400 border border-cyan-500/40">
+                  <Radio className="w-4 h-4 animate-pulse" />
+                </span>
+                <div>
+                  <h4 className="font-bold text-slate-100 flex items-center gap-2 text-sm">
+                    MANUAL EVENT DISPATCH CHANNEL // /ws/live
+                  </h4>
+                  <p className="text-[11px] text-slate-400">
+                    Instantly broadcast high-velocity transactions or trigger automated FIU-IND SAR alerts without page reload.
+                  </p>
+                </div>
+              </div>
+
+              {dispatchSuccessMsg && (
+                <div className="px-3 py-1 rounded-lg bg-emerald-950/80 text-emerald-300 border border-emerald-500/50 flex items-center gap-1.5 text-xs animate-fade-in shadow-glow-emerald">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>{dispatchSuccessMsg}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Instant 1-Click Presets */}
+            <div className="space-y-1.5">
+              <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold flex items-center gap-1">
+                <Sparkles className="w-3 h-3 text-amber-400" />
+                <span>Instant Presets (Zero-Typing Dispatch)</span>
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const payload = {
+                      rail: 'UPI',
+                      currency: 'INR',
+                      amount: 49500,
+                      from_entity: 'mule_cluster_alpha_41',
+                      to_entity: 'aggregator_shell_99',
+                      risk_tier: 'CRITICAL_SAR',
+                      risk_score: 0.985,
+                      flags: ['PAN_STRUCTURING_EVASION', 'MULE_BURST'],
+                      auto_trigger_sar: true,
+                    };
+                    if (onDispatchTransaction) {
+                      const res = await onDispatchTransaction(payload);
+                      setDispatchSuccessMsg(`Dispatched UPI Structuring (${res.transaction_id})`);
+                      setTimeout(() => setDispatchSuccessMsg(null), 4000);
+                    }
+                  }}
+                  className="p-2.5 rounded-xl border border-rose-500/40 bg-rose-950/20 hover:bg-rose-950/40 text-left transition-all group"
+                >
+                  <div className="flex items-center justify-between text-rose-300 font-bold text-xs mb-1">
+                    <span>⚡ UPI Structuring Burst</span>
+                    <span className="text-[10px] px-1 rounded bg-rose-900/60 text-rose-200">SAR</span>
+                  </div>
+                  <div className="text-[11px] text-slate-300 font-semibold">₹49,500.00 • Mule Burst</div>
+                  <div className="text-[10px] text-slate-400 mt-1">Triggers FIU-IND PMLA alert</div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const payload = {
+                      rail: 'RTGS',
+                      currency: 'INR',
+                      amount: 4850000,
+                      from_entity: 'DUMMY_EXPORT_OVERSEAS_LTD',
+                      to_entity: 'ESCROW_CYPRUS_SHELL_01',
+                      risk_tier: 'CRITICAL_SAR',
+                      risk_score: 0.994,
+                      flags: ['HAWALA_WIRE', 'CRITICAL_SAR'],
+                      auto_trigger_sar: true,
+                    };
+                    if (onDispatchTransaction) {
+                      const res = await onDispatchTransaction(payload);
+                      setDispatchSuccessMsg(`Dispatched Hawala Wire (${res.transaction_id})`);
+                      setTimeout(() => setDispatchSuccessMsg(null), 4000);
+                    }
+                  }}
+                  className="p-2.5 rounded-xl border border-purple-500/40 bg-purple-950/20 hover:bg-purple-950/40 text-left transition-all group"
+                >
+                  <div className="flex items-center justify-between text-purple-300 font-bold text-xs mb-1">
+                    <span>🚨 Hawala Corporate RTGS</span>
+                    <span className="text-[10px] px-1 rounded bg-purple-900/60 text-purple-200">SAR</span>
+                  </div>
+                  <div className="text-[11px] text-slate-300 font-semibold">₹48,50,000.00 • Hawala</div>
+                  <div className="text-[10px] text-slate-400 mt-1">Cross-border wire layering</div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const payload = {
+                      rail: 'BTC',
+                      currency: 'BTC',
+                      amount: 14.852,
+                      from_entity: 'bc1q_darknet_cluster_902',
+                      to_entity: 'bc1q_mixer_peel_input',
+                      risk_tier: 'CRITICAL_SAR',
+                      risk_score: 0.971,
+                      flags: ['ANOMALY', 'WHALE_TRANSFER'],
+                      engine: 'CRYPTO_FORENSICS',
+                      auto_trigger_sar: true,
+                    };
+                    if (onDispatchTransaction) {
+                      const res = await onDispatchTransaction(payload);
+                      setDispatchSuccessMsg(`Dispatched BTC Whale Mempool (${res.transaction_id})`);
+                      setTimeout(() => setDispatchSuccessMsg(null), 4000);
+                    }
+                  }}
+                  className="p-2.5 rounded-xl border border-amber-500/40 bg-amber-950/20 hover:bg-amber-950/40 text-left transition-all group"
+                >
+                  <div className="flex items-center justify-between text-amber-300 font-bold text-xs mb-1">
+                    <span>⚡ BTC Peel Chain Whale</span>
+                    <span className="text-[10px] px-1 rounded bg-amber-900/60 text-amber-200">VDA</span>
+                  </div>
+                  <div className="text-[11px] text-slate-300 font-semibold">14.852 BTC • Mempool Anomaly</div>
+                  <div className="text-[10px] text-slate-400 mt-1">Unhosted cluster dispersal</div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const payload = {
+                      rail: 'NEFT',
+                      currency: 'INR',
+                      amount: 75000,
+                      from_entity: 'TECH_CORP_PAYROLL_CENTRAL',
+                      to_entity: 'EMP_SALARY_ACC_4910',
+                      risk_tier: 'LOW',
+                      risk_score: 0.018,
+                      flags: [],
+                      auto_trigger_sar: false,
+                    };
+                    if (onDispatchTransaction) {
+                      const res = await onDispatchTransaction(payload);
+                      setDispatchSuccessMsg(`Dispatched Clean Payroll (${res.transaction_id})`);
+                      setTimeout(() => setDispatchSuccessMsg(null), 4000);
+                    }
+                  }}
+                  className="p-2.5 rounded-xl border border-emerald-500/30 bg-emerald-950/20 hover:bg-emerald-950/40 text-left transition-all group"
+                >
+                  <div className="flex items-center justify-between text-emerald-300 font-bold text-xs mb-1">
+                    <span>🟢 Verified Corporate ACH</span>
+                    <span className="text-[10px] px-1 rounded bg-emerald-900/60 text-emerald-300">CLEARED</span>
+                  </div>
+                  <div className="text-[11px] text-slate-300 font-semibold">₹75,000.00 • Low Risk</div>
+                  <div className="text-[10px] text-slate-400 mt-1">Clean payroll transaction</div>
+                </button>
+              </div>
+            </div>
+
+            {/* Custom Manual Dispatch Form */}
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!customDispatch.amount || !onDispatchTransaction) return;
+
+                const payload = {
+                  rail: customDispatch.rail,
+                  currency: customDispatch.rail === 'BTC' ? 'BTC' : 'INR',
+                  amount: parseFloat(customDispatch.amount) || 0,
+                  from_entity: customDispatch.from_entity.trim(),
+                  to_entity: customDispatch.to_entity.trim(),
+                  risk_tier: customDispatch.risk_tier,
+                  risk_score: parseFloat(customDispatch.risk_score) || 0.985,
+                  flags: customDispatch.flag ? [customDispatch.flag] : [],
+                  engine: customDispatch.rail === 'BTC' ? 'CRYPTO_FORENSICS' : 'FIAT_BANKING',
+                  auto_trigger_sar: customDispatch.auto_trigger_sar,
+                };
+
+                const res = await onDispatchTransaction(payload);
+                setDispatchSuccessMsg(`Dispatched Custom Event (${res?.transaction_id})`);
+                setTimeout(() => setDispatchSuccessMsg(null), 4000);
+              }}
+              className="p-3 rounded-xl border border-slate-800 bg-obsidian-900/80 space-y-3"
+            >
+              <div className="text-[11px] text-cyan-400 font-bold uppercase flex items-center justify-between">
+                <span>Custom Transaction Specification</span>
+                <span className="text-[10px] text-slate-500 font-normal">Instant Zero-Reload Push</span>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+                <div>
+                  <label className="text-[10px] text-slate-400 block mb-1">Rail</label>
+                  <select
+                    value={customDispatch.rail}
+                    onChange={(e) =>
+                      setCustomDispatch({ ...customDispatch, rail: e.target.value })
+                    }
+                    className="w-full bg-obsidian-950 border border-slate-700 rounded-lg px-2 py-1 text-slate-200 text-xs focus:border-cyan-500"
+                  >
+                    <option value="UPI">UPI (₹)</option>
+                    <option value="IMPS">IMPS (₹)</option>
+                    <option value="NEFT">NEFT (₹)</option>
+                    <option value="RTGS">RTGS (₹)</option>
+                    <option value="BTC">BTC (₿)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[10px] text-slate-400 block mb-1">Amount</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={customDispatch.amount}
+                    onChange={(e) =>
+                      setCustomDispatch({ ...customDispatch, amount: e.target.value })
+                    }
+                    className="w-full bg-obsidian-950 border border-slate-700 rounded-lg px-2 py-1 text-slate-200 text-xs focus:border-cyan-500"
+                    placeholder="49500"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] text-slate-400 block mb-1">Remitter Account / Addr</label>
+                  <input
+                    type="text"
+                    value={customDispatch.from_entity}
+                    onChange={(e) =>
+                      setCustomDispatch({ ...customDispatch, from_entity: e.target.value })
+                    }
+                    className="w-full bg-obsidian-950 border border-slate-700 rounded-lg px-2 py-1 text-slate-200 text-xs focus:border-cyan-500"
+                    placeholder="remitter_acc"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] text-slate-400 block mb-1">Beneficiary Account / Addr</label>
+                  <input
+                    type="text"
+                    value={customDispatch.to_entity}
+                    onChange={(e) =>
+                      setCustomDispatch({ ...customDispatch, to_entity: e.target.value })
+                    }
+                    className="w-full bg-obsidian-950 border border-slate-700 rounded-lg px-2 py-1 text-slate-200 text-xs focus:border-cyan-500"
+                    placeholder="beneficiary_acc"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] text-slate-400 block mb-1">Risk Tier</label>
+                  <select
+                    value={customDispatch.risk_tier}
+                    onChange={(e) =>
+                      setCustomDispatch({
+                        ...customDispatch,
+                        risk_tier: e.target.value,
+                        auto_trigger_sar: e.target.value === 'CRITICAL_SAR',
+                      })
+                    }
+                    className="w-full bg-obsidian-950 border border-slate-700 rounded-lg px-2 py-1 text-slate-200 text-xs focus:border-cyan-500"
+                  >
+                    <option value="CRITICAL_SAR">CRITICAL_SAR</option>
+                    <option value="HIGH">HIGH</option>
+                    <option value="ELEVATED">ELEVATED</option>
+                    <option value="LOW">LOW</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[10px] text-slate-400 block mb-1">Typology / Flag</label>
+                  <select
+                    value={customDispatch.flag}
+                    onChange={(e) =>
+                      setCustomDispatch({ ...customDispatch, flag: e.target.value })
+                    }
+                    className="w-full bg-obsidian-950 border border-slate-700 rounded-lg px-2 py-1 text-slate-200 text-xs focus:border-cyan-500"
+                  >
+                    <option value="PAN_STRUCTURING_EVASION">PAN Structuring</option>
+                    <option value="HAWALA_WIRE">Hawala Wire</option>
+                    <option value="MULE_BURST">Mule Burst</option>
+                    <option value="WHALE_TRANSFER">Whale Transfer</option>
+                    <option value="AUTO_FLAG_SAR">Auto Flag SAR</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1 border-t border-slate-800">
+                <label className="flex items-center gap-2 cursor-pointer text-[11px] text-slate-300">
+                  <input
+                    type="checkbox"
+                    checked={customDispatch.auto_trigger_sar}
+                    onChange={(e) =>
+                      setCustomDispatch({
+                        ...customDispatch,
+                        auto_trigger_sar: e.target.checked,
+                      })
+                    }
+                    className="rounded border-slate-700 text-cyan-600 focus:ring-0 bg-obsidian-950"
+                  />
+                  <span>Auto-trigger automated FIU-IND regulatory SAR alert banner</span>
+                </label>
+
+                <button
+                  type="submit"
+                  className="flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-bold text-xs shadow-glow-cyan transition-all hover:scale-[1.01]"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>Dispatch Event to /ws/live</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
 
         {/* ------------------------------------------------------------------------ */}
         {/* High-Density Ledger Table (Requirement 4) */}

@@ -89,3 +89,48 @@ def test_websocket_disconnect_cleanup():
 
     # After context exit, the connection should be purged
     assert len(manager.active_connections) == initial_count
+
+
+def test_websocket_live_manual_dispatch_roundtrip():
+    """
+    Verifies bidirectional duplex event dispatching over /ws/live:
+    A client dispatches a manual transaction, receives DISPATCH_ACK,
+    and all subscribers on /ws/live receive the broadcast instantaneously.
+    """
+    client = TestClient(app)
+
+    with client.websocket_connect("/ws/live") as ws1:
+        with client.websocket_connect("/ws/live") as ws2:
+            dispatch_frame = {
+                "type": "DISPATCH",
+                "transaction": {
+                    "transaction_id": "MANUAL_TX_LIVE_77",
+                    "rail": "UPI",
+                    "amount": 49500.0,
+                    "currency": "INR",
+                    "from_entity": "mule_wallet_44",
+                    "to_entity": "aggregator_shell_99",
+                    "risk_tier": "CRITICAL_SAR",
+                    "risk_score": 0.985,
+                    "flags": ["PAN_STRUCTURING_EVASION", "MULE_BURST"],
+                },
+            }
+            # Client 1 dispatches over the duplex connection
+            ws1.send_json(dispatch_frame)
+
+            # Client 1 receives instant ACK
+            ack = ws1.receive_json()
+            assert ack["type"] == "DISPATCH_ACK"
+            assert ack["status"] == "BROADCASTED"
+            assert ack["transaction_id"] == "MANUAL_TX_LIVE_77"
+
+            # Both client 1 and client 2 receive the broadcasted event
+            b1 = ws1.receive_json()
+            assert b1["transaction_id"] == "MANUAL_TX_LIVE_77"
+            assert b1["amount"] == 49500.0
+            assert b1["risk_tier"] == "CRITICAL_SAR"
+
+            b2 = ws2.receive_json()
+            assert b2["transaction_id"] == "MANUAL_TX_LIVE_77"
+            assert b2["from_entity"] == "mule_wallet_44"
+
