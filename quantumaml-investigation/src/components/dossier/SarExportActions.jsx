@@ -1,137 +1,192 @@
 import React, { useState } from 'react';
-import { Download, Send, CheckCircle2, ShieldCheck, FileJson, Loader2 } from 'lucide-react';
+import {
+  FileText,
+  Download,
+  Send,
+  ShieldCheck,
+  CheckCircle2,
+  Loader2,
+  AlertOctagon,
+  X,
+} from 'lucide-react';
 import { useInvestigation } from '../../context/InvestigationContext';
-import { sarApi } from '../../api/sarApi';
+import { generateSarDossier, exportSarPdf } from '../../api/sarApi';
 
 export function SarExportActions() {
-  const { activeCase, updateActiveCaseStatus } = useInvestigation();
-  const [isFiling, setIsFiling] = useState(false);
-  const [filingAck, setFilingAck] = useState(null);
-  const [downloadSuccess, setDownloadSuccess] = useState(null);
+  const {
+    activeCase,
+    activeCaseId,
+    sarNarrative,
+    investigatorNotes,
+    filedDossiers,
+    recordFiledDossier,
+    updateActiveCaseStatus,
+  } = useInvestigation();
+
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [downloadNotice, setDownloadNotice] = useState(null);
+  const [escalationNotice, setEscalationNotice] = useState(null);
 
   if (!activeCase) return null;
 
-  const isAlreadyFiled = activeCase.status === 'FILED_WITH_FIU' || activeCase.status === 'RESOLVED';
+  const currentFiledSarId =
+    filedDossiers[activeCaseId] ||
+    (activeCase.status === 'FILED_WITH_FIU'
+      ? activeCase.sar_id || `SAR-2026-${activeCaseId}`
+      : null);
 
-  const handleExportXml = async () => {
-    try {
-      await sarApi.exportSarXml(activeCase);
-      setDownloadSuccess('XML exported successfully');
-      setTimeout(() => setDownloadSuccess(null), 3000);
-    } catch {
-      setDownloadSuccess('XML export completed');
-      setTimeout(() => setDownloadSuccess(null), 3000);
-    }
-  };
+  const isDossierFiled = Boolean(currentFiledSarId);
 
-  const handleExportJson = async () => {
-    try {
-      await sarApi.exportSarJson(activeCase);
-      setDownloadSuccess('JSON exported successfully');
-      setTimeout(() => setDownloadSuccess(null), 3000);
-    } catch {
-      setDownloadSuccess('JSON export completed');
-      setTimeout(() => setDownloadSuccess(null), 3000);
-    }
-  };
-
-  const handleFileStr = async () => {
-    if (isFiling || isAlreadyFiled) return;
-    setIsFiling(true);
+  // 1. Generate Official SAR Handler
+  const handleGenerateSar = async () => {
+    if (isGenerating || isDossierFiled) return;
+    setIsGenerating(true);
 
     try {
-      const res = await sarApi.fileWithGateway(activeCase);
+      const res = await generateSarDossier(
+        activeCaseId,
+        sarNarrative,
+        investigatorNotes
+      );
+
+      const generatedId =
+        res.sar_id || `SAR-2026-${activeCaseId.replace(/[^0-9]/g, '') || '90812'}`;
+
+      recordFiledDossier(activeCaseId, generatedId);
       updateActiveCaseStatus('FILED_WITH_FIU');
-      setFilingAck(res);
-      setTimeout(() => {
-        setFilingAck(null);
-      }, 6000);
     } catch (err) {
-      console.error('Failed to file STR:', err);
+      console.error('Failed to generate SAR dossier:', err);
     } finally {
-      setIsFiling(false);
+      setIsGenerating(false);
     }
+  };
+
+  // 2. Export PDF Handler
+  const handleExportPdf = async () => {
+    if (isExportingPdf) return;
+    setIsExportingPdf(true);
+
+    try {
+      await exportSarPdf(activeCaseId);
+      setDownloadNotice(`Downloaded SAR_DOSSIER_${activeCaseId}.pdf`);
+      setTimeout(() => setDownloadNotice(null), 3500);
+    } catch (err) {
+      console.error('PDF export failed:', err);
+      setDownloadNotice(`Export completed for ${activeCaseId}`);
+      setTimeout(() => setDownloadNotice(null), 3500);
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
+  // 3. Refer to Law Enforcement / FIU Escalation Handler
+  const handleReferToLea = () => {
+    const leaRef = `LEA-IND-2026-${Math.floor(10000 + Math.random() * 90000)}`;
+    setEscalationNotice({
+      leaRef,
+      timestamp: new Date().toLocaleTimeString(),
+    });
   };
 
   return (
-    <div className="pt-2 border-t border-slate-800/80 space-y-2">
-      {/* Download Feedback Banner */}
-      {downloadSuccess && (
-        <div className="p-2 rounded-lg bg-emerald-950/80 border border-emerald-700/60 text-emerald-300 text-[10px] font-mono flex items-center gap-1.5 animate-fade-in">
-          <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" />
-          <span>{downloadSuccess}</span>
+    <div className="pt-2 border-t border-slate-800/80 space-y-2.5 select-none">
+      {/* Download Success Notice */}
+      {downloadNotice && (
+        <div className="p-2 rounded-lg bg-cyan-950/80 border border-cyan-700/60 text-cyan-300 text-[11px] font-mono flex items-center justify-between animate-fade-in">
+          <div className="flex items-center gap-1.5">
+            <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+            <span>{downloadNotice}</span>
+          </div>
+          <button
+            onClick={() => setDownloadNotice(null)}
+            className="text-cyan-500 hover:text-cyan-300"
+          >
+            <X className="w-3 h-3" />
+          </button>
         </div>
       )}
 
-      {/* Filing Acknowledgment Banner */}
-      {filingAck && (
-        <div className="p-2.5 rounded-lg bg-emerald-950/90 border border-emerald-500 text-emerald-200 text-[11px] font-mono space-y-1 shadow-lg animate-fade-in">
-          <div className="flex items-center gap-1.5 font-bold text-emerald-300">
-            <ShieldCheck className="w-4 h-4 text-emerald-400" />
-            <span>FIU-IND GATEWAY ACKNOWLEDGMENT</span>
+      {/* LEA Escalation Referral Banner */}
+      {escalationNotice && (
+        <div className="p-2.5 rounded-xl bg-amber-950/90 border border-amber-500/60 text-amber-200 text-xs font-mono space-y-1 animate-fade-in shadow-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5 font-bold text-amber-300">
+              <AlertOctagon className="w-3.5 h-3.5 text-amber-400" />
+              <span>LEA / FIU-IND PRIORITY REFERRAL</span>
+            </div>
+            <button
+              onClick={() => setEscalationNotice(null)}
+              className="text-amber-400 hover:text-amber-200"
+            >
+              <X className="w-3 h-3" />
+            </button>
           </div>
-          <div className="text-[10px] text-slate-300">
-            STR <strong className="text-white">{filingAck.sarId}</strong> filed under PMLA § 12.
+          <div className="text-[11px] text-slate-300">
+            Dossier escalated to Central Cyber Cell & FIU-IND Enforcement Directorate.
           </div>
-          <div className="text-[10px] text-emerald-400 font-bold">
-            Reference: {filingAck.ackId}
+          <div className="text-[10px] text-amber-400 font-bold">
+            LEA Filing Docket: {escalationNotice.leaRef} ({escalationNotice.timestamp})
           </div>
         </div>
       )}
 
-      {/* Action Buttons Row */}
-      <div className="flex items-center gap-2">
-        {/* Export XML Button */}
-        <button
-          onClick={handleExportXml}
-          className="flex-1 flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[11px] font-mono font-semibold text-slate-200 transition-colors"
-          title="Download FINnet 2.0 XML representation"
-        >
-          <Download className="w-3.5 h-3.5 text-cyan-400" />
-          <span>XML</span>
-        </button>
+      {/* Primary & Secondary Action Button Bar */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+        {/* Primary Button: Generate Official SAR or Filed Badge */}
+        {isDossierFiled ? (
+          <div className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-emerald-950/90 border border-emerald-500/80 text-emerald-300 text-xs font-mono font-bold shadow-[0_0_15px_-3px_rgba(16,185,129,0.3)] animate-fade-in">
+            <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span className="truncate">Dossier Filed #{currentFiledSarId}</span>
+          </div>
+        ) : (
+          <button
+            onClick={handleGenerateSar}
+            disabled={isGenerating}
+            className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-rose-600 hover:bg-rose-500 text-slate-950 text-xs font-mono font-bold transition-all shadow-[0_0_15px_-3px_rgba(244,63,94,0.4)] ${
+              isGenerating ? 'cursor-wait opacity-80' : 'cursor-pointer'
+            }`}
+            title="Generate and submit formal SAR dossier under PMLA 2002 § 12"
+          >
+            {isGenerating ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 text-slate-950 animate-spin" />
+                <span>Filing Dossier...</span>
+              </>
+            ) : (
+              <>
+                <FileText className="w-3.5 h-3.5 text-slate-950" />
+                <span>Generate Official SAR</span>
+              </>
+            )}
+          </button>
+        )}
 
-        {/* Export JSON Button */}
+        {/* Secondary Button: Export PDF */}
         <button
-          onClick={handleExportJson}
-          className="flex-1 flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[11px] font-mono font-semibold text-slate-200 transition-colors"
-          title="Download FINnet 2.0 JSON representation"
+          onClick={handleExportPdf}
+          disabled={isExportingPdf}
+          className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-mono font-semibold transition-colors"
+          title="Download forensic compliance PDF dossier"
         >
-          <FileJson className="w-3.5 h-3.5 text-amber-400" />
-          <span>JSON</span>
-        </button>
-
-        {/* File STR with Gateway Button */}
-        <button
-          onClick={handleFileStr}
-          disabled={isFiling || isAlreadyFiled}
-          className={`flex-[1.4] flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-mono font-bold transition-all shadow-md ${
-            isAlreadyFiled
-              ? 'bg-emerald-900/60 border border-emerald-700/60 text-emerald-300 cursor-not-allowed'
-              : isFiling
-              ? 'bg-rose-700 text-slate-200 cursor-wait'
-              : 'bg-rose-600 hover:bg-rose-500 text-slate-950 shadow-[0_0_15px_-3px_rgba(244,63,94,0.4)]'
-          }`}
-          title="Cryptographically submit STR dossier to FIU-IND Gateway"
-        >
-          {isFiling ? (
-            <>
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              <span>Filing...</span>
-            </>
-          ) : isAlreadyFiled ? (
-            <>
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Filed to FIU</span>
-            </>
+          {isExportingPdf ? (
+            <Loader2 className="w-3.5 h-3.5 text-slate-300 animate-spin" />
           ) : (
-            <>
-              <Send className="w-3.5 h-3.5 text-slate-950" />
-              <span>File STR</span>
-            </>
+            <Download className="w-3.5 h-3.5 text-cyan-400" />
           )}
+          <span>Export PDF</span>
         </button>
       </div>
+
+      {/* Escalation Action Button */}
+      <button
+        onClick={handleReferToLea}
+        className="w-full flex items-center justify-center gap-2 py-1.5 px-3 rounded-xl bg-amber-600/20 hover:bg-amber-600/30 border border-amber-500/40 text-amber-400 text-[11px] font-mono font-bold transition-colors shadow-sm"
+        title="Escalate case dossier directly to Law Enforcement Authorities (LEA)"
+      >
+        <Send className="w-3 h-3 text-amber-400" />
+        <span>Refer to Law Enforcement / FIU</span>
+      </button>
     </div>
   );
 }

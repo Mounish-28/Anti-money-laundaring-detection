@@ -146,9 +146,9 @@ export function WorkbenchLayout() {
         </div>
 
         {/* Dossier Content Stack */}
-        <div className="flex-1 p-3 overflow-y-auto space-y-3">
-          <EntityProfileCard />
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
           <ExplainabilityDeck />
+          <EntityProfileCard />
           <SarNarrativeEditor key={activeCase?.id || 'none'} />
           <SarExportActions />
         </div>

@@ -17,6 +17,12 @@ export function InvestigationProvider({ children }) {
   });
   const [isLoadingCases, setIsLoadingCases] = useState(true);
 
+  // SAR dossier remarks and state management
+  const [sarNarrative, setSarNarrative] = useState('');
+  const [investigatorNotes, setInvestigatorNotes] = useState('');
+  const [filedDossiers, setFiledDossiers] = useState({});
+  const [frozenEntities, setFrozenEntities] = useState({});
+
   // Initial load from backend if available, fallback to mock data
   useEffect(() => {
     let isMounted = true;
@@ -70,6 +76,21 @@ export function InvestigationProvider({ children }) {
     );
   };
 
+  const toggleAccountFreeze = (entityId) => {
+    if (!entityId) return;
+    setFrozenEntities((prev) => {
+      const nextState = !prev[entityId];
+      return { ...prev, [entityId]: nextState };
+    });
+  };
+
+  const recordFiledDossier = (caseId, sarId) => {
+    setFiledDossiers((prev) => ({
+      ...prev,
+      [caseId]: sarId,
+    }));
+  };
+
   const updateFilters = (key, value) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
   };
@@ -93,6 +114,14 @@ export function InvestigationProvider({ children }) {
         selectedNodeData,
         setSelectedNodeData,
         updateActiveCaseStatus,
+        sarNarrative,
+        setSarNarrative,
+        investigatorNotes,
+        setInvestigatorNotes,
+        filedDossiers,
+        recordFiledDossier,
+        frozenEntities,
+        toggleAccountFreeze,
         filters,
         setFilters,
         updateFilters,
