@@ -69,7 +69,7 @@ export function SarExportActions() {
 
     try {
       await exportSarPdf(activeCaseId);
-      setDownloadNotice(`Downloaded SAR_DOSSIER_${activeCaseId}.pdf`);
+      setDownloadNotice(`Downloaded SAR_${activeCaseId}_DOSSIER.pdf`);
       setTimeout(() => setDownloadNotice(null), 3500);
     } catch (err) {
       console.error('PDF export failed:', err);

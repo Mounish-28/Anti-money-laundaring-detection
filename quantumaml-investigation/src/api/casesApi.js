@@ -15,7 +15,7 @@ export const MOCK_CASES = [
     riskTier: 'CRITICAL',
     typology: 'UPI Smurfing Cluster',
     suspectEntity: 'mule4@okaxis (PAN: ABCDE1234F)',
-    slaDeadline: getFutureTime(18), // 18m -> pulsing rose (<30m)
+    slaDeadline: getFutureTime(18),
     status: 'OPEN',
     createdAt: new Date(Date.now() - 3600000).toISOString(),
     hopCount: 4,
@@ -32,7 +32,7 @@ export const MOCK_CASES = [
     riskTier: 'CRITICAL',
     typology: 'Layered UTXO Peeling',
     suspectEntity: 'bc1q9x4p...v08k (Wasabi Mixer)',
-    slaDeadline: getFutureTime(25), // 25m -> pulsing rose (<30m)
+    slaDeadline: getFutureTime(25),
     status: 'ESCALATED',
     createdAt: new Date(Date.now() - 7200000).toISOString(),
     hopCount: 6,
@@ -49,7 +49,7 @@ export const MOCK_CASES = [
     riskTier: 'HIGH',
     typology: 'Rapid Hop Transit',
     suspectEntity: 'A/C 918274019284 (HDFC0001)',
-    slaDeadline: getFutureTime(48), // 48m -> amber (>30m)
+    slaDeadline: getFutureTime(48),
     status: 'UNDER_REVIEW',
     createdAt: new Date(Date.now() - 10800000).toISOString(),
     hopCount: 3,
@@ -66,7 +66,7 @@ export const MOCK_CASES = [
     riskTier: 'HIGH',
     typology: 'High-Volume Off-Hours Structuring',
     suspectEntity: 'payquick_aggregator@icici',
-    slaDeadline: getFutureTime(95), // 1h 35m -> amber (>30m)
+    slaDeadline: getFutureTime(95),
     status: 'OPEN',
     createdAt: new Date(Date.now() - 14400000).toISOString(),
     hopCount: 2,
@@ -83,7 +83,7 @@ export const MOCK_CASES = [
     riskTier: 'HIGH',
     typology: 'Darknet Vendor Aggregation',
     suspectEntity: '1BoatSLRHtKNngkd5...kE',
-    slaDeadline: getFutureTime(140), // 2h 20m -> amber
+    slaDeadline: getFutureTime(140),
     status: 'UNDER_REVIEW',
     createdAt: new Date(Date.now() - 18000000).toISOString(),
     hopCount: 5,
@@ -100,7 +100,7 @@ export const MOCK_CASES = [
     riskTier: 'MEDIUM',
     typology: 'Circular Pass-Through Fanout',
     suspectEntity: 'A/C 401928374612 (SBIN0004)',
-    slaDeadline: getFutureTime(210), // 3h 30m -> amber
+    slaDeadline: getFutureTime(210),
     status: 'OPEN',
     createdAt: new Date(Date.now() - 21600000).toISOString(),
     hopCount: 3,
@@ -117,71 +117,162 @@ export const MOCK_CASES = [
     riskTier: 'MEDIUM',
     typology: 'Velocity Burst Smurfing',
     suspectEntity: 'retail_pay77@ybl',
-    slaDeadline: getFutureTime(235), // ~4 hours -> amber
+    slaDeadline: getFutureTime(235),
     status: 'RESOLVED',
     createdAt: new Date(Date.now() - 25200000).toISOString(),
     hopCount: 2,
     clusterSize: 9,
-  }
+  },
 ];
 
-export async function fetchCases() {
-  try {
-    const res = await apiClient.get('/api/v1/sar/list', { timeout: 2000 });
-    const rawItems = res.data?.items || (Array.isArray(res.data) ? res.data : null);
-    if (Array.isArray(rawItems) && rawItems.length > 0) {
-      return rawItems.map((item, idx) => {
-        const isBtc = Boolean(item.total_exposure_btc && item.total_exposure_btc > 0);
-        return {
-          id: item.sar_id || `ESC-${90812 + idx}`,
-          sar_id: item.sar_id || `SAR-IND-2026-${90812 + idx}`,
-          rail: isBtc ? 'BTC' : (item.rail || 'UPI'),
-          currency: isBtc ? 'BTC' : (item.currency || 'INR'),
-          amount: isBtc ? item.total_exposure_btc : (item.total_exposure_inr || item.amount || 4850000),
-          exposure_inr: item.total_exposure_inr || item.amount || 4850000,
-          riskScore: item.ml_telemetry?.risk_score || item.riskScore || 0.98,
-          riskTier: item.ml_telemetry?.risk_tier || item.riskTier || 'CRITICAL',
-          typology: typeof item.primary_typology === 'string'
-            ? item.primary_typology.replace(/^IN_TYP_/, '')
-            : (item.typology || 'UPI Smurfing Cluster'),
-          suspectEntity: item.suspect?.full_legal_name || item.suspect?.pan_or_identifier || item.suspectEntity || 'Target Suspect Entity',
-          slaDeadline: item.fiu_deadline || item.slaDeadline || getFutureTime(30),
-          status: item.status || 'OPEN',
-          createdAt: item.created_at || item.createdAt || new Date().toISOString(),
-          hopCount: item.transactions?.length || item.hopCount || 4,
-          clusterSize: (item.transactions?.length || 4) + 2,
-        };
-      });
-    }
-  } catch {
-    // Graceful fallback to mock data when backend is in standby
-  }
-  return MOCK_CASES;
+/**
+ * Normalizes backend case format to standard investigation workbench schema
+ */
+function normalizeCase(item, idx = 0) {
+  const isBtc = Boolean(item.total_exposure_btc && item.total_exposure_btc > 0) || item.rail === 'BTC';
+  return {
+    id: item.id || item.sar_id || `ESC-${90812 + idx}`,
+    sar_id: item.sar_id || item.id || `SAR-IND-2026-${90812 + idx}`,
+    rail: isBtc ? 'BTC' : item.rail || 'UPI',
+    currency: isBtc ? 'BTC' : item.currency || 'INR',
+    amount: isBtc ? item.total_exposure_btc || item.amount : item.total_exposure_inr || item.amount || 4850000,
+    exposure_inr: item.total_exposure_inr || item.amount || 4850000,
+    riskScore: item.ml_telemetry?.risk_score ?? item.riskScore ?? 0.95,
+    riskTier: item.ml_telemetry?.risk_tier ?? item.riskTier ?? 'CRITICAL',
+    typology:
+      typeof item.primary_typology === 'string'
+        ? item.primary_typology.replace(/^IN_TYP_/, '')
+        : item.typology || 'UPI Smurfing Cluster',
+    suspectEntity:
+      item.suspect?.full_legal_name ||
+      item.suspect?.pan_or_identifier ||
+      item.suspect_identifier ||
+      item.suspectEntity ||
+      'Target Suspect Entity',
+    slaDeadline: item.fiu_deadline || item.slaDeadline || getFutureTime(30),
+    status: item.status || 'OPEN',
+    createdAt: item.created_at || item.createdAt || new Date().toISOString(),
+    hopCount: item.transactions?.length || item.hopCount || 4,
+    clusterSize: (item.transactions?.length || 4) + 2,
+  };
 }
 
+/**
+ * 1. getCases(filters):
+ * Target: GET /cases?status=${status}&rail=${rail}&limit=50
+ * Returns array of priority triage cases.
+ */
+export async function getCases(filters = {}) {
+  const params = { limit: 50 };
+  if (filters.status && filters.status !== 'ALL') params.status = filters.status;
+  if (filters.rail && filters.rail !== 'ALL') params.rail = filters.rail;
+
+  try {
+    const res = await apiClient.get('/cases', { params, timeout: 4000 });
+    const rawList = res.data?.items || (Array.isArray(res.data) ? res.data : null);
+    if (Array.isArray(rawList) && rawList.length > 0) {
+      return rawList.map((c, i) => normalizeCase(c, i));
+    }
+  } catch {
+    // Attempt fallback to /sar/list
+    try {
+      const res = await apiClient.get('/sar/list', { params, timeout: 3000 });
+      const rawList = res.data?.items || (Array.isArray(res.data) ? res.data : null);
+      if (Array.isArray(rawList) && rawList.length > 0) {
+        return rawList.map((c, i) => normalizeCase(c, i));
+      }
+    } catch {
+      // Degrades to mock fixtures
+    }
+  }
+
+  // Resilient mock filtering
+  return MOCK_CASES.filter((c) => {
+    if (filters.rail && filters.rail !== 'ALL' && c.rail !== filters.rail) return false;
+    if (filters.status && filters.status !== 'ALL' && c.status !== filters.status) return false;
+    return true;
+  });
+}
+
+/**
+ * 2. getCaseById(caseId):
+ * Target: GET /cases/${caseId}
+ * Returns full metadata for specific case.
+ */
+export async function getCaseById(caseId) {
+  try {
+    const res = await apiClient.get(`/cases/${caseId}`, { timeout: 3500 });
+    if (res.data) {
+      return normalizeCase(res.data);
+    }
+  } catch {
+    try {
+      const res = await apiClient.get(`/sar/${caseId}`, { timeout: 3000 });
+      if (res.data) {
+        return normalizeCase(res.data);
+      }
+    } catch {
+      // Fallback to local mock
+    }
+  }
+
+  const found = MOCK_CASES.find((c) => c.id === caseId || c.sar_id === caseId);
+  return found || MOCK_CASES[0];
+}
+
+/**
+ * 3. updateCaseStatus(caseId, status, notes):
+ * Target: PATCH /cases/${caseId}/status
+ * Payload: { status, notes, updated_by: "OP-441" }
+ */
+export async function updateCaseStatus(caseId, status, notes = '') {
+  const payload = {
+    status,
+    notes,
+    updated_by: 'OP-441',
+  };
+
+  try {
+    const res = await apiClient.patch(`/cases/${caseId}/status`, payload, { timeout: 4000 });
+    if (res.data) {
+      return normalizeCase(res.data);
+    }
+  } catch {
+    try {
+      const res = await apiClient.patch(
+        `/sar/${caseId}/status`,
+        {
+          new_status: status,
+          analyst_id: 'OP-441',
+          resolution_notes: notes,
+        },
+        { timeout: 3500 }
+      );
+      if (res.data) {
+        return normalizeCase(res.data);
+      }
+    } catch {
+      // Offline fallback
+    }
+  }
+
+  return {
+    id: caseId,
+    status,
+    updated_by: 'OP-441',
+    notes,
+    timestamp: new Date().toISOString(),
+  };
+}
+
+export const fetchCases = getCases;
+
 export const casesApi = {
+  getCases,
   fetchCases,
-  getCases: fetchCases,
-  getCaseById: async (caseId) => {
-    try {
-      const response = await apiClient.get(`/api/v1/sar/${caseId}`);
-      return response.data;
-    } catch {
-      return MOCK_CASES.find((c) => c.id === caseId || c.sar_id === caseId) || MOCK_CASES[0];
-    }
-  },
-  updateCaseStatus: async (caseId, status, payload = {}) => {
-    try {
-      const response = await apiClient.patch(`/api/v1/sar/${caseId}/status`, {
-        new_status: status,
-        analyst_id: payload.analyst_id || 'OFFICER-AML-902',
-        resolution_notes: payload.notes || 'Status updated via QuantumAML Workbench',
-      });
-      return response.data;
-    } catch {
-      return { success: true, caseId, status };
-    }
-  },
+  getCaseById,
+  updateCaseStatus,
+  MOCK_CASES,
 };
 
 export default casesApi;

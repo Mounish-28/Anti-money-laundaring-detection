@@ -78,9 +78,6 @@ const DEFAULT_EXPLAINABILITY = {
   ],
 };
 
-/**
- * Case suspect KYC profiles database
- */
 const CASE_SUSPECT_PROFILES = {
   'ESC-90812': {
     entityId: 'ESC-90812',
@@ -129,9 +126,6 @@ const CASE_SUSPECT_PROFILES = {
   },
 };
 
-/**
- * Node-specific KYC profile attributes
- */
 const NODE_PROFILES = {
   'node-origin': {
     vpaOrWallet: 'audit.origin@oksbi (Acct *8912)',
@@ -228,28 +222,37 @@ const NODE_PROFILES = {
  */
 export function downloadFile(content, filename, mimeType = 'text/plain') {
   const blob = typeof content === 'string' ? new Blob([content], { type: mimeType }) : content;
-  const url = URL.createObjectURL(blob);
+  const url = window.URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
   a.download = filename;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  window.URL.revokeObjectURL(url);
 }
 
 /**
- * 1. fetchExplainability(caseId)
- * Returns ML model confidence score and feature importance array for Recharts
+ * 1. getExplainability(caseId):
+ * Target: GET /cases/${caseId}/explainability
+ * Returns anomaly confidence score, model attribution array, and risk tags.
  */
-export async function fetchExplainability(caseId) {
+export async function getExplainability(caseId) {
   try {
-    const res = await apiClient.get(`/api/v1/sar/cases/${caseId}/explainability`, { timeout: 1500 });
+    const res = await apiClient.get(`/cases/${caseId}/explainability`, { timeout: 3500 });
     if (res.data && res.data.featureImportance) {
       return res.data;
     }
   } catch {
-    // Graceful offline fallback
+    // Secondary endpoint attempt
+    try {
+      const res = await apiClient.get(`/sar/cases/${caseId}/explainability`, { timeout: 2500 });
+      if (res.data && res.data.featureImportance) {
+        return res.data;
+      }
+    } catch {
+      // Degrades to mock
+    }
   }
 
   const result = EXPLAINABILITY_BY_CASE[caseId] || DEFAULT_EXPLAINABILITY;
@@ -260,17 +263,18 @@ export async function fetchExplainability(caseId) {
 }
 
 /**
- * 2. fetchEntityProfile(caseId, nodeId = null)
- * Returns KYC details for the suspect or selected graph node
+ * 2. getSuspectProfile(caseId, nodeId = null):
+ * Target: GET /cases/${caseId}/suspect?node_id=${nodeId}
+ * Returns entity KYC attributes, PAN/VPA, account age, and freeze status.
  */
-export async function fetchEntityProfile(caseId, nodeId = null) {
+export async function getSuspectProfile(caseId, nodeId = null) {
+  const params = {};
+  if (nodeId) params.node_id = nodeId;
+
   try {
-    const endpoint = nodeId
-      ? `/api/v1/sar/cases/${caseId}/entities/${nodeId}`
-      : `/api/v1/sar/cases/${caseId}/suspect`;
-    const res = await apiClient.get(endpoint, { timeout: 1500 });
+    const res = await apiClient.get(`/cases/${caseId}/suspect`, { params, timeout: 3500 });
     if (res.data) {
-      const entityId = nodeId || caseId;
+      const entityId = nodeId || res.data.entityId || caseId;
       const cachedFreeze = FROZEN_ENTITIES_CACHE.get(entityId);
       return {
         ...res.data,
@@ -278,7 +282,21 @@ export async function fetchEntityProfile(caseId, nodeId = null) {
       };
     }
   } catch {
-    // Graceful offline fallback
+    // Secondary endpoint attempt
+    try {
+      const endpoint = nodeId ? `/sar/cases/${caseId}/entities/${nodeId}` : `/sar/cases/${caseId}/suspect`;
+      const res = await apiClient.get(endpoint, { timeout: 2500 });
+      if (res.data) {
+        const entityId = nodeId || caseId;
+        const cachedFreeze = FROZEN_ENTITIES_CACHE.get(entityId);
+        return {
+          ...res.data,
+          frozenStatus: cachedFreeze !== undefined ? cachedFreeze : Boolean(res.data.frozenStatus),
+        };
+      }
+    } catch {
+      // Fallback
+    }
   }
 
   const targetId = nodeId || caseId;
@@ -299,7 +317,6 @@ export async function fetchEntityProfile(caseId, nodeId = null) {
     };
   }
 
-  // Dynamic generic fallback for arbitrary node or case ID
   const isBtc = String(targetId).toLowerCase().includes('btc');
   return {
     entityId: targetId,
@@ -314,33 +331,83 @@ export async function fetchEntityProfile(caseId, nodeId = null) {
 }
 
 /**
- * Toggles account freeze status and persists in memory
+ * 3. freezeEntity(caseId, entityId):
+ * Target: POST /cases/${caseId}/entities/${entityId}/freeze
  */
-export function toggleEntityFreeze(entityId) {
+export async function freezeEntity(caseId, entityId) {
   const current = FROZEN_ENTITIES_CACHE.get(entityId) || false;
   const next = !current;
   FROZEN_ENTITIES_CACHE.set(entityId, next);
-  return next;
-}
-
-/**
- * 3. generateSarDossier(caseId, narrative, investigatorNotes)
- * Calls or simulates regulatory case filing under FIU-IND / FinCEN specifications
- */
-export async function generateSarDossier(caseId, narrative = '', investigatorNotes = '') {
-  const sarId = `SAR-2026-${caseId.replace(/[^0-9]/g, '') || Math.floor(10000 + Math.random() * 90000)}`;
 
   try {
-    const res = await apiClient.post(`/api/v1/sar/cases/${caseId}/generate`, {
-      narrative,
-      investigator_notes: investigatorNotes,
-      analyst_id: 'OFFICER-AML-902',
-    });
-    if (res.data && res.data.sar_id) {
+    const res = await apiClient.post(
+      `/cases/${caseId}/entities/${entityId}/freeze`,
+      { frozen: next, operator_id: 'OP-441' },
+      { timeout: 3500 }
+    );
+    if (res.data) {
       return res.data;
     }
   } catch {
-    // Offline simulation
+    // Offline simulation continues
+  }
+
+  return {
+    success: true,
+    entityId,
+    caseId,
+    frozenStatus: next,
+    timestamp: new Date().toISOString(),
+  };
+}
+
+/**
+ * 4. generateSarDossier(caseId, payload):
+ * Target: POST /sar/cases/${caseId}/generate
+ * Payload: { case_id: caseId, narrative: payload.narrative, notes: payload.notes, operator_id: "OP-441" }
+ * Returns created dossier metadata { sar_id, status: "FILED", filing_timestamp }.
+ */
+export async function generateSarDossier(caseId, payload = {}) {
+  const sarId = `SAR-2026-${String(caseId).replace(/[^0-9]/g, '') || '90812'}`;
+  const requestBody = {
+    case_id: caseId,
+    narrative: payload.narrative || payload || '',
+    notes: payload.notes || payload.investigatorNotes || '',
+    operator_id: 'OP-441',
+  };
+
+  try {
+    const res = await apiClient.post(`/sar/cases/${caseId}/generate`, requestBody, { timeout: 4500 });
+    if (res.data) {
+      return {
+        sar_id: res.data.sar_id || sarId,
+        status: res.data.status || 'FILED',
+        filing_timestamp: res.data.filing_timestamp || new Date().toISOString(),
+        ...res.data,
+      };
+    }
+  } catch {
+    try {
+      const res = await apiClient.post(
+        `/sar/generate`,
+        {
+          transaction_ids: [`TX-${caseId}-01`],
+          primary_typology: 'IN_TYP_STRUCT',
+          investigator_notes: requestBody.notes,
+          assigned_investigator: 'OP-441',
+        },
+        { timeout: 4500 }
+      );
+      if (res.data && res.data.sar_id) {
+        return {
+          sar_id: res.data.sar_id,
+          status: 'FILED',
+          filing_timestamp: new Date().toISOString(),
+        };
+      }
+    } catch {
+      // Offline fallback
+    }
   }
 
   return {
@@ -348,27 +415,44 @@ export async function generateSarDossier(caseId, narrative = '', investigatorNot
     sar_id: sarId,
     caseId,
     status: 'FILED',
-    timestamp: new Date().toISOString(),
+    filing_timestamp: new Date().toISOString(),
     filingReference: `FIU-IND-ACK-${Date.now().toString(36).toUpperCase()}`,
   };
 }
 
 /**
- * 4. exportSarPdf(caseId)
- * Generates and downloads official forensic SAR Dossier PDF document
+ * 5. downloadSarPdf(caseId):
+ * Target: GET /sar/export/${caseId}?format=pdf
+ * Response type: 'blob'
+ * Uses window.URL.createObjectURL(new Blob([response.data])) to trigger an immediate browser file download named SAR_${caseId}_DOSSIER.pdf.
  */
-export async function exportSarPdf(caseId) {
+export async function downloadSarPdf(caseId) {
+  const filename = `SAR_${caseId}_DOSSIER.pdf`;
+
   try {
-    const res = await apiClient.get(`/api/v1/sar/export/${caseId}?format=pdf`, {
+    const res = await apiClient.get(`/sar/export/${caseId}?format=pdf`, {
       responseType: 'blob',
-      timeout: 3000,
+      timeout: 5000,
     });
     if (res.data) {
-      downloadFile(res.data, `SAR_DOSSIER_${caseId}.pdf`, 'application/pdf');
-      return { success: true, caseId };
+      const blob = new Blob([res.data], { type: 'application/pdf' });
+      downloadFile(blob, filename, 'application/pdf');
+      return { success: true, caseId, filename };
     }
   } catch {
-    // Client-side fallback PDF generator
+    try {
+      const res = await apiClient.get(`/sar/${caseId}/export?format=pdf`, {
+        responseType: 'blob',
+        timeout: 4000,
+      });
+      if (res.data) {
+        const blob = new Blob([res.data], { type: 'application/pdf' });
+        downloadFile(blob, filename, 'application/pdf');
+        return { success: true, caseId, filename };
+      }
+    } catch {
+      // Offline client-side valid PDF fallback
+    }
   }
 
   // Synthesize standard valid PDF stream with forensic compliance headers
@@ -437,15 +521,26 @@ startxref
 904
 %%EOF`;
 
-  downloadFile(pdfContent, `SAR_DOSSIER_${caseId}.pdf`, 'application/pdf');
-  return { success: true, caseId, filename: `SAR_DOSSIER_${caseId}.pdf` };
+  const blob = new Blob([pdfContent], { type: 'application/pdf' });
+  downloadFile(blob, filename, 'application/pdf');
+  return { success: true, caseId, filename, isOfflineSynthesized: true };
 }
 
+// Aliases for backwards compatibility with earlier steps
+export const fetchExplainability = getExplainability;
+export const fetchEntityProfile = getSuspectProfile;
+export const toggleEntityFreeze = freezeEntity;
+export const exportSarPdf = downloadSarPdf;
+
 export const sarApi = {
+  getExplainability,
   fetchExplainability,
+  getSuspectProfile,
   fetchEntityProfile,
+  freezeEntity,
   toggleEntityFreeze,
   generateSarDossier,
+  downloadSarPdf,
   exportSarPdf,
 };
 
