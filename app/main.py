@@ -22,7 +22,7 @@ from prometheus_client import REGISTRY, Counter, Histogram
 from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.routers.sar import router as sar_router
-from app.routers.cases import router as cases_router
+from app.routers.forensics import router as forensics_router
 
 # FastAPI _IncludedRouter compatibility patch for prometheus_fastapi_instrumentator
 try:
@@ -859,62 +859,12 @@ app.include_router(
 )
 
 # ------------------------------------------------------------------------------
-# 6. Forensic Investigation Workbench Cases Router Mount
+# 6. Forensic Investigation Workbench & SAR Router Mount
 # ------------------------------------------------------------------------------
 app.include_router(
-    cases_router,
-    prefix="/api/v1/cases",
-    tags=["Forensic Investigation Cases"],
+    forensics_router,
+    prefix="/api/v1",
+    tags=["Forensics & SAR"],
 )
-
-
-# ------------------------------------------------------------------------------
-# 7. Additional aliases for workbench endpoints
-# ------------------------------------------------------------------------------
-@app.get("/api/v1/health", tags=["Health & Diagnostics"])
-def api_v1_health():
-    return health_check()
-
-
-@app.post("/api/v1/sar/cases/{case_id}/generate", tags=["SAR Compliance & Reporting"])
-async def generate_sar_case_alias(case_id: str, payload: dict[str, Any] = Body(...)):
-    from app.routers.cases import GenerateSarRequest, generate_sar_for_case
-
-    req = GenerateSarRequest(
-        case_id=case_id,
-        narrative=payload.get("narrative", ""),
-        notes=payload.get("notes", ""),
-        operator_id=payload.get("operator_id", "OP-441"),
-    )
-    return await generate_sar_for_case(case_id, req)
-
-
-@app.get("/api/v1/sar/export/{sar_id}", tags=["SAR Compliance & Reporting"])
-async def export_sar_alias(sar_id: str, format: str = Query("pdf")):
-    from app.routers.sar import export_sar_dossier
-    from app.services.sar_service import sar_service
-
-    case = await sar_service.get_sar_by_id(sar_id)
-    if not case:
-        tx_payload = {
-            "transaction_id": f"TX-{sar_id}-01",
-            "suspect_identifier": f"SUSPECT_{sar_id}",
-            "amount": 4850000.0,
-            "currency": "INR",
-            "payment_format": "UPI",
-            "investigator_notes": f"Statutory SAR dossier export for case {sar_id}",
-        }
-        ml_result = {
-            "risk_score": 0.98,
-            "recommended_action": "PRIORITY_SAR_FILING",
-            "feature_importance": {"burst_velocity": 0.94},
-        }
-        case = await sar_service.create_or_aggregate_sar(
-            tx_payload=tx_payload,
-            ml_result=ml_result,
-            typology=SuspicionTypology.IN_TYP_STRUCT,
-        )
-
-    return await export_sar_dossier(sar_id=case.sar_id, format=format)
 
 

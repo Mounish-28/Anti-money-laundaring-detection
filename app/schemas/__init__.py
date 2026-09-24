@@ -22,6 +22,17 @@ from app.schemas.sar import (
 )
 from app.schemas.timeseries import TimeSeriesInput
 from app.schemas.transaction import AMLSimInput, TransactionInput
+from app.schemas.forensics import (
+    CaseSummary,
+    ExplainabilityResponse,
+    FeatureAttribution,
+    GraphEdge,
+    GraphNode,
+    GraphResponse,
+    SarGenerateRequest,
+    StatusUpdateRequest,
+    SuspectProfileResponse,
+)
 
 # Backward compatibility exports for legacy router references
 TransactionScoreRequest = TransactionInput
@@ -62,4 +73,14 @@ __all__ = [
     "SARListResponse",
     "calculate_fiu_deadline",
     "generate_sar_id",
+    # Forensic Investigation Workbench Models
+    "CaseSummary",
+    "GraphNode",
+    "GraphEdge",
+    "GraphResponse",
+    "FeatureAttribution",
+    "ExplainabilityResponse",
+    "SuspectProfileResponse",
+    "StatusUpdateRequest",
+    "SarGenerateRequest",
 ]
