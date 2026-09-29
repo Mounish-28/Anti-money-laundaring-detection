@@ -1,0 +1,12 @@
+{
+    "Dataset": "SAML-D",
+    "Architecture": "XGBoost + Typology Engineering",
+    "Best_Threshold": 0.215,
+    "Test_Accuracy": 0.9972364995286619,
+    "Precision": 0.2584953840109998,
+    "Recall": 0.888588791357191,
+    "F1_Score": 0.40048691418137555,
+    "PR_AUC": 0.887234617527088,
+    "ROC_AUC": 0.9789073307996999,
+    "Target_Met": "PARTIAL"
+}

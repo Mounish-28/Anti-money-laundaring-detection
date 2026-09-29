@@ -1,0 +1,157 @@
+# ==============================================================================
+# QuantumAML Nexus - Argo Rollouts Canary Deployment & Automated Rollback
+# ==============================================================================
+# Step 5.4.4: Zero-Downtime Deployment Automation & Automated Rollback
+# Features:
+#   - Progressive Canary Traffic Shifting: 10% -> 25% -> 50% -> 100%
+#   - Automated Rollback Triggered by:
+#       1. Elevated 4xx / 5xx error rate (> 0.5%)
+#       2. Cryptographic Integrity Probe Failures (> 0 occurrences)
+#       3. p95 Latency Degradation (> 35ms)
+# ==============================================================================
+
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: investigation-service-rollout
+  namespace: mesh-investigation
+spec:
+  replicas: 4
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app: investigation-service
+  strategy:
+    canary:
+      analysis:
+        templates:
+          - templateName: enclave-integrity-and-error-analysis
+        args:
+          - name: service-name
+            value: investigation-service
+      canaryService: investigation-service-canary
+      stableService: investigation-service-stable
+      trafficRouting:
+        istio:
+          virtualService:
+            name: investigation-vservice
+            routes:
+              - primary
+      steps:
+        # Step 1: 10% canary traffic with 5-minute soak and integrity analysis
+        - setWeight: 10
+        - pause: { duration: 5m }
+        # Step 2: 25% canary traffic with 10-minute soak
+        - setWeight: 25
+        - pause: { duration: 10m }
+        # Step 3: 50% canary traffic
+        - setWeight: 50
+        - pause: { duration: 10m }
+        # Step 4: Promote to 100% full production
+        - setWeight: 100
+  template:
+    metadata:
+      labels:
+        app: investigation-service
+        enclave.quantumaml.io/domain: investigation
+      annotations:
+        sidecar.istio.io/inject: "true"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+      containers:
+        - name: investigation-app
+          image: gcr.io/quantumaml-security/investigation-backend:v1.0.0-distroless
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          ports:
+            - containerPort: 8000
+              name: http
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+            limits:
+              cpu: "2000m"
+              memory: "2Gi"
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            periodSeconds: 2
+            failureThreshold: 15
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            periodSeconds: 5
+            failureThreshold: 2
+          volumeMounts:
+            - name: memory-tmp
+              mountPath: /tmp
+      volumes:
+        - name: memory-tmp
+          emptyDir:
+            medium: Memory
+
+---
+# ------------------------------------------------------------------------------
+# REAL-TIME CANARY ANALYSIS TEMPLATE
+# Aborts and initiates instant rollback if integrity failure > 0 or 5xx > 0.5%
+# ------------------------------------------------------------------------------
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: enclave-integrity-and-error-analysis
+  namespace: mesh-investigation
+spec:
+  args:
+    - name: service-name
+  metrics:
+    # Metric 1: HTTP 5xx Error Rate SLA (< 0.5%)
+    - name: success-rate
+      interval: 30s
+      successCondition: result[0] <= 0.005
+      failureLimit: 2
+      provider:
+        prometheus:
+          address: http://prometheus.mesh-telemetry.svc.cluster.local:9090
+          query: |
+            sum(rate(http_requests_total{service="{{args.service-name}}", status=~"5.."}[1m]))
+            /
+            sum(rate(http_requests_total{service="{{args.service-name}}"}[1m]))
+
+    # Metric 2: Cryptographic Integrity Probe Failures (Strict ZERO tolerance)
+    - name: crypto-integrity-violations
+      interval: 15s
+      successCondition: result[0] == 0
+      failureLimit: 1
+      provider:
+        prometheus:
+          address: http://prometheus.mesh-telemetry.svc.cluster.local:9090
+          query: |
+            sum(increase(quantumaml_crypto_integrity_failures_total{service="{{args.service-name}}"}[1m])) or vector(0)
+
+    # Metric 3: p95 Search & Scoring Latency (< 35ms)
+    - name: p95-latency
+      interval: 30s
+      successCondition: result[0] < 0.035
+      failureLimit: 3
+      provider:
+        prometheus:
+          address: http://prometheus.mesh-telemetry.svc.cluster.local:9090
+          query: |
+            histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{service="{{args.service-name}}"}[1m])) by (le))

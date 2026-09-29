@@ -1,0 +1,588 @@
+{
+  "dataset_name": "Elliptic Bitcoin Dataset",
+  "timestamp": "2026-09-28T17:49:00Z",
+  "schema_validation": {
+    "total_nodes": 203769,
+    "total_columns": 167,
+    "local_features_count": 93,
+    "aggregated_features_count": 72,
+    "total_engineered_features": 165,
+    "missing_value_audit": {
+      "nan_count": 0,
+      "inf_count": 0,
+      "zero_sparsity_pct": 0.0,
+      "integrity_status": "100%_CLEAN_ZERO_NANS"
+    },
+    "temporal_continuity": {
+      "total_time_steps": 49,
+      "min_time_step": 1,
+      "max_time_step": 49,
+      "is_contiguous": true,
+      "missing_time_steps": []
+    },
+    "feature_moments": {
+      "local_mean": 0.0,
+      "local_std": 1.0,
+      "agg_mean": 0.0,
+      "agg_std": 1.0
+    }
+  },
+  "label_distribution": {
+    "total_nodes": 203769,
+    "class_breakdown": {
+      "illicit_count": 4545,
+      "illicit_pct_total": 2.2305,
+      "illicit_pct_labeled": 9.7608,
+      "licit_count": 42019,
+      "licit_pct_total": 20.6209,
+      "licit_pct_labeled": 90.2392,
+      "unknown_count": 157205,
+      "unknown_pct_total": 77.1486,
+      "labeled_total": 46564,
+      "labeled_imbalance_ratio": "9.25:1"
+    },
+    "time_steps_count": 49,
+    "temporal_summary": [
+      {
+        "time_step": 1,
+        "total_nodes": 7880,
+        "illicit_count": 17,
+        "licit_count": 2130,
+        "unknown_count": 5733,
+        "labeled_count": 2147,
+        "illicit_rate_pct": 0.79
+      },
+      {
+        "time_step": 2,
+        "total_nodes": 4544,
+        "illicit_count": 18,
+        "licit_count": 1099,
+        "unknown_count": 3427,
+        "labeled_count": 1117,
+        "illicit_rate_pct": 1.61
+      },
+      {
+        "time_step": 3,
+        "total_nodes": 6621,
+        "illicit_count": 11,
+        "licit_count": 1268,
+        "unknown_count": 5342,
+        "labeled_count": 1279,
+        "illicit_rate_pct": 0.86
+      },
+      {
+        "time_step": 4,
+        "total_nodes": 5693,
+        "illicit_count": 30,
+        "licit_count": 1410,
+        "unknown_count": 4253,
+        "labeled_count": 1440,
+        "illicit_rate_pct": 2.08
+      },
+      {
+        "time_step": 5,
+        "total_nodes": 6803,
+        "illicit_count": 8,
+        "licit_count": 1874,
+        "unknown_count": 4921,
+        "labeled_count": 1882,
+        "illicit_rate_pct": 0.43
+      },
+      {
+        "time_step": 6,
+        "total_nodes": 4328,
+        "illicit_count": 5,
+        "licit_count": 480,
+        "unknown_count": 3843,
+        "labeled_count": 485,
+        "illicit_rate_pct": 1.03
+      },
+      {
+        "time_step": 7,
+        "total_nodes": 6048,
+        "illicit_count": 102,
+        "licit_count": 1101,
+        "unknown_count": 4845,
+        "labeled_count": 1203,
+        "illicit_rate_pct": 8.48
+      },
+      {
+        "time_step": 8,
+        "total_nodes": 4457,
+        "illicit_count": 67,
+        "licit_count": 1098,
+        "unknown_count": 3292,
+        "labeled_count": 1165,
+        "illicit_rate_pct": 5.75
+      },
+      {
+        "time_step": 9,
+        "total_nodes": 4996,
+        "illicit_count": 248,
+        "licit_count": 530,
+        "unknown_count": 4218,
+        "labeled_count": 778,
+        "illicit_rate_pct": 31.88
+      },
+      {
+        "time_step": 10,
+        "total_nodes": 6727,
+        "illicit_count": 18,
+        "licit_count": 954,
+        "unknown_count": 5755,
+        "labeled_count": 972,
+        "illicit_rate_pct": 1.85
+      },
+      {
+        "time_step": 11,
+        "total_nodes": 4296,
+        "illicit_count": 131,
+        "licit_count": 565,
+        "unknown_count": 3600,
+        "labeled_count": 696,
+        "illicit_rate_pct": 18.82
+      },
+      {
+        "time_step": 12,
+        "total_nodes": 2047,
+        "illicit_count": 16,
+        "licit_count": 490,
+        "unknown_count": 1541,
+        "labeled_count": 506,
+        "illicit_rate_pct": 3.16
+      },
+      {
+        "time_step": 13,
+        "total_nodes": 4528,
+        "illicit_count": 291,
+        "licit_count": 518,
+        "unknown_count": 3719,
+        "labeled_count": 809,
+        "illicit_rate_pct": 35.97
+      },
+      {
+        "time_step": 14,
+        "total_nodes": 2022,
+        "illicit_count": 43,
+        "licit_count": 374,
+        "unknown_count": 1605,
+        "labeled_count": 417,
+        "illicit_rate_pct": 10.31
+      },
+      {
+        "time_step": 15,
+        "total_nodes": 3639,
+        "illicit_count": 147,
+        "licit_count": 471,
+        "unknown_count": 3021,
+        "labeled_count": 618,
+        "illicit_rate_pct": 23.79
+      },
+      {
+        "time_step": 16,
+        "total_nodes": 2975,
+        "illicit_count": 128,
+        "licit_count": 402,
+        "unknown_count": 2445,
+        "labeled_count": 530,
+        "illicit_rate_pct": 24.15
+      },
+      {
+        "time_step": 17,
+        "total_nodes": 3385,
+        "illicit_count": 99,
+        "licit_count": 712,
+        "unknown_count": 2574,
+        "labeled_count": 811,
+        "illicit_rate_pct": 12.21
+      },
+      {
+        "time_step": 18,
+        "total_nodes": 1976,
+        "illicit_count": 52,
+        "licit_count": 337,
+        "unknown_count": 1587,
+        "labeled_count": 389,
+        "illicit_rate_pct": 13.37
+      },
+      {
+        "time_step": 19,
+        "total_nodes": 3506,
+        "illicit_count": 80,
+        "licit_count": 665,
+        "unknown_count": 2761,
+        "labeled_count": 745,
+        "illicit_rate_pct": 10.74
+      },
+      {
+        "time_step": 20,
+        "total_nodes": 4291,
+        "illicit_count": 260,
+        "licit_count": 640,
+        "unknown_count": 3391,
+        "labeled_count": 900,
+        "illicit_rate_pct": 28.89
+      },
+      {
+        "time_step": 21,
+        "total_nodes": 3537,
+        "illicit_count": 100,
+        "licit_count": 541,
+        "unknown_count": 2896,
+        "labeled_count": 641,
+        "illicit_rate_pct": 15.6
+      },
+      {
+        "time_step": 22,
+        "total_nodes": 5894,
+        "illicit_count": 158,
+        "licit_count": 1605,
+        "unknown_count": 4131,
+        "labeled_count": 1763,
+        "illicit_rate_pct": 8.96
+      },
+      {
+        "time_step": 23,
+        "total_nodes": 4165,
+        "illicit_count": 53,
+        "licit_count": 1134,
+        "unknown_count": 2978,
+        "labeled_count": 1187,
+        "illicit_rate_pct": 4.47
+      },
+      {
+        "time_step": 24,
+        "total_nodes": 4592,
+        "illicit_count": 137,
+        "licit_count": 989,
+        "unknown_count": 3466,
+        "labeled_count": 1126,
+        "illicit_rate_pct": 12.17
+      },
+      {
+        "time_step": 25,
+        "total_nodes": 2314,
+        "illicit_count": 118,
+        "licit_count": 476,
+        "unknown_count": 1720,
+        "labeled_count": 594,
+        "illicit_rate_pct": 19.87
+      },
+      {
+        "time_step": 26,
+        "total_nodes": 2523,
+        "illicit_count": 96,
+        "licit_count": 421,
+        "unknown_count": 2006,
+        "labeled_count": 517,
+        "illicit_rate_pct": 18.57
+      },
+      {
+        "time_step": 27,
+        "total_nodes": 1089,
+        "illicit_count": 24,
+        "licit_count": 182,
+        "unknown_count": 883,
+        "labeled_count": 206,
+        "illicit_rate_pct": 11.65
+      },
+      {
+        "time_step": 28,
+        "total_nodes": 1653,
+        "illicit_count": 85,
+        "licit_count": 199,
+        "unknown_count": 1369,
+        "labeled_count": 284,
+        "illicit_rate_pct": 29.93
+      },
+      {
+        "time_step": 29,
+        "total_nodes": 4275,
+        "illicit_count": 329,
+        "licit_count": 845,
+        "unknown_count": 3101,
+        "labeled_count": 1174,
+        "illicit_rate_pct": 28.02
+      },
+      {
+        "time_step": 30,
+        "total_nodes": 2483,
+        "illicit_count": 83,
+        "licit_count": 441,
+        "unknown_count": 1959,
+        "labeled_count": 524,
+        "illicit_rate_pct": 15.84
+      },
+      {
+        "time_step": 31,
+        "total_nodes": 2816,
+        "illicit_count": 106,
+        "licit_count": 604,
+        "unknown_count": 2106,
+        "labeled_count": 710,
+        "illicit_rate_pct": 14.93
+      },
+      {
+        "time_step": 32,
+        "total_nodes": 4525,
+        "illicit_count": 342,
+        "licit_count": 981,
+        "unknown_count": 3202,
+        "labeled_count": 1323,
+        "illicit_rate_pct": 25.85
+      },
+      {
+        "time_step": 33,
+        "total_nodes": 3151,
+        "illicit_count": 23,
+        "licit_count": 418,
+        "unknown_count": 2710,
+        "labeled_count": 441,
+        "illicit_rate_pct": 5.22
+      },
+      {
+        "time_step": 34,
+        "total_nodes": 2486,
+        "illicit_count": 37,
+        "licit_count": 478,
+        "unknown_count": 1971,
+        "labeled_count": 515,
+        "illicit_rate_pct": 7.18
+      },
+      {
+        "time_step": 35,
+        "total_nodes": 5507,
+        "illicit_count": 182,
+        "licit_count": 1159,
+        "unknown_count": 4166,
+        "labeled_count": 1341,
+        "illicit_rate_pct": 13.57
+      },
+      {
+        "time_step": 36,
+        "total_nodes": 6393,
+        "illicit_count": 33,
+        "licit_count": 1675,
+        "unknown_count": 4685,
+        "labeled_count": 1708,
+        "illicit_rate_pct": 1.93
+      },
+      {
+        "time_step": 37,
+        "total_nodes": 3306,
+        "illicit_count": 40,
+        "licit_count": 458,
+        "unknown_count": 2808,
+        "labeled_count": 498,
+        "illicit_rate_pct": 8.03
+      },
+      {
+        "time_step": 38,
+        "total_nodes": 2891,
+        "illicit_count": 111,
+        "licit_count": 645,
+        "unknown_count": 2135,
+        "labeled_count": 756,
+        "illicit_rate_pct": 14.68
+      },
+      {
+        "time_step": 39,
+        "total_nodes": 2760,
+        "illicit_count": 81,
+        "licit_count": 1102,
+        "unknown_count": 1577,
+        "labeled_count": 1183,
+        "illicit_rate_pct": 6.85
+      },
+      {
+        "time_step": 40,
+        "total_nodes": 4481,
+        "illicit_count": 112,
+        "licit_count": 1099,
+        "unknown_count": 3270,
+        "labeled_count": 1211,
+        "illicit_rate_pct": 9.25
+      },
+      {
+        "time_step": 41,
+        "total_nodes": 5342,
+        "illicit_count": 116,
+        "licit_count": 1016,
+        "unknown_count": 4210,
+        "labeled_count": 1132,
+        "illicit_rate_pct": 10.25
+      },
+      {
+        "time_step": 42,
+        "total_nodes": 7140,
+        "illicit_count": 239,
+        "licit_count": 1915,
+        "unknown_count": 4986,
+        "labeled_count": 2154,
+        "illicit_rate_pct": 11.1
+      },
+      {
+        "time_step": 43,
+        "total_nodes": 5063,
+        "illicit_count": 24,
+        "licit_count": 1346,
+        "unknown_count": 3693,
+        "labeled_count": 1370,
+        "illicit_rate_pct": 1.75
+      },
+      {
+        "time_step": 44,
+        "total_nodes": 4975,
+        "illicit_count": 24,
+        "licit_count": 1567,
+        "unknown_count": 3384,
+        "labeled_count": 1591,
+        "illicit_rate_pct": 1.51
+      },
+      {
+        "time_step": 45,
+        "total_nodes": 5598,
+        "illicit_count": 5,
+        "licit_count": 1216,
+        "unknown_count": 4377,
+        "labeled_count": 1221,
+        "illicit_rate_pct": 0.41
+      },
+      {
+        "time_step": 46,
+        "total_nodes": 3519,
+        "illicit_count": 2,
+        "licit_count": 710,
+        "unknown_count": 2807,
+        "labeled_count": 712,
+        "illicit_rate_pct": 0.28
+      },
+      {
+        "time_step": 47,
+        "total_nodes": 5121,
+        "illicit_count": 22,
+        "licit_count": 824,
+        "unknown_count": 4275,
+        "labeled_count": 846,
+        "illicit_rate_pct": 2.6
+      },
+      {
+        "time_step": 48,
+        "total_nodes": 2954,
+        "illicit_count": 36,
+        "licit_count": 435,
+        "unknown_count": 2483,
+        "labeled_count": 471,
+        "illicit_rate_pct": 7.64
+      },
+      {
+        "time_step": 49,
+        "total_nodes": 2454,
+        "illicit_count": 56,
+        "licit_count": 420,
+        "unknown_count": 1978,
+        "labeled_count": 476,
+        "illicit_rate_pct": 11.76
+      }
+    ]
+  },
+  "network_topology": {
+    "total_nodes": 203769,
+    "total_edges": 234355,
+    "temporal_edge_isolation": {
+      "intra_time_step_edges": 234355,
+      "cross_time_step_edges": 0,
+      "isolation_valid": true
+    },
+    "degree_distributions": {
+      "in_degree": {
+        "mean": 1.1501,
+        "std": 3.9111,
+        "median": 1.0,
+        "p90": 1.0,
+        "p95": 2.0,
+        "p99": 9.0,
+        "max": 284
+      },
+      "out_degree": {
+        "mean": 1.1501,
+        "std": 1.8947,
+        "median": 1.0,
+        "p90": 2.0,
+        "p95": 2.0,
+        "p99": 5.0,
+        "max": 472
+      },
+      "total_degree": {
+        "mean": 2.3002,
+        "median": 2.0,
+        "p90": 3.0,
+        "p95": 4.0,
+        "p99": 13.0,
+        "max": 473
+      }
+    },
+    "top_hubs": {
+      "top_in_degree_aggregators": {
+        "43388675": 284,
+        "68705820": 247,
+        "30699343": 241,
+        "96576418": 239,
+        "225859042": 212
+      },
+      "top_out_degree_faucets": {
+        "2984918": 472,
+        "89273": 288,
+        "102570": 122,
+        "3181": 112,
+        "7952": 99
+      }
+    },
+    "graph_density": 5.644170528459417e-06,
+    "labeled_homophily": {
+      "labeled_edge_transitions": {
+        "illicit_to_illicit": 998,
+        "illicit_to_licit": 915,
+        "licit_to_licit": 33930,
+        "licit_to_illicit": 781
+      },
+      "illicit_homophily_pct": 52.17,
+      "licit_homophily_pct": 97.75
+    },
+    "component_summary": {
+      "total_weakly_connected_components": 49,
+      "mean_components_per_slice": 1.0,
+      "mean_component_size": 4158.55
+    }
+  },
+  "adjacency_memory_benchmark": {
+    "theoretical_dense_float32_gb": 154.68,
+    "theoretical_dense_uint8_gb": 38.67,
+    "sparse_csr": {
+      "construction_time_ms": 13.9,
+      "memory_mb": 2.57,
+      "nnz": 234355,
+      "compression_ratio": 61744.3
+    },
+    "pyg_edge_index": {
+      "tensor_shape": [
+        2,
+        234355
+      ],
+      "construction_time_ms": 315.98,
+      "memory_mb": 3.58
+    },
+    "temporal_slice_extraction": {
+      "mean_time_ms": 16.25,
+      "p95_time_ms": 24.0,
+      "mean_memory_kb": 53.61,
+      "total_49_slices_time_ms": 796.21
+    },
+    "memory_bottleneck_risk": "ZERO_BOTTLENECK_VERIFIED"
+  },
+  "generated_artifacts": [
+    "elliptic_class_temporal_distribution.png",
+    "elliptic_degree_distribution.png",
+    "elliptic_graph_topology_summary.png"
+  ]
+}

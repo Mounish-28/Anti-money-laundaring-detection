@@ -1,0 +1,360 @@
+{
+    "timestamp": "2026-09-28T16:57:50Z",
+    "dataset": "SAML-D",
+    "pipeline_architecture": "SamldFeaturePipeline",
+    "model_type": "Regularized XGBoost (Hist)",
+    "execution_cohort": {
+        "sample_size": 1000000,
+        "positive_laundering_cases": 911,
+        "negative_legitimate_cases": 999089,
+        "base_laundering_rate_pct": 0.0911,
+        "class_imbalance_ratio": "1096:1"
+    },
+    "zero_leakage_guarantee": {
+        "fold_isolation": "Strict. Encodings and scalers fit purely on training indices.",
+        "target_encoding": "Bayesian smoothed Laplace m-estimate (m=10.0) with global training prior fallback.",
+        "scaling": "RobustScaler (median & IQR) fit exclusively on training splits.",
+        "interaction_features": "Deterministic transaction-level and graph topology features."
+    },
+    "feature_engineering_inventory": {
+        "raw_features_count": 9,
+        "raw_features": [
+            "Amount",
+            "In_Degree",
+            "Out_Degree",
+            "Rolling_24h_Velocity",
+            "Payment_type",
+            "Sender_bank_location",
+            "Receiver_bank_location",
+            "Payment_currency",
+            "Received_currency"
+        ],
+        "engineered_features_count": 26,
+        "engineered_features": [
+            "Amount",
+            "Log_Amount",
+            "Rolling_24h_Velocity",
+            "Log_Velocity",
+            "In_Degree",
+            "Out_Degree",
+            "Amount_to_Velocity_Ratio",
+            "Degree_Ratio",
+            "Degree_Difference",
+            "Network_Activity",
+            "Velocity_Per_Out_Degree",
+            "Cash_Velocity_Risk",
+            "Structuring_Proximity",
+            "Payment_type_TE",
+            "Sender_bank_location_TE",
+            "Receiver_bank_location_TE",
+            "Payment_currency_TE",
+            "Received_currency_TE",
+            "Location_Risk_Differential",
+            "Currency_Risk_Differential",
+            "Is_Cross_Border",
+            "Is_Currency_Exchange",
+            "Cross_Border_Currency_Mismatch",
+            "Is_Cash",
+            "Is_Structuring_Band",
+            "Round_Amount_Flag"
+        ],
+        "feature_specifications": [
+            {
+                "name": "Amount",
+                "type": "Continuous Numerical",
+                "transformation": "RobustScaler (Median/IQR)",
+                "rationale": "Mitigates extreme skewness (102.16) and 4.5% outliers without loss of signal."
+            },
+            {
+                "name": "Log_Amount",
+                "type": "Continuous Numerical",
+                "transformation": "log1p(Amount) + RobustScaler",
+                "rationale": "Compresses exponential multi-million dollar tail into gaussian-like distribution."
+            },
+            {
+                "name": "Rolling_24h_Velocity",
+                "type": "Continuous Numerical",
+                "transformation": "RobustScaler (Median/IQR)",
+                "rationale": "Historical 24h sender volume normalized against operational IQR."
+            },
+            {
+                "name": "Log_Velocity",
+                "type": "Continuous Numerical",
+                "transformation": "log1p(Velocity) + RobustScaler",
+                "rationale": "Log-linearized account velocity scale."
+            },
+            {
+                "name": "In_Degree",
+                "type": "Graph Topology",
+                "transformation": "RobustScaler (Median/IQR)",
+                "rationale": "Receiver fan-in connectivity identifying aggregation collectors."
+            },
+            {
+                "name": "Out_Degree",
+                "type": "Graph Topology",
+                "transformation": "RobustScaler (Median/IQR)",
+                "rationale": "Sender fan-out connectivity identifying distribution nodes."
+            },
+            {
+                "name": "Amount_to_Velocity_Ratio",
+                "type": "Non-Linear Interaction",
+                "transformation": "Amount / (Velocity + 1.0) + RobustScaler",
+                "rationale": "Isolates sudden single-transaction bursts exceeding historical sender pattern."
+            },
+            {
+                "name": "Degree_Ratio",
+                "type": "Non-Linear Interaction",
+                "transformation": "(In_Degree + 1) / (Out_Degree + 1) + RobustScaler",
+                "rationale": "Captures Fan-In vs Fan-Out structural asymmetry (Smurfing, Layered Fan-In/Out)."
+            },
+            {
+                "name": "Degree_Difference",
+                "type": "Non-Linear Interaction",
+                "transformation": "(In_Degree - Out_Degree) + RobustScaler",
+                "rationale": "Directional net flow accumulation vs dispersion indicator."
+            },
+            {
+                "name": "Network_Activity",
+                "type": "Non-Linear Interaction",
+                "transformation": "log1p(In_Degree * Out_Degree) + RobustScaler",
+                "rationale": "Compound bipartite node centrality separating retail customers from laundering hubs."
+            },
+            {
+                "name": "Velocity_Per_Out_Degree",
+                "type": "Collinearity Breaker",
+                "transformation": "Velocity / (Out_Degree + 1.0) + RobustScaler",
+                "rationale": "Resolves collinearity between Out_Degree and Velocity (reduced from r=0.9723 to r=0.0917)."
+            },
+            {
+                "name": "Payment_type_TE",
+                "type": "Target Encoded",
+                "transformation": "Bayesian Smoothed Laplace (m=10.0) + RobustScaler",
+                "rationale": "Encodes payment modality risk (Cash Deposit 0.62%, Cash Withdrawal 0.44% vs ACH 0.05%)."
+            },
+            {
+                "name": "Sender_bank_location_TE",
+                "type": "Target Encoded",
+                "transformation": "Bayesian Smoothed Laplace (m=10.0) + RobustScaler",
+                "rationale": "Source jurisdiction regulatory risk profile."
+            },
+            {
+                "name": "Receiver_bank_location_TE",
+                "type": "Target Encoded",
+                "transformation": "Bayesian Smoothed Laplace (m=10.0) + RobustScaler",
+                "rationale": "Destination jurisdiction regulatory risk profile."
+            },
+            {
+                "name": "Payment_currency_TE",
+                "type": "Target Encoded",
+                "transformation": "Bayesian Smoothed Laplace (m=10.0) + RobustScaler",
+                "rationale": "Source currency risk profile."
+            },
+            {
+                "name": "Received_currency_TE",
+                "type": "Target Encoded",
+                "transformation": "Bayesian Smoothed Laplace (m=10.0) + RobustScaler",
+                "rationale": "Settlement currency risk profile."
+            },
+            {
+                "name": "Location_Risk_Differential",
+                "type": "Jurisdictional Risk",
+                "transformation": "Sender_TE - Receiver_TE + RobustScaler",
+                "rationale": "Risk gradient across origin and destination jurisdictions."
+            },
+            {
+                "name": "Currency_Risk_Differential",
+                "type": "Forex Risk",
+                "transformation": "Payment_Currency_TE - Received_Currency_TE + RobustScaler",
+                "rationale": "Forex flight risk differential."
+            },
+            {
+                "name": "Is_Cross_Border",
+                "type": "Binary Indicator",
+                "transformation": "Sender_Location != Receiver_Location",
+                "rationale": "International transfer flag (4.09x laundering risk multiplier)."
+            },
+            {
+                "name": "Is_Currency_Exchange",
+                "type": "Binary Indicator",
+                "transformation": "Payment_Currency != Received_Currency",
+                "rationale": "Currency conversion flag (4.56x laundering risk multiplier)."
+            },
+            {
+                "name": "Cross_Border_Currency_Mismatch",
+                "type": "Binary Interaction",
+                "transformation": "Is_Cross_Border * Is_Currency_Exchange",
+                "rationale": "Compound offshore forex laundering mechanism."
+            },
+            {
+                "name": "Is_Cash",
+                "type": "Binary Indicator",
+                "transformation": "Payment_type in (Cash Deposit, Cash Withdrawal)",
+                "rationale": "Physical cash handling indicator (6.0x risk multiplier)."
+            },
+            {
+                "name": "Cash_Velocity_Risk",
+                "type": "Non-Linear Interaction",
+                "transformation": "Is_Cash * log1p(Amount) + RobustScaler",
+                "rationale": "High-value physical cash movement anomaly detector."
+            },
+            {
+                "name": "Is_Structuring_Band",
+                "type": "Typology Detector",
+                "transformation": "Amount in [8000, 10000)",
+                "rationale": "Targets Structuring (#1 typology: 18.94% of laundering) near $10k reporting limit."
+            },
+            {
+                "name": "Structuring_Proximity",
+                "type": "Non-Linear Interaction",
+                "transformation": "exp(-0.5 * ((Amount - 9500)/1500)^2) + RobustScaler",
+                "rationale": "Continuous Gaussian proximity detector peaking at $9,500."
+            },
+            {
+                "name": "Round_Amount_Flag",
+                "type": "Binary Indicator",
+                "transformation": "Amount >= 1000 and Amount % 500 == 0",
+                "rationale": "Identifies artificial round-figure smurfing injections."
+            }
+        ]
+    },
+    "collinearity_mitigation": {
+        "out_degree_and_velocity_raw_r": 0.9723,
+        "out_degree_and_velocity_per_degree_r": 0.0917,
+        "collinearity_reduction_pct": 90.57,
+        "l2_regularization_parameter": 8.0,
+        "feature_subsampling_ratio": 0.8
+    },
+    "cross_validation_evaluation": {
+        "n_splits": 5,
+        "overall_pr_auc": 0.49383,
+        "overall_roc_auc": 0.9805,
+        "optimal_operating_point": {
+            "threshold": 0.517,
+            "f1_score": 0.5351,
+            "precision": 0.6157,
+            "recall": 0.4731
+        },
+        "operational_high_recall_point_95": {
+            "threshold": 0.0056,
+            "recall": 0.9506,
+            "fpr_percentage": 12.619
+        },
+        "precision_at_k": {
+            "P@100": 92.0,
+            "P@500": 73.6,
+            "P@1000": 47.4
+        },
+        "mean_fold_metrics": {
+            "mean_pr_auc": 0.49729,
+            "std_pr_auc": 0.03333,
+            "mean_roc_auc": 0.98077,
+            "std_roc_auc": 0.00494,
+            "mean_f1": 0.5421,
+            "mean_fpr_at_95": 12.37
+        },
+        "fold_breakdown": [
+            {
+                "fold": 1,
+                "pr_auc": 0.45313,
+                "roc_auc": 0.97932,
+                "optimal_f1": 0.5105,
+                "optimal_precision": 0.7019,
+                "optimal_recall": 0.4011,
+                "optimal_threshold": 0.6075,
+                "operational_fpr_at_recall_95_pct": 12.491,
+                "threshold_at_recall_95": 0.0056,
+                "train_samples": 800000,
+                "val_samples": 200000,
+                "val_positives": 182
+            },
+            {
+                "fold": 2,
+                "pr_auc": 0.49639,
+                "roc_auc": 0.98002,
+                "optimal_f1": 0.5342,
+                "optimal_precision": 0.6143,
+                "optimal_recall": 0.4725,
+                "optimal_threshold": 0.5256,
+                "operational_fpr_at_recall_95_pct": 11.089,
+                "threshold_at_recall_95": 0.0061,
+                "train_samples": 800000,
+                "val_samples": 200000,
+                "val_positives": 182
+            },
+            {
+                "fold": 3,
+                "pr_auc": 0.48194,
+                "roc_auc": 0.97309,
+                "optimal_f1": 0.5449,
+                "optimal_precision": 0.6538,
+                "optimal_recall": 0.467,
+                "optimal_threshold": 0.5048,
+                "operational_fpr_at_recall_95_pct": 16.19,
+                "threshold_at_recall_95": 0.0043,
+                "train_samples": 800000,
+                "val_samples": 200000,
+                "val_positives": 182
+            },
+            {
+                "fold": 4,
+                "pr_auc": 0.49972,
+                "roc_auc": 0.98812,
+                "optimal_f1": 0.5442,
+                "optimal_precision": 0.7624,
+                "optimal_recall": 0.4231,
+                "optimal_threshold": 0.6533,
+                "operational_fpr_at_recall_95_pct": 8.899,
+                "threshold_at_recall_95": 0.0072,
+                "train_samples": 800000,
+                "val_samples": 200000,
+                "val_positives": 182
+            },
+            {
+                "fold": 5,
+                "pr_auc": 0.55528,
+                "roc_auc": 0.98329,
+                "optimal_f1": 0.5767,
+                "optimal_precision": 0.6573,
+                "optimal_recall": 0.5137,
+                "optimal_threshold": 0.5375,
+                "operational_fpr_at_recall_95_pct": 13.183,
+                "threshold_at_recall_95": 0.0056,
+                "train_samples": 800000,
+                "val_samples": 200000,
+                "val_positives": 183
+            }
+        ]
+    },
+    "feature_importance_rankings": {
+        "Cash_Velocity_Risk": 0.10352,
+        "Is_Currency_Exchange": 0.10225,
+        "Out_Degree": 0.08958,
+        "In_Degree": 0.0704,
+        "Received_currency_TE": 0.06135,
+        "Network_Activity": 0.05324,
+        "Degree_Ratio": 0.04919,
+        "Receiver_bank_location_TE": 0.04431,
+        "Rolling_24h_Velocity": 0.04337,
+        "Degree_Difference": 0.04114,
+        "Log_Velocity": 0.03725,
+        "Payment_type_TE": 0.03708,
+        "Log_Amount": 0.03279,
+        "Is_Cash": 0.03254,
+        "Location_Risk_Differential": 0.03209,
+        "Amount_to_Velocity_Ratio": 0.03061,
+        "Structuring_Proximity": 0.02945,
+        "Amount": 0.02737,
+        "Currency_Risk_Differential": 0.02003,
+        "Velocity_Per_Out_Degree": 0.01885,
+        "Payment_currency_TE": 0.01273,
+        "Is_Structuring_Band": 0.01078,
+        "Is_Cross_Border": 0.00771,
+        "Cross_Border_Currency_Mismatch": 0.00652,
+        "Sender_bank_location_TE": 0.00585,
+        "Round_Amount_Flag": 0.0
+    },
+    "serialized_artifacts": {
+        "preprocessor_pipeline": "E:\\Anti money laundaring detection\\models\\samld\\feature_preprocessor.joblib",
+        "regularized_xgboost_model": "E:\\Anti money laundaring detection\\models\\samld\\xgboost_model.joblib"
+    }
+}

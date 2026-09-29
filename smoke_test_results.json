@@ -1,0 +1,48 @@
+{
+  "status": "SUCCESS",
+  "total_requests": 21,
+  "success_rate_pct": 100.0,
+  "p50_latency_ms": 7.467,
+  "p95_latency_ms": 10.936,
+  "max_latency_ms": 16.452,
+  "sla_pass": true,
+  "celery_alerts_ingested": 1,
+  "prometheus_target_state": "UP",
+  "grafana_status": "OK",
+  "metrics_harvested": {
+    "total_evaluated": 21.0,
+    "anomalies_flagged": 1.0
+  },
+  "services": [
+    {
+      "service": "quantumaml-redis",
+      "port": 6379,
+      "status": "HEALTHY",
+      "role": "In-Memory Broker & Result Store"
+    },
+    {
+      "service": "quantumaml-api",
+      "port": 8000,
+      "status": "HEALTHY",
+      "role": "Real-Time FastAPI Serving Engine"
+    },
+    {
+      "service": "quantumaml-worker",
+      "port": "Internal Queue",
+      "status": "HEALTHY",
+      "role": "Background Anomaly Alert Triage Dispatcher"
+    },
+    {
+      "service": "prometheus",
+      "port": 9090,
+      "status": "HEALTHY",
+      "role": "Telemetry Scraper & Metric Store"
+    },
+    {
+      "service": "grafana",
+      "port": 3000,
+      "status": "HEALTHY",
+      "role": "Real-Time Observability Dashboard"
+    }
+  ]
+}

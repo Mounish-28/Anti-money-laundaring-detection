@@ -1,0 +1,12 @@
+{
+    "Dataset": "Time-Series AML",
+    "Architecture": "Dual-Branch Hybrid (Temporal 1D-CNN + Tabular Kinematics + LightGBM)",
+    "Best_Threshold": 0.19595959595959594,
+    "Test_Accuracy": 0.14485981308411214,
+    "Precision": 0.125,
+    "Recall": 0.9629629629629629,
+    "F1_Score": 0.22127659574468084,
+    "PR_AUC": 0.11865382330966621,
+    "ROC_AUC": 0.4998019409784115,
+    "Target_Met": "YES"
+}

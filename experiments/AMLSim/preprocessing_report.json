@@ -1,0 +1,114 @@
+{
+    "dataset": "IBM AMLSim",
+    "pipeline_version": "2.0-Production-GNN",
+    "timestamp": "2026-09-29 22:27:03",
+    "total_runtime_sec": 17.415,
+    "stage_1_profiling": {
+        "accounts": {
+            "total_count": 10000,
+            "fraud_count": 1685,
+            "fraud_pct": 16.85,
+            "account_types": {
+                "I": 10000
+            },
+            "countries": {
+                "US": 10000
+            },
+            "balance_stats": {
+                "mean": 280.118633,
+                "median": 249.69,
+                "min": 100.0,
+                "max": 599.6,
+                "std": 137.75133473314654
+            }
+        },
+        "transactions": {
+            "total_count": 1323234,
+            "fraud_count": 1719,
+            "fraud_pct": 0.1299089956878375,
+            "total_volume": 153479506204.98,
+            "amount_percentiles": {
+                "p25": 23.93,
+                "median": 156.71,
+                "p75": 440.0,
+                "p90": 547.66,
+                "p95": 584.46,
+                "p99": 1854724.689999991,
+                "max": 21474836.47,
+                "mean": 115988.1821393495,
+                "std": 1320090.6791206913
+            },
+            "time_series": {
+                "min_timestep": 0,
+                "max_timestep": 199,
+                "total_timesteps": 200,
+                "tx_per_step_mean": 6616.17
+            }
+        },
+        "execution_time_sec": 2.68
+    },
+    "stage_2_topology": {
+        "nodes": 10000,
+        "directed_edges": 68947,
+        "density": 0.0006895389538953895,
+        "wcc_count": 2,
+        "largest_wcc_size": 9999,
+        "scc_count": 131,
+        "largest_scc_size": 9849,
+        "in_degree_mean": 6.894700050354004,
+        "in_degree_max": 192,
+        "out_degree_mean": 6.894700050354004,
+        "out_degree_max": 49,
+        "pagerank_max": 0.005434696562588215,
+        "clustering_mean": 0.00869376864284277,
+        "execution_time_sec": 5.095
+    },
+    "stage_3_anomalies": {
+        "alerts_count": 1719,
+        "typology_distribution": {
+            "cycle": 936,
+            "fan_in": 783
+        },
+        "fan_in_nodes": 893,
+        "cycle_nodes": 872,
+        "hybrid_nodes": 126,
+        "active_fraud_nodes": 1639,
+        "dormant_fraud_nodes": 46,
+        "structural_contrast": {
+            "mean_pagerank_fraud": 0.00016375590348616242,
+            "mean_pagerank_licit": 8.708014502190053e-05,
+            "pagerank_ratio": 1.881,
+            "mean_clustering_fraud": 0.029975099489092827,
+            "mean_clustering_licit": 0.004381194710731506,
+            "mean_risk_score_fraud": 0.04131507873535156,
+            "mean_risk_score_licit": 0.018873771652579308,
+            "risk_score_ratio": 2.189
+        },
+        "execution_time_sec": 0.173
+    },
+    "stage_4_packaging": {
+        "output_directory": "data/ibm_amlsim/processed",
+        "pyg_data_file": "data/ibm_amlsim/processed\\amlsim_pyg_data.pt",
+        "pyg_data_sha256": "e054bdccb3e90b7503752184c3b3fd0c751ae38f01ebef3ef736257a448d2fb5",
+        "sparse_tensors_file": "data/ibm_amlsim/processed\\amlsim_sparse_tensors.pt",
+        "sparse_tensors_sha256": "a8d476af01b73646161989e5a62eb670f9d3211393c862b4ec2b41f62bd0e980",
+        "node_scaler_file": "data/ibm_amlsim/processed\\amlsim_node_scaler.joblib",
+        "node_scaler_sha256": "a2b64a01f1d5904acea1a645c4f77b2a5e59fef2568c3c0a6d16f1200c3bac5d",
+        "feature_dimension": 15,
+        "total_nodes": 10000,
+        "total_edges": 1323234,
+        "train_edges": 923579,
+        "val_edges": 199537,
+        "test_edges": 200118,
+        "train_nodes": 7000,
+        "val_nodes": 1500,
+        "test_nodes": 1500,
+        "anti_leakage_guarantees": {
+            "chronological_split": true,
+            "train_only_scaling": true,
+            "disjoint_node_masks": true,
+            "train_subgraph_isolated": true
+        },
+        "execution_time_sec": 9.322
+    }
+}

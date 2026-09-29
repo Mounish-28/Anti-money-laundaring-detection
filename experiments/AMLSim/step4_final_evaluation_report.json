@@ -1,0 +1,460 @@
+{
+    "registry_key": "ibm_amlsim_pipeline:v1.0",
+    "evaluation_summary": {
+        "dataset": "IBM AMLSim",
+        "evaluation_partition": "Holdout Test (t >= 170, 1500 accounts)",
+        "metrics": {
+            "pr_auc": 0.40779747148146456,
+            "roc_auc": 0.7127292556980056,
+            "brier_score": 0.13487837787880033,
+            "precision_at_100": 55.00000000000001,
+            "precision_at_250": 38.4
+        },
+        "operating_points": {
+            "optimal_f2": {
+                "threshold": 0.21363636363636362,
+                "precision": 0.21725239616613418,
+                "recall": 0.8095238095238095,
+                "f1_score": 0.3425692695214106,
+                "specificity": 0.411057692307692,
+                "false_positive_rate_pct": 58.894230769230724,
+                "confusion_matrix": {
+                    "TP": 204,
+                    "FP": 735,
+                    "TN": 513,
+                    "FN": 48
+                }
+            },
+            "high_recall_safety": {
+                "threshold": 0.15,
+                "precision": 0.1695827725437416,
+                "recall": 1.0,
+                "f1_score": 0.2899884925201381,
+                "false_positive_rate_pct": 98.87820512820505,
+                "confusion_matrix": {
+                    "TP": 252,
+                    "FP": 1234,
+                    "TN": 14,
+                    "FN": 0
+                }
+            }
+        }
+    },
+    "explainability": {
+        "base_value": -1.1867484373721724,
+        "global_top_drivers": [
+            {
+                "rank": 1,
+                "feature": "gcn_topo_dim_07",
+                "mean_abs_shap": 0.0934,
+                "is_gnn_embedding": true
+            },
+            {
+                "rank": 2,
+                "feature": "tx_out_count",
+                "mean_abs_shap": 0.057,
+                "is_gnn_embedding": false
+            },
+            {
+                "rank": 3,
+                "feature": "tx_in_count",
+                "mean_abs_shap": 0.0349,
+                "is_gnn_embedding": false
+            },
+            {
+                "rank": 4,
+                "feature": "gcn_topo_dim_00",
+                "mean_abs_shap": 0.0282,
+                "is_gnn_embedding": true
+            },
+            {
+                "rank": 5,
+                "feature": "gcn_topo_dim_11",
+                "mean_abs_shap": 0.0269,
+                "is_gnn_embedding": true
+            },
+            {
+                "rank": 6,
+                "feature": "gcn_topo_dim_08",
+                "mean_abs_shap": 0.0223,
+                "is_gnn_embedding": true
+            },
+            {
+                "rank": 7,
+                "feature": "gcn_topo_dim_31",
+                "mean_abs_shap": 0.0186,
+                "is_gnn_embedding": true
+            },
+            {
+                "rank": 8,
+                "feature": "max_out_amount",
+                "mean_abs_shap": 0.0132,
+                "is_gnn_embedding": false
+            },
+            {
+                "rank": 9,
+                "feature": "gcn_topo_dim_20",
+                "mean_abs_shap": 0.0107,
+                "is_gnn_embedding": true
+            },
+            {
+                "rank": 10,
+                "feature": "gcn_topo_dim_21",
+                "mean_abs_shap": 0.0096,
+                "is_gnn_embedding": true
+            },
+            {
+                "rank": 11,
+                "feature": "init_balance",
+                "mean_abs_shap": 0.0096,
+                "is_gnn_embedding": false
+            },
+            {
+                "rank": 12,
+                "feature": "gcn_topo_dim_24",
+                "mean_abs_shap": 0.0078,
+                "is_gnn_embedding": true
+            },
+            {
+                "rank": 13,
+                "feature": "gcn_topo_dim_02",
+                "mean_abs_shap": 0.0075,
+                "is_gnn_embedding": true
+            },
+            {
+                "rank": 14,
+                "feature": "gcn_topo_dim_28",
+                "mean_abs_shap": 0.0073,
+                "is_gnn_embedding": true
+            },
+            {
+                "rank": 15,
+                "feature": "active_steps_count",
+                "mean_abs_shap": 0.007,
+                "is_gnn_embedding": false
+            }
+        ],
+        "local_case_studies": [
+            {
+                "case_id": "AML_ALERT_HOLD_CASE_001",
+                "node_test_index": 1113,
+                "risk_score_probability": 0.39476710986681846,
+                "predicted_status": "SAR_INVESTIGATION_TRIGGERED",
+                "top_contributing_factors": [
+                    "tx_out_count (normalized val: 0.16, SHAP delta: +0.678)",
+                    "gcn_topo_dim_07 (normalized val: 0.38, SHAP delta: +0.016)",
+                    "gcn_topo_dim_20 (normalized val: 0.33, SHAP delta: -0.014)",
+                    "active_steps_count (normalized val: 0.77, SHAP delta: -0.013)",
+                    "gcn_topo_dim_28 (normalized val: 0.10, SHAP delta: +0.013)"
+                ],
+                "regulatory_narrative": "Account flagged with predicted risk 39.48% exceeding operational threshold 21.36%. Primary anomalous drivers include tx_out_count (normalized val: 0.16, SHAP delta: +0.678) and gcn_topo_dim_07 (normalized val: 0.38, SHAP delta: +0.016), indicating concentrated pass-through structuring and structural clustering alignment."
+            },
+            {
+                "case_id": "AML_ALERT_HOLD_CASE_002",
+                "node_test_index": 720,
+                "risk_score_probability": 0.39476710986681846,
+                "predicted_status": "SAR_INVESTIGATION_TRIGGERED",
+                "top_contributing_factors": [
+                    "tx_out_count (normalized val: 0.16, SHAP delta: +0.705)",
+                    "gcn_topo_dim_07 (normalized val: 0.34, SHAP delta: +0.039)",
+                    "gcn_topo_dim_11 (normalized val: 0.02, SHAP delta: -0.010)",
+                    "gcn_topo_dim_00 (normalized val: -0.03, SHAP delta: +0.009)",
+                    "gcn_topo_dim_08 (normalized val: 0.12, SHAP delta: -0.008)"
+                ],
+                "regulatory_narrative": "Account flagged with predicted risk 39.48% exceeding operational threshold 21.36%. Primary anomalous drivers include tx_out_count (normalized val: 0.16, SHAP delta: +0.705) and gcn_topo_dim_07 (normalized val: 0.34, SHAP delta: +0.039), indicating concentrated pass-through structuring and structural clustering alignment."
+            }
+        ]
+    },
+    "drift_baselines": {
+        "mean_psi": 0.006919582573495774,
+        "max_psi": 0.018328298469783903,
+        "monitoring_thresholds": {
+            "psi_nominal": "< 0.10",
+            "psi_warning": "0.10 - 0.25",
+            "psi_action_retrain": ">= 0.25"
+        },
+        "feature_drift_metrics": {
+            "init_balance": {
+                "psi": 0.0055,
+                "wasserstein_distance": 0.0104,
+                "status": "STABLE"
+            },
+            "is_individual": {
+                "psi": 0.0,
+                "wasserstein_distance": 0.0,
+                "status": "STABLE"
+            },
+            "is_corporate": {
+                "psi": 0.0,
+                "wasserstein_distance": 0.0,
+                "status": "STABLE"
+            },
+            "is_us_jurisdiction": {
+                "psi": 0.0,
+                "wasserstein_distance": 0.0,
+                "status": "STABLE"
+            },
+            "tx_behavior_id": {
+                "psi": 0.0022,
+                "wasserstein_distance": 0.0161,
+                "status": "STABLE"
+            },
+            "tx_in_count": {
+                "psi": 0.0041,
+                "wasserstein_distance": 0.0283,
+                "status": "STABLE"
+            },
+            "tx_out_count": {
+                "psi": 0.0124,
+                "wasserstein_distance": 0.0113,
+                "status": "STABLE"
+            },
+            "tx_total_count": {
+                "psi": 0.0038,
+                "wasserstein_distance": 0.0196,
+                "status": "STABLE"
+            },
+            "tx_in_volume": {
+                "psi": 0.007,
+                "wasserstein_distance": 0.0173,
+                "status": "STABLE"
+            },
+            "tx_out_volume": {
+                "psi": 0.0064,
+                "wasserstein_distance": 0.0286,
+                "status": "STABLE"
+            },
+            "tx_total_volume": {
+                "psi": 0.0135,
+                "wasserstein_distance": 0.0179,
+                "status": "STABLE"
+            },
+            "net_flow_volume": {
+                "psi": 0.0075,
+                "wasserstein_distance": 0.005,
+                "status": "STABLE"
+            },
+            "pass_through_ratio": {
+                "psi": 0.0119,
+                "wasserstein_distance": 0.0257,
+                "status": "STABLE"
+            },
+            "avg_in_amount": {
+                "psi": 0.0037,
+                "wasserstein_distance": 0.0187,
+                "status": "STABLE"
+            },
+            "avg_out_amount": {
+                "psi": 0.0074,
+                "wasserstein_distance": 0.044,
+                "status": "STABLE"
+            },
+            "max_in_amount": {
+                "psi": 0.0061,
+                "wasserstein_distance": 0.0122,
+                "status": "STABLE"
+            },
+            "max_out_amount": {
+                "psi": 0.0067,
+                "wasserstein_distance": 0.0538,
+                "status": "STABLE"
+            },
+            "active_steps_count": {
+                "psi": 0.0078,
+                "wasserstein_distance": 0.0093,
+                "status": "STABLE"
+            },
+            "active_steps_ratio": {
+                "psi": 0.0078,
+                "wasserstein_distance": 0.0093,
+                "status": "STABLE"
+            },
+            "velocity_tx_per_step": {
+                "psi": 0.0034,
+                "wasserstein_distance": 0.0186,
+                "status": "STABLE"
+            },
+            "recent_in_volume_w30": {
+                "psi": 0.001,
+                "wasserstein_distance": 0.0094,
+                "status": "STABLE"
+            },
+            "recent_out_volume_w30": {
+                "psi": 0.0053,
+                "wasserstein_distance": 0.0452,
+                "status": "STABLE"
+            },
+            "recent_tx_count_w30": {
+                "psi": 0.009,
+                "wasserstein_distance": 0.0225,
+                "status": "STABLE"
+            },
+            "velocity_acceleration": {
+                "psi": 0.0054,
+                "wasserstein_distance": 0.0149,
+                "status": "STABLE"
+            },
+            "gcn_topo_dim_00": {
+                "psi": 0.0057,
+                "wasserstein_distance": 0.0077,
+                "status": "STABLE"
+            },
+            "gcn_topo_dim_01": {
+                "psi": 0.0183,
+                "wasserstein_distance": 0.0173,
+                "status": "STABLE"
+            },
+            "gcn_topo_dim_02": {
+                "psi": 0.0105,
+                "wasserstein_distance": 0.0108,
+                "status": "STABLE"
+            },
+            "gcn_topo_dim_03": {
+                "psi": 0.0084,
+                "wasserstein_distance": 0.0075,
+                "status": "STABLE"
+            },
+            "gcn_topo_dim_04": {
+                "psi": 0.0079,
+                "wasserstein_distance": 0.0091,
+                "status": "STABLE"
+            },
+            "gcn_topo_dim_05": {
+                "psi": 0.0178,
+                "wasserstein_distance": 0.0193,
+                "status": "STABLE"
+            },
+            "gcn_topo_dim_06": {
+                "psi": 0.0053,
+                "wasserstein_distance": 0.0087,
+                "status": "STABLE"
+            },
+            "gcn_topo_dim_07": {
+                "psi": 0.0016,
+                "wasserstein_distance": 0.0075,
+                "status": "STABLE"
+            },
+            "gcn_topo_dim_08": {
+                "psi": 0.0089,
+                "wasserstein_distance": 0.0105,
+                "status": "STABLE"
+            },
+            "gcn_topo_dim_09": {
+                "psi": 0.0071,
+                "wasserstein_distance": 0.0165,
+                "status": "STABLE"
+            },
+            "gcn_topo_dim_10": {
+                "psi": 0.011,
+                "wasserstein_distance": 0.0058,
+                "status": "STABLE"
+            },
+            "gcn_topo_dim_11": {
+                "psi": 0.0181,
+                "wasserstein_distance": 0.0116,
+                "status": "STABLE"
+            },
+            "gcn_topo_dim_12": {
+                "psi": 0.0083,
+                "wasserstein_distance": 0.0083,
+                "status": "STABLE"
+            },
+            "gcn_topo_dim_13": {
+                "psi": 0.0037,
+                "wasserstein_distance": 0.0044,
+                "status": "STABLE"
+            },
+            "gcn_topo_dim_14": {
+                "psi": 0.0054,
+                "wasserstein_distance": 0.0077,
+                "status": "STABLE"
+            },
+            "gcn_topo_dim_15": {
+                "psi": 0.0047,
+                "wasserstein_distance": 0.0071,
+                "status": "STABLE"
+            },
+            "gcn_topo_dim_16": {
+                "psi": 0.0068,
+                "wasserstein_distance": 0.008,
+                "status": "STABLE"
+            },
+            "gcn_topo_dim_17": {
+                "psi": 0.003,
+                "wasserstein_distance": 0.0058,
+                "status": "STABLE"
+            },
+            "gcn_topo_dim_18": {
+                "psi": 0.0055,
+                "wasserstein_distance": 0.0157,
+                "status": "STABLE"
+            },
+            "gcn_topo_dim_19": {
+                "psi": 0.0035,
+                "wasserstein_distance": 0.0072,
+                "status": "STABLE"
+            },
+            "gcn_topo_dim_20": {
+                "psi": 0.0065,
+                "wasserstein_distance": 0.0048,
+                "status": "STABLE"
+            },
+            "gcn_topo_dim_21": {
+                "psi": 0.0056,
+                "wasserstein_distance": 0.0053,
+                "status": "STABLE"
+            },
+            "gcn_topo_dim_22": {
+                "psi": 0.0039,
+                "wasserstein_distance": 0.0097,
+                "status": "STABLE"
+            },
+            "gcn_topo_dim_23": {
+                "psi": 0.0106,
+                "wasserstein_distance": 0.0079,
+                "status": "STABLE"
+            },
+            "gcn_topo_dim_24": {
+                "psi": 0.0099,
+                "wasserstein_distance": 0.0089,
+                "status": "STABLE"
+            },
+            "gcn_topo_dim_25": {
+                "psi": 0.0041,
+                "wasserstein_distance": 0.0144,
+                "status": "STABLE"
+            },
+            "gcn_topo_dim_26": {
+                "psi": 0.0137,
+                "wasserstein_distance": 0.0041,
+                "status": "STABLE"
+            },
+            "gcn_topo_dim_27": {
+                "psi": 0.0078,
+                "wasserstein_distance": 0.0031,
+                "status": "STABLE"
+            },
+            "gcn_topo_dim_28": {
+                "psi": 0.0146,
+                "wasserstein_distance": 0.0124,
+                "status": "STABLE"
+            },
+            "gcn_topo_dim_29": {
+                "psi": 0.0055,
+                "wasserstein_distance": 0.0074,
+                "status": "STABLE"
+            },
+            "gcn_topo_dim_30": {
+                "psi": 0.0033,
+                "wasserstein_distance": 0.0058,
+                "status": "STABLE"
+            },
+            "gcn_topo_dim_31": {
+                "psi": 0.0029,
+                "wasserstein_distance": 0.0082,
+                "status": "STABLE"
+            }
+        }
+    },
+    "execution_time_sec": 4.162
+}

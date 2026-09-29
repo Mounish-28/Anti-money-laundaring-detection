@@ -1,0 +1,74 @@
+{
+    "timestamp": "2026-09-04T22:29:57Z",
+    "total_concurrent_requests": 100,
+    "total_duration_sec": 1.928,
+    "throughput_req_per_sec": 51.9,
+    "overall_p50_ms": 716.26,
+    "overall_p95_ms": 1804.99,
+    "overall_p99_ms": 1852.61,
+    "overall_success_rate": 100.0,
+    "memory_rss_mb": 53.18,
+    "cpu_percent": 94.9,
+    "report_matrix": [
+        {
+            "subsystem": "IBM Transactions (/api/v1/score/transaction)",
+            "total_requests": 20,
+            "success_rate": 100.0,
+            "p50_ms": 336.24,
+            "p95_ms": 400.0,
+            "p99_ms": 401.18,
+            "sla_status": "FAIL",
+            "celery_dispatch": "VERIFIED (NON-BLOCKING)"
+        },
+        {
+            "subsystem": "Time-Series AML (/api/v1/score/timeseries)",
+            "total_requests": 20,
+            "success_rate": 100.0,
+            "p50_ms": 606.9,
+            "p95_ms": 706.75,
+            "p99_ms": 713.12,
+            "sla_status": "FAIL",
+            "celery_dispatch": "VERIFIED (NON-BLOCKING)"
+        },
+        {
+            "subsystem": "Elliptic Bitcoin (/api/v1/score/crypto)",
+            "total_requests": 20,
+            "success_rate": 100.0,
+            "p50_ms": 717.99,
+            "p95_ms": 1098.21,
+            "p99_ms": 1511.04,
+            "sla_status": "FAIL",
+            "celery_dispatch": "VERIFIED (NON-BLOCKING)"
+        },
+        {
+            "subsystem": "SAML-D (/api/v1/score/samld)",
+            "total_requests": 20,
+            "success_rate": 100.0,
+            "p50_ms": 1014.57,
+            "p95_ms": 1807.11,
+            "p99_ms": 1847.05,
+            "sla_status": "FAIL",
+            "celery_dispatch": "VERIFIED (NON-BLOCKING)"
+        },
+        {
+            "subsystem": "IBM AMLSim (/api/v1/score/amlsim)",
+            "total_requests": 20,
+            "success_rate": 100.0,
+            "p50_ms": 1611.64,
+            "p95_ms": 1845.53,
+            "p99_ms": 1851.16,
+            "sla_status": "FAIL",
+            "celery_dispatch": "VERIFIED (NON-BLOCKING)"
+        },
+        {
+            "subsystem": "Batch Pipeline (/api/v1/score/batch - 50 items)",
+            "total_requests": 1,
+            "success_rate": 100.0,
+            "p50_ms": 320.28,
+            "p95_ms": 320.28,
+            "p99_ms": 320.28,
+            "sla_status": "PASS",
+            "celery_dispatch": "VERIFIED (0 alerts dispatched)"
+        }
+    ]
+}

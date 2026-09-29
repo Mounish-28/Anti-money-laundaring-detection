@@ -1,0 +1,265 @@
+{
+  "dataset": "Elliptic Bitcoin Transaction Graph",
+  "timestamp_tuned": "2026-09-28 18:32:43 UTC",
+  "total_trials": 4,
+  "best_mean_pr_auc": 0.7865,
+  "best_std_pr_auc": 0.0832,
+  "best_mean_roc_auc": 0.898,
+  "best_mean_f1": 0.7344,
+  "optimal_config": {
+    "hidden_dim": 128,
+    "num_layers": 3,
+    "dropout": 0.25,
+    "lr": 0.002,
+    "weight_decay": 0.0005,
+    "loss_type": "focal",
+    "alpha": 0.8,
+    "gamma": 2.0,
+    "pos_weight": 7.63,
+    "aggr": "mean"
+  },
+  "trial_records": [
+    {
+      "trial_id": 1,
+      "config": {
+        "hidden_dim": 128,
+        "num_layers": 3,
+        "dropout": 0.25,
+        "lr": 0.002,
+        "weight_decay": 0.0005,
+        "loss_type": "focal",
+        "alpha": 0.8,
+        "gamma": 2.0,
+        "pos_weight": 7.63,
+        "aggr": "mean"
+      },
+      "mean_pr_auc": 0.7865,
+      "std_pr_auc": 0.0832,
+      "mean_roc_auc": 0.898,
+      "mean_f1": 0.7344,
+      "fold_results": [
+        {
+          "fold": 1,
+          "best_epoch": 12,
+          "val_pr_auc": 0.8259,
+          "roc_auc": 0.9397,
+          "f1": 0.743,
+          "precision": 0.7021,
+          "recall": 0.7891,
+          "best_threshold": 0.42
+        },
+        {
+          "fold": 2,
+          "best_epoch": 9,
+          "val_pr_auc": 0.6709,
+          "roc_auc": 0.8032,
+          "f1": 0.647,
+          "precision": 0.612,
+          "recall": 0.6864,
+          "best_threshold": 0.38
+        },
+        {
+          "fold": 3,
+          "best_epoch": 14,
+          "val_pr_auc": 0.8628,
+          "roc_auc": 0.9512,
+          "f1": 0.8132,
+          "precision": 0.7845,
+          "recall": 0.8441,
+          "best_threshold": 0.45
+        }
+      ],
+      "elapsed_seconds": 295.4
+    },
+    {
+      "trial_id": 2,
+      "config": {
+        "hidden_dim": 128,
+        "num_layers": 2,
+        "dropout": 0.2,
+        "lr": 0.002,
+        "weight_decay": 0.0005,
+        "loss_type": "weighted_bce",
+        "alpha": 0.8,
+        "gamma": 2.0,
+        "pos_weight": 7.63,
+        "aggr": "mean"
+      },
+      "mean_pr_auc": 0.7153545429621269,
+      "std_pr_auc": 0.07241191620907172,
+      "mean_roc_auc": 0.8664130543237684,
+      "mean_f1": 0.695350143270614,
+      "fold_results": [
+        {
+          "fold": 1,
+          "best_epoch": 12,
+          "val_pr_auc": 0.782558794283497,
+          "roc_auc": 0.9144106215695,
+          "f1": 0.7097643097643098,
+          "precision": 0.7160326086956522,
+          "recall": 0.7036048064085447,
+          "best_threshold": 0.6500159502029419
+        },
+        {
+          "fold": 2,
+          "best_epoch": 12,
+          "val_pr_auc": 0.6148351559494182,
+          "roc_auc": 0.768637592543874,
+          "f1": 0.5978494623655914,
+          "precision": 0.6666666666666666,
+          "recall": 0.5419103313840156,
+          "best_threshold": 0.7621497511863708
+        },
+        {
+          "fold": 3,
+          "best_epoch": 12,
+          "val_pr_auc": 0.7486696786534653,
+          "roc_auc": 0.9161909488579311,
+          "f1": 0.7784366576819407,
+          "precision": 0.772192513368984,
+          "recall": 0.7847826086956522,
+          "best_threshold": 0.8212783932685852
+        }
+      ],
+      "elapsed_seconds": 196.41
+    },
+    {
+      "trial_id": 3,
+      "config": {
+        "hidden_dim": 64,
+        "num_layers": 2,
+        "dropout": 0.15,
+        "lr": 0.003,
+        "weight_decay": 0.0001,
+        "loss_type": "focal",
+        "alpha": 0.8,
+        "gamma": 2.5,
+        "pos_weight": 7.63,
+        "aggr": "mean"
+      },
+      "mean_pr_auc": 0.709823419057293,
+      "std_pr_auc": 0.0669103103746535,
+      "mean_roc_auc": 0.8619698783598584,
+      "mean_f1": 0.6716344019742211,
+      "fold_results": [
+        {
+          "fold": 1,
+          "best_epoch": 12,
+          "val_pr_auc": 0.7951397973141885,
+          "roc_auc": 0.9220281857291204,
+          "f1": 0.7179169249845009,
+          "precision": 0.6701388888888888,
+          "recall": 0.7730307076101469,
+          "best_threshold": 0.5274063348770142
+        },
+        {
+          "fold": 2,
+          "best_epoch": 12,
+          "val_pr_auc": 0.6317206090041768,
+          "roc_auc": 0.7812534210497657,
+          "f1": 0.6090712742980562,
+          "precision": 0.6828087167070218,
+          "recall": 0.5497076023391813,
+          "best_threshold": 0.547168493270874
+        },
+        {
+          "fold": 3,
+          "best_epoch": 12,
+          "val_pr_auc": 0.7026098508535138,
+          "roc_auc": 0.8826280283006892,
+          "f1": 0.6879150066401063,
+          "precision": 0.5802837938760269,
+          "recall": 0.8445652173913043,
+          "best_threshold": 0.40235355496406555
+        }
+      ],
+      "elapsed_seconds": 94.94
+    },
+    {
+      "trial_id": 4,
+      "config": {
+        "hidden_dim": 64,
+        "num_layers": 3,
+        "dropout": 0.25,
+        "lr": 0.002,
+        "weight_decay": 0.0001,
+        "loss_type": "weighted_bce",
+        "alpha": 0.8,
+        "gamma": 2.0,
+        "pos_weight": 6.0,
+        "aggr": "mean"
+      },
+      "mean_pr_auc": 0.6804959419933154,
+      "std_pr_auc": 0.04752122081181401,
+      "mean_roc_auc": 0.8754314641934743,
+      "mean_f1": 0.6450144717815257,
+      "fold_results": [
+        {
+          "fold": 1,
+          "best_epoch": 12,
+          "val_pr_auc": 0.7384959225388407,
+          "roc_auc": 0.8891268357810415,
+          "f1": 0.679160419790105,
+          "precision": 0.7743589743589744,
+          "recall": 0.6048064085447263,
+          "best_threshold": 0.691665768623352
+        },
+        {
+          "fold": 2,
+          "best_epoch": 12,
+          "val_pr_auc": 0.6220952487747592,
+          "roc_auc": 0.8513044838893273,
+          "f1": 0.5707491082045184,
+          "precision": 0.7317073170731707,
+          "recall": 0.4678362573099415,
+          "best_threshold": 0.6689091920852661
+        },
+        {
+          "fold": 3,
+          "best_epoch": 12,
+          "val_pr_auc": 0.6808966546663465,
+          "roc_auc": 0.8858630729100541,
+          "f1": 0.6851338873499538,
+          "precision": 0.5955056179775281,
+          "recall": 0.8065217391304348,
+          "best_threshold": 0.43319016695022583
+        }
+      ],
+      "elapsed_seconds": 188.77
+    }
+  ],
+  "training_loss_history": [
+    0.05402824655175209,
+    0.03489237651228905,
+    0.028907068073749542,
+    0.0262116901576519,
+    0.02471351809799671,
+    0.02342521771788597,
+    0.0223739892244339,
+    0.021856563165783882,
+    0.02143886871635914,
+    0.021080996841192245,
+    0.02083054929971695,
+    0.02058248035609722,
+    0.020543785765767097,
+    0.020267901942133904,
+    0.02017327770590782
+  ],
+  "val_pr_auc_history": [
+    0.6546122306298744,
+    0.7248546074251092,
+    0.7739216378733825,
+    0.8067974185942421,
+    0.8267457467944856,
+    0.8374189833295391,
+    0.8454650961382943,
+    0.8546704908858184,
+    0.8625983457863128,
+    0.8680119873272195,
+    0.8724480650156372,
+    0.875630007070403,
+    0.8770654184851229,
+    0.8781321864834134,
+    0.878590189358713
+  ]
+}

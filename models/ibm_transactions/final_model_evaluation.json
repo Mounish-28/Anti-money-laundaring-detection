@@ -1,0 +1,122 @@
+{
+    "timestamp": "2026-09-27T18:26:26Z",
+    "dataset": "IBM Transactions (HI-Small_Trans.csv)",
+    "total_records": 5078345,
+    "train_records": 4062676,
+    "test_records": 1015669,
+    "base_rate_percentage": "0.1019%",
+    "optimal_hyperparameters": {
+        "grow_policy": "SymmetricTree",
+        "depth": 5,
+        "l2_leaf_reg": 10.0,
+        "learning_rate": 0.04,
+        "iterations": 600,
+        "best_iteration": 284,
+        "auto_class_weights": "Balanced",
+        "eval_metric": "Logloss"
+    },
+    "holdout_evaluation_metrics": {
+        "pr_auc": 0.24845,
+        "roc_auc": 0.97857,
+        "optimal_f1": 0.404,
+        "optimal_threshold": 0.988062,
+        "precision_at_optimal_f1": 0.4233,
+        "recall_at_optimal_f1": 0.3865,
+        "confusion_matrix_optimal": {
+            "true_positives": 400,
+            "false_positives": 545,
+            "true_negatives": 1014089,
+            "false_negatives": 635
+        },
+        "metrics_at_default_t50": {
+            "threshold": 0.5,
+            "precision": 0.0084,
+            "recall": 0.9449,
+            "f1_score": 0.0166,
+            "true_positives": 978,
+            "false_positives": 116019
+        },
+        "operational_point_at_recall_95": {
+            "target_recall": 0.95,
+            "achieved_recall": 0.9507,
+            "operating_threshold": 0.494069,
+            "precision": 0.0082,
+            "false_positive_rate": 0.117178,
+            "false_positive_rate_percentage": "11.718%",
+            "false_positives_count": 118893
+        },
+        "queue_prioritization_precision_at_k": {
+            "P@50": 0.48,
+            "P@100": 0.45,
+            "P@500": 0.518,
+            "P@1000": 0.406
+        }
+    },
+    "feature_importance_rankings": [
+        {
+            "rank": 1,
+            "feature": "Payment Format",
+            "importance": 44.5903
+        },
+        {
+            "rank": 2,
+            "feature": "Amount",
+            "importance": 26.644
+        },
+        {
+            "rank": 3,
+            "feature": "From Bank",
+            "importance": 15.6854
+        },
+        {
+            "rank": 4,
+            "feature": "Account_From",
+            "importance": 6.9701
+        },
+        {
+            "rank": 5,
+            "feature": "Currency",
+            "importance": 2.5416
+        },
+        {
+            "rank": 6,
+            "feature": "Account_To",
+            "importance": 2.1371
+        },
+        {
+            "rank": 7,
+            "feature": "To Bank",
+            "importance": 1.4315
+        }
+    ],
+    "serialized_artifacts": {
+        "models/ibm_transactions.cbm": {
+            "size_mb": 60.71,
+            "size_bytes": 63655356,
+            "modified_time": "2026-09-27T18:26:07Z"
+        },
+        "models/ibm_transactions/catboost_model.cbm": {
+            "size_mb": 60.71,
+            "size_bytes": 63655356,
+            "modified_time": "2026-09-27T18:26:07Z"
+        },
+        "models/ibm_transactions/catboost_model.joblib": {
+            "size_mb": 69.43,
+            "size_bytes": 72800383,
+            "modified_time": "2026-09-27T18:26:12Z"
+        },
+        "models/IBM-AML/model_v5.cbm": {
+            "size_mb": 60.71,
+            "size_bytes": 63655356,
+            "modified_time": "2026-09-27T18:26:13Z"
+        },
+        "models/IBM-AML/model_v5.joblib": {
+            "size_mb": 69.43,
+            "size_bytes": 72800383,
+            "modified_time": "2026-09-27T18:26:17Z"
+        }
+    },
+    "engine_live_verified": true,
+    "training_duration_sec": 891.77,
+    "evaluation_duration_sec": 6.68
+}

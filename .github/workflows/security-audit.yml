@@ -1,0 +1,122 @@
+name: Enterprise Security Audit & Zero-Trust Verification Pipeline
+
+on:
+  push:
+    branches: [ main, master, release/* ]
+  pull_request:
+    branches: [ main, master ]
+  schedule:
+    - cron: '0 2 * * *' # Nightly security scan
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  # ----------------------------------------------------------------------------
+  # Gate 1: Automated Secret Leak & Credential Scanners
+  # ----------------------------------------------------------------------------
+  secret-scan:
+    name: Zero-Trust Secret & Key Leak Scanner
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Gitleaks Secret Detection
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: true
+          GITLEAKS_ENABLE_SUMMARY: true
+
+  # ----------------------------------------------------------------------------
+  # Gate 2: SAST (Static Application Security Testing) with Semgrep
+  # ----------------------------------------------------------------------------
+  sast-semgrep:
+    name: Semgrep SAST & Cross-Domain Boundary Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v4
+
+      - name: Run Semgrep SAST Rules
+        run: |
+          python3 -m pip install semgrep
+          semgrep scan --config semgrep.yml --config "p/owasp-top-ten" --config "p/cwe-top-25" --error
+
+  # ----------------------------------------------------------------------------
+  # Gate 3: Dependency Vulnerability Gating (CVE >= 7.0 High/Critical Block)
+  # ----------------------------------------------------------------------------
+  trivy-dependency-scan:
+    name: Trivy CVE Vulnerability Gating (Zero-Tolerance)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v4
+
+      - name: Run Trivy Vulnerability Scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          ignore-unfixed: true
+          format: 'table'
+          exit-code: '1' # Break build on High / Critical
+          severity: 'HIGH,CRITICAL'
+
+  # ----------------------------------------------------------------------------
+  # Gate 4: Automated Penetration & Cross-Domain Firewall Verification
+  # ----------------------------------------------------------------------------
+  penetration-verification:
+    name: Automated Adversarial Penetration Test Suite
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pytest httpx starlette
+
+      - name: Execute Security & Boundary Bypass Test Suite
+        run: |
+          python tests/security/test_security_pentest_suite.py
+
+  # ----------------------------------------------------------------------------
+  # Gate 5: Algorithmic Verification & Cryptographic Integrity Proving
+  # ----------------------------------------------------------------------------
+  algorithmic-verification:
+    name: Phase 4 Algorithmic & Merkle Verification Suite
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: 'nexus-frontend/package-lock.json'
+
+      - name: Install Frontend Dependencies
+        working-directory: nexus-frontend
+        run: npm ci
+
+      - name: Run Algorithmic Engines Test Suite
+        working-directory: nexus-frontend
+        run: node --experimental-strip-types src/algorithms/test_phase4_suite.mjs
+
+      - name: Verify Frontend Production Build
+        working-directory: nexus-frontend
+        run: npm run build

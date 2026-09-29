@@ -1,0 +1,16 @@
+# ==============================================================================
+# QuantumAML Nexus - Prometheus Core Scrape Configuration
+# ==============================================================================
+
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+
+scrape_configs:
+  - job_name: "quantumaml-serving"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["api:8000"]
+        labels:
+          environment: "production"
+          service: "quantumaml-nexus"

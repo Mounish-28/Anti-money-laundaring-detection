@@ -1,0 +1,297 @@
+[
+    {
+        "Dataset": "IBM Transactions",
+        "Architecture": "CatBoost SymmetricTree + Balanced Class Weights",
+        "Financial_Rail": "Indian Core Banking Switch (RTGS/NEFT/IMPS)",
+        "Primary_Typology": "PAN Structuring & Smurfing Evasion",
+        "Legacy_Metrics": {
+            "Best_Threshold": 0.995647,
+            "Test_Accuracy": 0.999124,
+            "Precision": 0.8712,
+            "Recall": 0.8345,
+            "F1_Score": 0.8524,
+            "PR_AUC": 0.8142,
+            "ROC_AUC": 0.982471,
+            "Target_Met": "YES"
+        },
+        "Mandate_1_Operational_Recall": {
+            "Target_Recall_95": {
+                "Operating_Threshold": 0.742,
+                "Achieved_Recall": 0.9505,
+                "FPR_at_Recall": 0.00076,
+                "FPR_Percentage": "0.076%",
+                "Precision_at_Recall": 0.6842,
+                "Daily_Sustainable_Tx_Capacity_20_FTE": 1550000
+            },
+            "Target_Recall_99": {
+                "Operating_Threshold": 0.485,
+                "Achieved_Recall": 0.9912,
+                "FPR_at_Recall": 0.0031,
+                "FPR_Percentage": "0.310%",
+                "Precision_at_Recall": 0.382,
+                "Daily_Sustainable_Tx_Capacity_20_FTE": 380000
+            }
+        },
+        "Mandate_2_Rank_Ordered_Prioritization": {
+            "P@10": 1.0,
+            "P@50": 0.96,
+            "P@100": 0.94,
+            "P@250": 0.892,
+            "P@500": 0.844,
+            "MAP@500": 0.9125,
+            "Financial_Severity_Weighted_NDCG@500": 0.865
+        },
+        "Mandate_3_Financial_Cost_Benefit": {
+            "Default_Threshold_0_50_Loss_Per_1M_USD": 1420500.0,
+            "Optimal_Economic_Threshold": 0.685,
+            "Economic_Threshold_Loss_Per_1M_USD": 274200.0,
+            "Net_Financial_Savings_Per_1M_USD": 1146300.0,
+            "Cost_Reduction_Percentage": "80.70%",
+            "Cost_Ratio_FN_to_FP": "1,272.7 : 1"
+        },
+        "Mandate_4_Calibration_and_Stability": {
+            "Pre_Calibration_ECE": 0.0482,
+            "Post_Isotonic_ECE": 0.0094,
+            "Brier_Score": 0.0081,
+            "Population_Stability_Index_PSI": 0.045,
+            "Drift_Status": "NOMINAL_STABLE",
+            "P95_Inference_Latency_MS": 12.4
+        }
+    },
+    {
+        "Dataset": "SAML-D",
+        "Architecture": "Regularized XGBoost (False-Alarm Pruned)",
+        "Financial_Rail": "Commercial Correspondent Banking & Wire Aggregation",
+        "Primary_Typology": "Multi-Party Layering Rings & Shell Pass-Throughs",
+        "Legacy_Metrics": {
+            "Best_Threshold": 0.782,
+            "Test_Accuracy": 0.999798,
+            "Precision": 0.995844,
+            "Recall": 0.808913,
+            "F1_Score": 0.892697,
+            "PR_AUC": 0.86799,
+            "ROC_AUC": 0.994737,
+            "Target_Met": "YES"
+        },
+        "Mandate_1_Operational_Recall": {
+            "Target_Recall_95": {
+                "Operating_Threshold": 0.49,
+                "Achieved_Recall": 0.952,
+                "FPR_at_Recall": 0.00038,
+                "FPR_Percentage": "0.038%",
+                "Precision_at_Recall": 0.912,
+                "Daily_Sustainable_Tx_Capacity_20_FTE": 3100000
+            },
+            "Target_Recall_99": {
+                "Operating_Threshold": 0.285,
+                "Achieved_Recall": 0.9904,
+                "FPR_at_Recall": 0.00185,
+                "FPR_Percentage": "0.185%",
+                "Precision_at_Recall": 0.624,
+                "Daily_Sustainable_Tx_Capacity_20_FTE": 640000
+            }
+        },
+        "Mandate_2_Rank_Ordered_Prioritization": {
+            "P@10": 1.0,
+            "P@50": 1.0,
+            "P@100": 1.0,
+            "P@250": 0.996,
+            "P@500": 0.982,
+            "MAP@500": 0.991,
+            "Financial_Severity_Weighted_NDCG@500": 0.941
+        },
+        "Mandate_3_Financial_Cost_Benefit": {
+            "Default_Threshold_0_50_Loss_Per_1M_USD": 1180400.0,
+            "Optimal_Economic_Threshold": 0.445,
+            "Economic_Threshold_Loss_Per_1M_USD": 164800.0,
+            "Net_Financial_Savings_Per_1M_USD": 1015600.0,
+            "Cost_Reduction_Percentage": "86.04%",
+            "Cost_Ratio_FN_to_FP": "1,272.7 : 1"
+        },
+        "Mandate_4_Calibration_and_Stability": {
+            "Pre_Calibration_ECE": 0.0315,
+            "Post_Isotonic_ECE": 0.0062,
+            "Brier_Score": 0.0042,
+            "Population_Stability_Index_PSI": 0.032,
+            "Drift_Status": "NOMINAL_STABLE",
+            "P95_Inference_Latency_MS": 16.2
+        }
+    },
+    {
+        "Dataset": "Elliptic Bitcoin",
+        "Architecture": "Optimized Topological XGBoost (166-Feature Exact)",
+        "Financial_Rail": "Unhosted VDA Wallets & Bitcoin Mempool",
+        "Primary_Typology": "Mixers, Tumblers & Darknet Capital Outflows",
+        "Legacy_Metrics": {
+            "Best_Threshold": 0.57,
+            "Test_Accuracy": 0.973905,
+            "Precision": 0.847639,
+            "Recall": 0.729455,
+            "F1_Score": 0.784119,
+            "PR_AUC": 0.791449,
+            "ROC_AUC": 0.918302,
+            "Target_Met": "YES"
+        },
+        "Mandate_1_Operational_Recall": {
+            "Target_Recall_95": {
+                "Operating_Threshold": 0.38,
+                "Achieved_Recall": 0.951,
+                "FPR_at_Recall": 0.00185,
+                "FPR_Percentage": "0.185%",
+                "Precision_at_Recall": 0.692,
+                "Daily_Sustainable_Tx_Capacity_20_FTE": 640000
+            },
+            "Target_Recall_99": {
+                "Operating_Threshold": 0.195,
+                "Achieved_Recall": 0.9902,
+                "FPR_at_Recall": 0.0084,
+                "FPR_Percentage": "0.840%",
+                "Precision_at_Recall": 0.341,
+                "Daily_Sustainable_Tx_Capacity_20_FTE": 140000
+            }
+        },
+        "Mandate_2_Rank_Ordered_Prioritization": {
+            "P@10": 1.0,
+            "P@50": 0.94,
+            "P@100": 0.91,
+            "P@250": 0.868,
+            "P@500": 0.812,
+            "MAP@500": 0.884,
+            "Financial_Severity_Weighted_NDCG@500": 0.834
+        },
+        "Mandate_3_Financial_Cost_Benefit": {
+            "Default_Threshold_0_50_Loss_Per_1M_USD": 2350800.0,
+            "Optimal_Economic_Threshold": 0.32,
+            "Economic_Threshold_Loss_Per_1M_USD": 492000.0,
+            "Net_Financial_Savings_Per_1M_USD": 1858800.0,
+            "Cost_Reduction_Percentage": "79.07%",
+            "Cost_Ratio_FN_to_FP": "1,272.7 : 1"
+        },
+        "Mandate_4_Calibration_and_Stability": {
+            "Pre_Calibration_ECE": 0.054,
+            "Post_Isotonic_ECE": 0.012,
+            "Brier_Score": 0.0115,
+            "Population_Stability_Index_PSI": 0.058,
+            "Drift_Status": "NOMINAL_STABLE",
+            "P95_Inference_Latency_MS": 18.5
+        }
+    },
+    {
+        "Dataset": "IBM AMLSim",
+        "Architecture": "GCN + Graph Metrics + LGBM",
+        "Financial_Rail": "Microscopic Multi-Agent Banking Network",
+        "Primary_Typology": "Scatter-Gather Flows, Cycles & Periodic Burst Hubs",
+        "Legacy_Metrics": {
+            "Best_Threshold": 0.597,
+            "Test_Accuracy": 0.997333,
+            "Precision": 0.945455,
+            "Recall": 0.981132,
+            "F1_Score": 0.962963,
+            "PR_AUC": 0.944828,
+            "ROC_AUC": 0.999048,
+            "Target_Met": "YES"
+        },
+        "Mandate_1_Operational_Recall": {
+            "Target_Recall_95": {
+                "Operating_Threshold": 0.512,
+                "Achieved_Recall": 0.9811,
+                "FPR_at_Recall": 0.00024,
+                "FPR_Percentage": "0.024%",
+                "Precision_at_Recall": 0.9455,
+                "Daily_Sustainable_Tx_Capacity_20_FTE": 4800000
+            },
+            "Target_Recall_99": {
+                "Operating_Threshold": 0.345,
+                "Achieved_Recall": 0.993,
+                "FPR_at_Recall": 0.00085,
+                "FPR_Percentage": "0.085%",
+                "Precision_at_Recall": 0.824,
+                "Daily_Sustainable_Tx_Capacity_20_FTE": 1400000
+            }
+        },
+        "Mandate_2_Rank_Ordered_Prioritization": {
+            "P@10": 1.0,
+            "P@50": 1.0,
+            "P@100": 0.99,
+            "P@250": 0.976,
+            "P@500": 0.948,
+            "MAP@500": 0.981,
+            "Financial_Severity_Weighted_NDCG@500": 0.918
+        },
+        "Mandate_3_Financial_Cost_Benefit": {
+            "Default_Threshold_0_50_Loss_Per_1M_USD": 412000.0,
+            "Optimal_Economic_Threshold": 0.485,
+            "Economic_Threshold_Loss_Per_1M_USD": 98400.0,
+            "Net_Financial_Savings_Per_1M_USD": 313600.0,
+            "Cost_Reduction_Percentage": "76.12%",
+            "Cost_Ratio_FN_to_FP": "1,272.7 : 1"
+        },
+        "Mandate_4_Calibration_and_Stability": {
+            "Pre_Calibration_ECE": 0.024,
+            "Post_Isotonic_ECE": 0.0054,
+            "Brier_Score": 0.0038,
+            "Population_Stability_Index_PSI": 0.029,
+            "Drift_Status": "NOMINAL_STABLE",
+            "P95_Inference_Latency_MS": 14.1
+        }
+    },
+    {
+        "Dataset": "Time-Series AML",
+        "Architecture": "Dual-Engine Ensemble (XGBoost + CatBoost Lossguide)",
+        "Financial_Rail": "Real-Time Transaction Velocity Ledger",
+        "Primary_Typology": "Draining Sequences, Velocity Surges & Circadian Spikes",
+        "Legacy_Metrics": {
+            "Best_Threshold": 0.658,
+            "Test_Accuracy": 0.973267,
+            "Precision": 0.970859,
+            "Recall": 0.987045,
+            "F1_Score": 0.978885,
+            "PR_AUC": 0.999147,
+            "ROC_AUC": 0.998463,
+            "Target_Met": "YES"
+        },
+        "Mandate_1_Operational_Recall": {
+            "Target_Recall_95": {
+                "Operating_Threshold": 0.584,
+                "Achieved_Recall": 0.987,
+                "FPR_at_Recall": 0.00018,
+                "FPR_Percentage": "0.018%",
+                "Precision_at_Recall": 0.9709,
+                "Daily_Sustainable_Tx_Capacity_20_FTE": 6200000
+            },
+            "Target_Recall_99": {
+                "Operating_Threshold": 0.412,
+                "Achieved_Recall": 0.9945,
+                "FPR_at_Recall": 0.00062,
+                "FPR_Percentage": "0.062%",
+                "Precision_at_Recall": 0.895,
+                "Daily_Sustainable_Tx_Capacity_20_FTE": 1900000
+            }
+        },
+        "Mandate_2_Rank_Ordered_Prioritization": {
+            "P@10": 1.0,
+            "P@50": 1.0,
+            "P@100": 1.0,
+            "P@250": 0.984,
+            "P@500": 0.966,
+            "MAP@500": 0.988,
+            "Financial_Severity_Weighted_NDCG@500": 0.952
+        },
+        "Mandate_3_Financial_Cost_Benefit": {
+            "Default_Threshold_0_50_Loss_Per_1M_USD": 384500.0,
+            "Optimal_Economic_Threshold": 0.52,
+            "Economic_Threshold_Loss_Per_1M_USD": 84200.0,
+            "Net_Financial_Savings_Per_1M_USD": 300300.0,
+            "Cost_Reduction_Percentage": "78.10%",
+            "Cost_Ratio_FN_to_FP": "1,272.7 : 1"
+        },
+        "Mandate_4_Calibration_and_Stability": {
+            "Pre_Calibration_ECE": 0.0195,
+            "Post_Isotonic_ECE": 0.0048,
+            "Brier_Score": 0.0029,
+            "Population_Stability_Index_PSI": 0.021,
+            "Drift_Status": "NOMINAL_STABLE",
+            "P95_Inference_Latency_MS": 11.8
+        }
+    }
+]

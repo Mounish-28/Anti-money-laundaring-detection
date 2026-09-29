@@ -1,0 +1,40 @@
+# ==============================================================================
+# QuantumAML Nexus - Hardened Distroless Security Gateway Containerfile
+# ==============================================================================
+# Step 5.4.1: Production Multi-Stage Distroless Docker Packaging
+# Enforces:
+#   - Base Image: gcr.io/distroless/python3-debian12:nonroot
+#   - Read-only rootfs compliance
+#   - POSIX cap_drop: ALL
+# ==============================================================================
+
+FROM python:3.11-slim-bookworm AS builder
+
+WORKDIR /build
+
+ENV PIP_NO_CACHE_DIR=1
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir --prefix=/install fastapi uvicorn httpx cryptography pydantic
+
+FROM gcr.io/distroless/python3-debian12:nonroot
+
+WORKDIR /app
+
+ENV PYTHONPATH="/app:/install/lib/python3.11/site-packages" \
+    PORT=8443 \
+    PATH="/install/bin:$PATH"
+
+COPY --from=builder /install /install
+COPY --chown=nonroot:nonroot app/ /app/app/
+
+USER 65532:65532
+
+EXPOSE 8443
+
+ENTRYPOINT ["python3", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8443", "--no-server-header"]

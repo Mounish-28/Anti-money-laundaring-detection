@@ -1,0 +1,17 @@
+{
+  "train_step_bounds": [
+    1,
+    220
+  ],
+  "val_step_bounds": [
+    221,
+    267
+  ],
+  "test_step_bounds": [
+    268,
+    313
+  ],
+  "train_size": 294511,
+  "val_size": 4592,
+  "test_size": 897
+}

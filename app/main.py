@@ -1,0 +1,916 @@
+import asyncio
+import json
+import logging
+import socket
+import time
+import uuid
+from contextlib import asynccontextmanager
+from datetime import datetime, timezone
+from typing import Any
+
+from fastapi import (
+    BackgroundTasks,
+    Body,
+    FastAPI,
+    HTTPException,
+    Query,
+    WebSocket,
+    WebSocketDisconnect,
+)
+from fastapi.middleware.cors import CORSMiddleware
+from prometheus_client import REGISTRY, Counter, Histogram
+from prometheus_fastapi_instrumentator import Instrumentator
+
+from app.routers.sar import router as sar_router
+from app.routers.forensics import router as forensics_router
+from app.domains.investigation.router import router as investigation_router
+from app.domains.bank.router import router as bank_router
+from app.domains.ai.router import router as ai_router
+from app.middleware.ai_context_firewall import AIContextFirewallMiddleware
+
+# FastAPI _IncludedRouter compatibility patch for prometheus_fastapi_instrumentator
+try:
+    import fastapi.routing
+
+    if not hasattr(fastapi.routing._IncludedRouter, "path"):
+        fastapi.routing._IncludedRouter.path = ""
+except (ImportError, AttributeError):
+    pass
+from app.schemas import (
+    EllipticNodeInput,
+    RiskEvaluationResponse,
+    SAMLDInput,
+    TimeSeriesInput,
+    TransactionInput,
+)
+from app.schemas.sar import (
+    SuspicionTypology,
+)
+from app.services.inference_engine import UnifiedInferenceEngine
+from app.services.sar_service import sar_service
+from app.worker import dispatch_investigator_alert, log_investigator_alert
+
+# Observability Configuration
+logger = logging.getLogger("QuantumAML-API")
+logging.basicConfig(level=logging.INFO)
+
+# Global unified inference engine instance
+engine: UnifiedInferenceEngine = UnifiedInferenceEngine()
+
+
+# ------------------------------------------------------------------------------
+# Prometheus Custom Metric Definitions & Registration
+# ------------------------------------------------------------------------------
+def _get_or_create_histogram(
+    name: str, documentation: str, labelnames: list, buckets: list
+) -> Histogram:
+    try:
+        return Histogram(name, documentation, labelnames=labelnames, buckets=buckets)
+    except ValueError:
+        return REGISTRY._names_to_collectors[name]
+
+
+def _get_or_create_counter(name: str, documentation: str, labelnames: list) -> Counter:
+    try:
+        return Counter(name, documentation, labelnames=labelnames)
+    except ValueError:
+        return REGISTRY._names_to_collectors[name]
+
+
+aml_inference_latency_seconds = _get_or_create_histogram(
+    name="aml_inference_latency_seconds",
+    documentation="Latency of AML model inference in seconds per dataset model",
+    labelnames=["dataset_model"],
+    buckets=[0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5],
+)
+
+aml_transactions_evaluated_total = _get_or_create_counter(
+    name="aml_transactions_evaluated_total",
+    documentation="Total number of AML transactions evaluated by model and risk tier",
+    labelnames=["dataset_model", "risk_tier"],
+)
+
+aml_anomalies_detected_total = _get_or_create_counter(
+    name="aml_anomalies_detected_total",
+    documentation="Total number of AML anomalies detected per dataset model",
+    labelnames=["dataset_model"],
+)
+
+
+def _record_metrics(
+    dataset_model: str, res: dict[str, Any], duration_seconds: float
+) -> None:
+    """Records latency observation, throughput by risk tier, and anomaly counters."""
+    aml_inference_latency_seconds.labels(dataset_model=dataset_model).observe(
+        duration_seconds
+    )
+
+    # Normalize risk tier to standard tiers: LOW, MEDIUM, HIGH, CRITICAL
+    raw_tier = str(res.get("risk_tier", "LOW")).upper()
+    if raw_tier in ("CRITICAL", "CRITICAL_SAR"):
+        tier = "CRITICAL"
+    elif raw_tier in ("HIGH",):
+        tier = "HIGH"
+    elif raw_tier in ("MEDIUM", "ELEVATED"):
+        tier = "MEDIUM"
+    else:
+        tier = "LOW"
+
+    aml_transactions_evaluated_total.labels(
+        dataset_model=dataset_model, risk_tier=tier
+    ).inc()
+
+    if res.get("is_anomaly"):
+        aml_anomalies_detected_total.labels(dataset_model=dataset_model).inc()
+
+
+_redis_probe_cache = {"status": None, "expires_at": 0.0}
+
+
+def _is_redis_available() -> bool:
+    now = time.monotonic()
+    if (
+        _redis_probe_cache["status"] is not None
+        and now < _redis_probe_cache["expires_at"]
+    ):
+        return _redis_probe_cache["status"]
+    try:
+        with socket.create_connection(("127.0.0.1", 6379), timeout=0.005):
+            _redis_probe_cache["status"] = True
+            _redis_probe_cache["expires_at"] = now + 300.0
+            return True
+    except Exception:
+        _redis_probe_cache["status"] = False
+        _redis_probe_cache["expires_at"] = now + 300.0
+        return False
+
+
+_is_redis_available()  # Pre-warm Redis probe cache at module load
+
+
+def queue_alert(res: dict):
+    """Enqueues alert task to Celery broker with fallback to direct invocation."""
+    if _is_redis_available():
+        try:
+            dispatch_investigator_alert.apply_async(args=[res], retry=False)
+            return
+        except Exception as e:
+            logger.warning(
+                "Failed to queue alert via Celery broker (%s), falling back to local dispatch.",
+                e,
+            )
+    log_investigator_alert(res)
+
+
+# ------------------------------------------------------------------------------
+# WebSocket Real-Time Broadcast Hub
+# ------------------------------------------------------------------------------
+class ConnectionManager:
+    """
+    Thread-safe asynchronous WebSocket connection manager for real-time inference streaming
+    and investigator war-room collaboration with concurrent zero-reload dispatch.
+    """
+
+    def __init__(self):
+        self.channels: dict[str, set[WebSocket]] = {"live": set()}
+        self._lock = asyncio.Lock()
+
+    @property
+    def active_connections(self) -> list[WebSocket]:
+        """Backward-compatible property returning list of connected live sockets."""
+        return list(self.channels.get("live", set()))
+
+    async def connect(self, websocket: WebSocket, channel: str = "live"):
+        """Accepts the WebSocket handshake and registers the socket in the specified channel pool."""
+        await websocket.accept()
+        async with self._lock:
+            if channel not in self.channels:
+                self.channels[channel] = set()
+            self.channels[channel].add(websocket)
+        logger.info(
+            "WebSocket client connected to [%s]. Active channel size: %d",
+            channel,
+            len(self.channels[channel]),
+        )
+
+    def disconnect(self, websocket: WebSocket, channel: str = "live"):
+        """Safely removes the socket from the specified channel pool."""
+        if channel in self.channels and websocket in self.channels[channel]:
+            self.channels[channel].remove(websocket)
+            logger.info(
+                "WebSocket client disconnected from [%s]. Remaining in channel: %d",
+                channel,
+                len(self.channels[channel]),
+            )
+
+    async def broadcast(self, payload: dict, channel: str = "live"):
+        """
+        Asynchronously iterates across active connections in the channel and transmits JSON payload
+        concurrently using asyncio.gather(..., return_exceptions=True).
+        Stale/closed client sockets are collected and purged immediately without blocking.
+        """
+        targets = list(self.channels.get(channel, set()))
+        if not targets:
+            return
+
+        # Concurrent broadcast across all active sockets in channel
+        results = await asyncio.gather(
+            *(conn.send_json(payload) for conn in targets),
+            return_exceptions=True,
+        )
+
+        dead_connections: list[WebSocket] = []
+        for conn, res in zip(targets, results, strict=False):
+            if isinstance(res, Exception):
+                logger.warning(
+                    "Error transmitting WebSocket payload to client: %s", res
+                )
+                dead_connections.append(conn)
+
+        if dead_connections:
+            async with self._lock:
+                for dead_conn in dead_connections:
+                    if channel in self.channels and dead_conn in self.channels[channel]:
+                        self.channels[channel].remove(dead_conn)
+            logger.info(
+                "Purged %d stale socket(s) from [%s]. Remaining: %d",
+                len(dead_connections),
+                channel,
+                len(self.channels.get(channel, set())),
+            )
+
+
+manager = ConnectionManager()
+
+
+# ------------------------------------------------------------------------------
+# Asynchronous SAR Generation Pipeline & Typology Resolver
+# ------------------------------------------------------------------------------
+def _resolve_typology(
+    engine_type: str,
+    flags: list[str],
+    payload: dict[str, Any],
+) -> SuspicionTypology:
+    """
+    In-memory classification helper determining the appropriate FIU-IND SuspicionTypology.
+    """
+    if engine_type == "CRYPTO_FORENSICS":
+        return SuspicionTypology.IN_TYP_VDA_MIX
+
+    # FIAT_BANKING classification rules
+    flags_set = set(flags) if flags else set()
+    amount = float(payload.get("amount", 0.0) or 0.0)
+
+    # 1. Structuring: PAN_STRUCTURING_EVASION flag or amount in [45000, 49999]
+    if "PAN_STRUCTURING_EVASION" in flags_set or (45000.0 <= amount <= 49999.0):
+        return SuspicionTypology.IN_TYP_STRUCT
+
+    # 2. Hawala: HAWALA_WIRE flag or amount >= 25,00,000 (INR 2.5 million)
+    if "HAWALA_WIRE" in flags_set or amount >= 2500000.0:
+        return SuspicionTypology.IN_TYP_HAWALA
+
+    # 3. Mule burst: MULE_BURST flag
+    if "MULE_BURST" in flags_set:
+        return SuspicionTypology.IN_TYP_MULE
+
+    # Default fallback
+    return SuspicionTypology.IN_TYP_STRUCT
+
+
+async def process_sar_background(
+    tx_payload: dict[str, Any],
+    result_payload: dict[str, Any],
+    typology: SuspicionTypology,
+):
+    """
+    Asynchronously processes critical risk events in background without blocking
+    inference latency, generating or aggregating SAR dossier records and broadcasting
+    real-time regulatory alerts via WebSocket.
+    """
+    try:
+        case = await sar_service.create_or_aggregate_sar(
+            tx_payload=tx_payload,
+            ml_result=result_payload,
+            typology=typology,
+        )
+        logger.info(
+            "SAR background processing complete: %s (Status: %s, Exposure: \u20b9%.2f, Typology: %s)",
+            case.sar_id,
+            case.status,
+            case.total_exposure_inr,
+            typology.value if hasattr(typology, "value") else typology,
+        )
+        # Index transaction ID directly to case.sar_id for instantaneous reverse lookup
+        trigger_id = (
+            tx_payload.get("transaction_id")
+            or tx_payload.get("node_id")
+            or tx_payload.get("tx_hash")
+        )
+        if trigger_id:
+            async with sar_service._lock:
+                sar_service._active_ring_index[str(trigger_id)] = case.sar_id
+
+        # Broadcast real-time SAR alert packet to connected monitoring dashboards
+        status_val = (
+            case.status.value if hasattr(case.status, "value") else str(case.status)
+        )
+        is_crypto_sar = bool(
+            (case.total_exposure_btc and case.total_exposure_btc > 0)
+            or tx_payload.get("rail") == "BTC"
+            or tx_payload.get("currency") == "BTC"
+            or tx_payload.get("engine") == "CRYPTO_FORENSICS"
+        )
+        sar_alert_packet = {
+            "event": "SAR_DISPATCHED",
+            "sar_id": case.sar_id,
+            "engine": "CRYPTO_FORENSICS" if is_crypto_sar else "FIAT_BANKING",
+            "rail": (
+                "BTC"
+                if is_crypto_sar
+                else tx_payload.get("payment_format", tx_payload.get("rail", "INR"))
+            ),
+            "exposure_inr": float(case.total_exposure_inr or 0.0),
+            "exposure_btc": float(case.total_exposure_btc or 0.0),
+            "status": status_val,
+            "typology": typology.value if hasattr(typology, "value") else str(typology),
+            "suspect": (
+                (
+                    getattr(case.suspect, "full_legal_name", None)
+                    or getattr(case.suspect, "entity_name", None)
+                )
+                if case.suspect
+                else (
+                    tx_payload.get("account_from")
+                    or tx_payload.get("from_address")
+                    or tx_payload.get("node_id")
+                    or "Unknown Suspect"
+                )
+            ),
+            "triggering_tx_id": (
+                tx_payload.get("transaction_id")
+                or tx_payload.get("tx_hash")
+                or tx_payload.get("node_id")
+            ),
+            "timestamp": (
+                case.created_at.isoformat()
+                if hasattr(case.created_at, "isoformat")
+                else str(case.created_at)
+            ),
+        }
+        await manager.broadcast(sar_alert_packet)
+    except Exception as e:
+        logger.error(
+            "Failed to process SAR in background for payload %s: %s",
+            tx_payload.get("transaction_id", "UNKNOWN"),
+            str(e),
+            exc_info=True,
+        )
+
+
+# ------------------------------------------------------------------------------
+# 1. Lifespan & Startup Warmup
+# ------------------------------------------------------------------------------
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global engine
+    logger.info("Initializing QuantumAML Serving Layer...")
+    if engine is None:
+        engine = UnifiedInferenceEngine()
+    engine.warmup()
+    logger.info(
+        "Engine warmup completed successfully. Loaded models: %s",
+        list(engine.models.keys()),
+    )
+    yield
+    logger.info("Shutting down QuantumAML Serving Layer...")
+
+
+app = FastAPI(
+    title="QuantumAML Nexus Serving Layer",
+    version="2.0.0",
+    description="Production continuous risk scoring and AML detection engine.",
+    lifespan=lifespan,
+)
+
+# ------------------------------------------------------------------------------
+# CORS Middleware Configuration (Resolves Preflight OPTIONS 405)
+# ------------------------------------------------------------------------------
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5174",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+app.add_middleware(AIContextFirewallMiddleware)
+
+# ------------------------------------------------------------------------------
+# 2. Mount Prometheus FastAPI Instrumentator
+# ------------------------------------------------------------------------------
+Instrumentator().instrument(app).expose(app, endpoint="/metrics")
+
+
+# ------------------------------------------------------------------------------
+# 3. Health & Diagnostic Endpoints
+# ------------------------------------------------------------------------------
+@app.get("/health")
+def health_check():
+    return {
+        "status": "HEALTHY",
+        "loaded_models": list(engine.models.keys()) if engine else [],
+    }
+
+
+# ------------------------------------------------------------------------------
+# WebSocket Routes (/ws/live and /ws/chat)
+# ------------------------------------------------------------------------------
+@app.websocket("/ws/live")
+async def websocket_live(websocket: WebSocket):
+    """
+    Persistent WebSocket hub streaming live AML inference scoring events
+    directly to connected frontend monitoring clients with ping-pong keepalives
+    and bidirectional manual transaction/event dispatching without page reloads.
+    """
+    await manager.connect(websocket, channel="live")
+    try:
+        while True:
+            data = await websocket.receive_text()
+            try:
+                parsed = json.loads(data)
+                if isinstance(parsed, dict):
+                    # Keepalive frame
+                    if parsed.get("type") == "ping":
+                        await websocket.send_json(
+                            {
+                                "type": "pong",
+                                "timestamp": datetime.now(timezone.utc).isoformat(),
+                            }
+                        )
+                        continue
+
+                    # Duplex manual transaction / event dispatch over /ws/live
+                    if (
+                        parsed.get("type")
+                        in ("DISPATCH", "MANUAL_DISPATCH", "TRANSACTION")
+                        or "transaction_id" in parsed
+                        or "transaction" in parsed
+                    ):
+                        tx_data = parsed.get("transaction", parsed)
+                        if isinstance(tx_data, dict):
+                            if "timestamp" not in tx_data:
+                                tx_data["timestamp"] = datetime.now(
+                                    timezone.utc
+                                ).isoformat()
+                            if "transaction_id" not in tx_data:
+                                tx_data["transaction_id"] = (
+                                    f"TX_MANUAL_{uuid.uuid4().hex[:8]}"
+                                )
+                            if "latency_ms" not in tx_data:
+                                tx_data["latency_ms"] = 0.8
+
+                            # Ensure entity fields are normalized
+                            if (
+                                "from_entity" not in tx_data
+                                and "account_from" in tx_data
+                            ):
+                                tx_data["from_entity"] = tx_data["account_from"]
+                            if "to_entity" not in tx_data and "account_to" in tx_data:
+                                tx_data["to_entity"] = tx_data["account_to"]
+
+                            # Send instantaneous acknowledgment back to dispatcher
+                            await websocket.send_json(
+                                {
+                                    "type": "DISPATCH_ACK",
+                                    "status": "BROADCASTED",
+                                    "transaction_id": tx_data.get("transaction_id"),
+                                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                                }
+                            )
+
+                            # Concurrently broadcast to all live surveillance dashboards
+                            await manager.broadcast(tx_data, channel="live")
+
+                            # Automated SAR Alert trigger for critical / threat transactions
+                            raw_tier = str(tx_data.get("risk_tier", "")).upper()
+                            score_val = float(tx_data.get("risk_score", 0.0) or 0.0)
+                            if (
+                                raw_tier in ("CRITICAL", "CRITICAL_SAR")
+                                or score_val >= 0.85
+                                or tx_data.get("auto_trigger_sar")
+                            ):
+                                is_crypto = (
+                                    tx_data.get("rail") == "BTC"
+                                    or tx_data.get("currency") == "BTC"
+                                    or tx_data.get("engine") == "CRYPTO_FORENSICS"
+                                )
+                                engine_type = (
+                                    "CRYPTO_FORENSICS" if is_crypto else "FIAT_BANKING"
+                                )
+                                flags = list(tx_data.get("flags", []))
+                                if "AUTO_FLAG_SAR" not in flags and raw_tier in (
+                                    "CRITICAL",
+                                    "CRITICAL_SAR",
+                                ):
+                                    flags.append("AUTO_FLAG_SAR")
+                                typology = _resolve_typology(
+                                    engine_type, flags, tx_data
+                                )
+                                asyncio.create_task(
+                                    process_sar_background(
+                                        tx_payload=tx_data,
+                                        result_payload=tx_data,
+                                        typology=typology,
+                                    )
+                                )
+            except Exception as e:
+                logger.warning("Error processing incoming frame on /ws/live: %s", e)
+    except WebSocketDisconnect:
+        manager.disconnect(websocket, channel="live")
+    except Exception as e:
+        logger.warning("WebSocket client connection closed on /ws/live: %s", e)
+        manager.disconnect(websocket, channel="live")
+
+
+@app.post("/api/v1/live/dispatch")
+async def dispatch_live_event(event: dict[str, Any]):
+    """
+    Dispatches custom transaction or incident events immediately to all
+    connected /ws/live clients without requiring page reloads, and automatically
+    triggers real-time SAR alerts for critical/structuring signatures.
+    """
+    if "timestamp" not in event:
+        event["timestamp"] = datetime.now(timezone.utc).isoformat()
+    if "transaction_id" not in event:
+        event["transaction_id"] = f"TX_MANUAL_{uuid.uuid4().hex[:8]}"
+    if "latency_ms" not in event:
+        event["latency_ms"] = 0.8
+
+    if "from_entity" not in event and "account_from" in event:
+        event["from_entity"] = event["account_from"]
+    if "to_entity" not in event and "account_to" in event:
+        event["to_entity"] = event["account_to"]
+
+    await manager.broadcast(event, channel="live")
+
+    # Automated SAR Alert trigger for critical / threat transactions
+    raw_tier = str(event.get("risk_tier", "")).upper()
+    score_val = float(event.get("risk_score", 0.0) or 0.0)
+    if (
+        raw_tier in ("CRITICAL", "CRITICAL_SAR")
+        or score_val >= 0.85
+        or event.get("auto_trigger_sar")
+    ):
+        is_crypto = (
+            event.get("rail") == "BTC"
+            or event.get("currency") == "BTC"
+            or event.get("engine") == "CRYPTO_FORENSICS"
+        )
+        engine_type = "CRYPTO_FORENSICS" if is_crypto else "FIAT_BANKING"
+        flags = list(event.get("flags", []))
+        if "AUTO_FLAG_SAR" not in flags and raw_tier in ("CRITICAL", "CRITICAL_SAR"):
+            flags.append("AUTO_FLAG_SAR")
+        typology = _resolve_typology(engine_type, flags, event)
+        asyncio.create_task(
+            process_sar_background(
+                tx_payload=event,
+                result_payload=event,
+                typology=typology,
+            )
+        )
+
+    return {
+        "status": "DISPATCHED",
+        "event_id": event.get("transaction_id"),
+        "transaction_id": event.get("transaction_id"),
+        "data": event,
+    }
+
+
+# ------------------------------------------------------------------------------
+# 4. Model Scoring Endpoints
+# ------------------------------------------------------------------------------
+@app.post("/api/v1/score/transaction", response_model=RiskEvaluationResponse)
+async def score_transaction(
+    payload: TransactionInput, background_tasks: BackgroundTasks
+):
+    try:
+        t0 = time.perf_counter()
+        res = engine.score_ibm_transaction(payload.model_dump())
+        duration = time.perf_counter() - t0
+        _record_metrics("ibm_transactions", res, duration)
+
+        if res.get("is_anomaly"):
+            background_tasks.add_task(queue_alert, res)
+
+        # Construct normalized broadcast payload for FIAT banking
+        flags = [res["recommended_action"]] if res.get("recommended_action") else []
+        if res.get("is_anomaly") and "ANOMALY" not in flags:
+            flags.insert(0, "ANOMALY")
+
+        # Asynchronous SAR Generation / Ring Aggregation Pipeline
+        raw_tier = str(res.get("risk_tier", "")).upper()
+        score_val = float(res.get("risk_score", 0.0))
+        is_structuring_candidate = (
+            45000.0 <= float(payload.amount) <= 49999.0
+            or "PAN_STRUCTURING_EVASION" in flags
+            or "smurf" in str(payload.account_from).lower()
+        )
+        is_hawala_candidate = (
+            float(payload.amount) >= 2500000.0 or "HAWALA_WIRE" in flags
+        )
+        is_mule_candidate = (
+            "MULE_BURST" in flags or "draining" in str(payload.account_from).lower()
+        )
+
+        is_threat = (
+            raw_tier in ("CRITICAL_SAR", "CRITICAL")
+            or score_val >= 0.85
+            or is_structuring_candidate
+            or is_hawala_candidate
+            or is_mule_candidate
+        )
+
+        if is_threat:
+            if is_structuring_candidate and "PAN_STRUCTURING_EVASION" not in flags:
+                flags.append("PAN_STRUCTURING_EVASION")
+            if is_hawala_candidate and "HAWALA_WIRE" not in flags:
+                flags.append("HAWALA_WIRE")
+            if is_mule_candidate and "MULE_BURST" not in flags:
+                flags.append("MULE_BURST")
+
+            txn_dict = payload.model_dump()
+            typology = _resolve_typology("FIAT_BANKING", flags, txn_dict)
+            background_tasks.add_task(
+                process_sar_background,
+                txn_dict,
+                res,
+                typology,
+            )
+
+        # Ensure risk tier and broadcast reflect SAR threat tier
+        if is_threat:
+            if res.get("risk_tier") in ("LOW", "LOW_RISK", "ELEVATED", "MEDIUM"):
+                res["risk_tier"] = "CRITICAL_SAR"
+            res["is_anomaly"] = True
+            if (
+                not res.get("recommended_action")
+                or res["recommended_action"] == "AUTO_CLEARED"
+            ):
+                res["recommended_action"] = "AUTO_FLAG_SAR"
+
+        broadcast_tier = str(res.get("risk_tier", "LOW"))
+
+        result_payload = {
+            "engine": "FIAT_BANKING",
+            "transaction_id": payload.transaction_id,
+            "timestamp": payload.timestamp or datetime.now(timezone.utc).isoformat(),
+            "rail": payload.payment_format,
+            "from_entity": payload.account_from,
+            "to_entity": payload.account_to,
+            "amount": float(payload.amount),
+            "currency": "INR",
+            "risk_score": float(res.get("risk_score", 0.0)),
+            "risk_tier": broadcast_tier,
+            "latency_ms": float(res.get("latency_ms", round(duration * 1000, 2))),
+            "flags": flags,
+        }
+
+        try:
+            await manager.broadcast(result_payload)
+        except Exception as ws_err:
+            logger.warning("Failed to broadcast transaction score: %s", ws_err)
+
+        return res
+    except Exception as e:
+        logger.error("Error evaluating IBM transaction: %s", str(e), exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/v1/score/timeseries", response_model=RiskEvaluationResponse)
+async def score_timeseries(payload: TimeSeriesInput, background_tasks: BackgroundTasks):
+    try:
+        t0 = time.perf_counter()
+        res = engine.score_timeseries(payload.model_dump())
+        duration = time.perf_counter() - t0
+        _record_metrics("timeseries", res, duration)
+
+        if res.get("is_anomaly"):
+            background_tasks.add_task(queue_alert, res)
+        return res
+    except Exception as e:
+        logger.error("Error evaluating time-series event: %s", str(e), exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/v1/score/crypto", response_model=RiskEvaluationResponse)
+async def score_crypto(payload: EllipticNodeInput, background_tasks: BackgroundTasks):
+    try:
+        t0 = time.perf_counter()
+        res = engine.score_elliptic(payload.model_dump())
+        duration = time.perf_counter() - t0
+        _record_metrics("elliptic", res, duration)
+
+        if res.get("is_anomaly"):
+            background_tasks.add_task(queue_alert, res)
+
+        # Construct normalized crypto broadcast payload
+        flags = [res["recommended_action"]] if res.get("recommended_action") else []
+        if res.get("is_anomaly") and "ANOMALY" not in flags:
+            flags.insert(0, "ANOMALY")
+
+        # Asynchronous SAR Generation / Ring Aggregation Pipeline for Crypto
+        raw_tier = str(res.get("risk_tier", "LOW")).upper()
+        score_val = float(res.get("risk_score", 0.0))
+        effective_btc = (
+            float(payload.btc_value)
+            if payload.btc_value is not None
+            else (float(payload.features[0]) if payload.features else 0.0)
+        )
+        is_crypto_threat = (
+            raw_tier in ("CRITICAL_SAR", "CRITICAL")
+            or score_val >= 0.88
+            or effective_btc >= 10.0
+            or bool(res.get("is_anomaly"))
+        )
+
+        if is_crypto_threat:
+            if raw_tier in ("LOW", "LOW_RISK", "ELEVATED", "MEDIUM"):
+                res["risk_tier"] = "CRITICAL_SAR"
+                res["is_anomaly"] = True
+                if "ANOMALY" not in flags:
+                    flags.insert(0, "ANOMALY")
+                if effective_btc >= 10.0 and "WHALE_TRANSFER" not in flags:
+                    flags.append("WHALE_TRANSFER")
+
+            crypto_dict = payload.model_dump()
+            background_tasks.add_task(
+                process_sar_background,
+                crypto_dict,
+                res,
+                SuspicionTypology.IN_TYP_VDA_MIX,
+            )
+
+        btc_amount = (
+            round(abs(float(payload.btc_value)), 4)
+            if payload.btc_value is not None
+            else (
+                round(abs(float(payload.features[0])), 4)
+                if payload.features and abs(payload.features[0]) > 0
+                else 1.0
+            )
+        )
+
+        from_entity = payload.from_address or f"node_{payload.node_id}"
+        to_entity = payload.to_address or f"cluster_{payload.node_id[:8]}"
+
+        broadcast_tier = str(res.get("risk_tier", "LOW"))
+
+        result_payload = {
+            "engine": "CRYPTO_FORENSICS",
+            "transaction_id": payload.tx_hash or payload.node_id,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "rail": "BTC",
+            "from_entity": from_entity,
+            "to_entity": to_entity,
+            "amount": float(btc_amount),
+            "currency": "BTC",
+            "risk_score": float(res.get("risk_score", 0.0)),
+            "risk_tier": broadcast_tier,
+            "latency_ms": float(res.get("latency_ms", round(duration * 1000, 2))),
+            "flags": flags,
+        }
+
+        try:
+            await manager.broadcast(result_payload)
+        except Exception as ws_err:
+            logger.warning("Failed to broadcast crypto score: %s", ws_err)
+
+        return res
+    except Exception as e:
+        logger.error("Error evaluating crypto transaction: %s", str(e), exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/v1/score/samld", response_model=RiskEvaluationResponse)
+async def score_samld(payload: SAMLDInput, background_tasks: BackgroundTasks):
+    try:
+        t0 = time.perf_counter()
+        res = engine.score_samld(payload.model_dump())
+        duration = time.perf_counter() - t0
+        _record_metrics("samld", res, duration)
+
+        if res.get("is_anomaly"):
+            background_tasks.add_task(queue_alert, res)
+        return res
+    except Exception as e:
+        logger.error("Error evaluating SAML-D transaction: %s", str(e), exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/v1/score/amlsim", response_model=RiskEvaluationResponse)
+async def score_amlsim(payload: TransactionInput, background_tasks: BackgroundTasks):
+    try:
+        t0 = time.perf_counter()
+        res = engine.score_amlsim(payload.model_dump())
+        duration = time.perf_counter() - t0
+        _record_metrics("amlsim", res, duration)
+
+        if res.get("is_anomaly"):
+            background_tasks.add_task(queue_alert, res)
+        return res
+    except Exception as e:
+        logger.error("Error evaluating AMLSim transaction: %s", str(e), exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/v1/score/batch")
+def score_batch(
+    items: list[dict[str, Any]] = Body(...),
+    background_tasks: BackgroundTasks = BackgroundTasks(),
+    dataset: str = Query(..., description="Target dataset for batch evaluation"),
+):
+    valid_datasets = [
+        "ibm_transactions",
+        "timeseries",
+        "elliptic",
+        "samld",
+        "amlsim",
+    ]
+    if dataset not in valid_datasets:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid dataset '{dataset}'. Must be one of: {valid_datasets}",
+        )
+
+    scoring_methods = {
+        "ibm_transactions": engine.score_ibm_transaction,
+        "timeseries": engine.score_timeseries,
+        "elliptic": engine.score_elliptic,
+        "samld": engine.score_samld,
+        "amlsim": engine.score_amlsim,
+    }
+    score_fn = scoring_methods[dataset]
+
+    evaluations = []
+    anomalies_detected = 0
+
+    try:
+        for item in items:
+            t0 = time.perf_counter()
+            res = score_fn(item)
+            duration = time.perf_counter() - t0
+            _record_metrics(dataset, res, duration)
+
+            if res.get("is_anomaly"):
+                anomalies_detected += 1
+                if background_tasks is not None:
+                    background_tasks.add_task(queue_alert, res)
+            evaluations.append(res)
+
+        return {
+            "dataset": dataset,
+            "total_evaluated": len(evaluations),
+            "anomalies_detected": anomalies_detected,
+            "evaluations": evaluations,
+        }
+    except Exception as e:
+        logger.error(
+            "Error during batch evaluation for %s: %s",
+            dataset,
+            str(e),
+            exc_info=True,
+        )
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ------------------------------------------------------------------------------
+# 5. Regulatory SAR Compliance & Reporting Router Mount
+# ------------------------------------------------------------------------------
+app.include_router(
+    sar_router,
+    prefix="/api/v1/sar",
+    tags=["SAR Compliance & Reporting"],
+)
+
+# ------------------------------------------------------------------------------
+# 6. Forensic Investigation Workbench & SAR Router Mount
+# ------------------------------------------------------------------------------
+app.include_router(
+    forensics_router,
+    prefix="/api/v1",
+    tags=["Forensics & SAR"],
+)
+
+# ------------------------------------------------------------------------------
+# 7. Dual-Stakeholder Enterprise Enclaves & AI Domain Routers
+# ------------------------------------------------------------------------------
+app.include_router(investigation_router)
+app.include_router(bank_router)
+app.include_router(ai_router)

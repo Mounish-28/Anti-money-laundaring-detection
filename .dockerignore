@@ -1,0 +1,45 @@
+# Version control
+.git/
+.gitignore
+
+# Python bytecode, caches, and environments
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyd
+.venv/
+venv/
+env/
+ENV/
+
+# Testing and coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# IDE configurations
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Exclude all raw datasets and archives
+**/*.csv
+**/*.parquet
+**/*.zip
+**/*.tar.gz
+
+# Exclude JSON files except configurations under app/
+**/*.json
+!app/**/*.json
+
+# Exclude host models directory (dynamically mounted as read-only volume at runtime)
+models/
+
+# Ephemeral runtime logs & databases
+*.log
+catboost_info/
+alerts.db
+runtime_audit_results.json

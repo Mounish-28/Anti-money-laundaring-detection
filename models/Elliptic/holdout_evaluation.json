@@ -1,0 +1,311 @@
+{
+  "dataset": "Elliptic Bitcoin Transaction Graph",
+  "evaluation_timesteps": "35..49",
+  "total_holdout_nodes": 67504,
+  "total_labelled_nodes": 16670,
+  "illicit_count": 1083,
+  "licit_count": 15587,
+  "class_imbalance_ratio": "14.39:1",
+  "metrics": {
+    "pr_auc": 0.5643691024538671,
+    "roc_auc": 0.8105699098989907,
+    "brier_score": 0.10511583834886551,
+    "optimal_f1": 0.5705984845847296,
+    "optimal_precision": 0.7695924764890282,
+    "optimal_recall": 0.4533702677746999,
+    "optimal_threshold": 0.6576064825057983,
+    "specificity": 0.9905690639635594,
+    "false_positive_rate_pct": 0.9430936036440624,
+    "confusion_matrix": {
+      "tp": 491,
+      "fp": 147,
+      "fn": 592,
+      "tn": 15440
+    }
+  },
+  "operating_points": {
+    "default_0_50": {
+      "threshold": 0.5,
+      "f1": 0.47855855855855856,
+      "precision": 0.39243498817966904,
+      "recall": 0.6131117266851339
+    },
+    "optimal_f1": {
+      "threshold": 0.6576064825057983,
+      "f1": 0.5705984845847296,
+      "precision": 0.7695924764890282,
+      "recall": 0.4533702677746999
+    },
+    "high_recall_operational": {
+      "threshold": 0.20458921790122986,
+      "f1": 0.14565282193696966,
+      "precision": 0.07923608289313287,
+      "recall": 0.9002770083102493
+    },
+    "high_precision_operational": {
+      "threshold": 0.7254678010940552,
+      "f1": 0.5369551441304863,
+      "precision": 0.85,
+      "recall": 0.9002770083102493
+    }
+  },
+  "per_timestep_metrics": [
+    {
+      "timestep": 35,
+      "total_nodes": 5507,
+      "total_edges": 6351,
+      "labelled_nodes": 1341,
+      "illicit_count": 182,
+      "licit_count": 1159,
+      "pr_auc": 0.8415938910885583,
+      "roc_auc": 0.944139984260778
+    },
+    {
+      "timestep": 36,
+      "total_nodes": 6393,
+      "total_edges": 7813,
+      "labelled_nodes": 1708,
+      "illicit_count": 33,
+      "licit_count": 1675,
+      "pr_auc": 0.5106846489987844,
+      "roc_auc": 0.9148258706467661
+    },
+    {
+      "timestep": 37,
+      "total_nodes": 3306,
+      "total_edges": 3849,
+      "labelled_nodes": 498,
+      "illicit_count": 40,
+      "licit_count": 458,
+      "pr_auc": 0.5146841209173311,
+      "roc_auc": 0.8175218340611353
+    },
+    {
+      "timestep": 38,
+      "total_nodes": 2891,
+      "total_edges": 3094,
+      "labelled_nodes": 756,
+      "illicit_count": 111,
+      "licit_count": 645,
+      "pr_auc": 0.7845937530458174,
+      "roc_auc": 0.9266010196242754
+    },
+    {
+      "timestep": 39,
+      "total_nodes": 2760,
+      "total_edges": 2914,
+      "labelled_nodes": 1183,
+      "illicit_count": 81,
+      "licit_count": 1102,
+      "pr_auc": 0.6951076417091725,
+      "roc_auc": 0.9508077345342923
+    },
+    {
+      "timestep": 40,
+      "total_nodes": 4481,
+      "total_edges": 5246,
+      "labelled_nodes": 1211,
+      "illicit_count": 112,
+      "licit_count": 1099,
+      "pr_auc": 0.6452132015705065,
+      "roc_auc": 0.8337693357597815
+    },
+    {
+      "timestep": 41,
+      "total_nodes": 5342,
+      "total_edges": 6093,
+      "labelled_nodes": 1132,
+      "illicit_count": 116,
+      "licit_count": 1016,
+      "pr_auc": 0.604802080614076,
+      "roc_auc": 0.9022281428183546
+    },
+    {
+      "timestep": 42,
+      "total_nodes": 7140,
+      "total_edges": 8493,
+      "labelled_nodes": 2154,
+      "illicit_count": 239,
+      "licit_count": 1915,
+      "pr_auc": 0.7616305843657275,
+      "roc_auc": 0.8656521406644309
+    },
+    {
+      "timestep": 43,
+      "total_nodes": 5063,
+      "total_edges": 5950,
+      "labelled_nodes": 1370,
+      "illicit_count": 24,
+      "licit_count": 1346,
+      "pr_auc": 0.016964629482091848,
+      "roc_auc": 0.4569403169886082
+    },
+    {
+      "timestep": 44,
+      "total_nodes": 4975,
+      "total_edges": 5551,
+      "labelled_nodes": 1591,
+      "illicit_count": 24,
+      "licit_count": 1567,
+      "pr_auc": 0.010849352302180024,
+      "roc_auc": 0.33974154435226545
+    },
+    {
+      "timestep": 45,
+      "total_nodes": 5598,
+      "total_edges": 6673,
+      "labelled_nodes": 1221,
+      "illicit_count": 5,
+      "licit_count": 1216,
+      "pr_auc": 0.006494645094860359,
+      "roc_auc": 0.4462171052631579
+    },
+    {
+      "timestep": 46,
+      "total_nodes": 3519,
+      "total_edges": 3866,
+      "labelled_nodes": 712,
+      "illicit_count": 2,
+      "licit_count": 710,
+      "pr_auc": 0.0029307983378601106,
+      "roc_auc": 0.2859154929577465
+    },
+    {
+      "timestep": 47,
+      "total_nodes": 5121,
+      "total_edges": 5748,
+      "labelled_nodes": 846,
+      "illicit_count": 22,
+      "licit_count": 824,
+      "pr_auc": 0.02004444860071253,
+      "roc_auc": 0.3582855251544572
+    },
+    {
+      "timestep": 48,
+      "total_nodes": 2954,
+      "total_edges": 3284,
+      "labelled_nodes": 471,
+      "illicit_count": 36,
+      "licit_count": 435,
+      "pr_auc": 0.07072127539210793,
+      "roc_auc": 0.47164750957854407
+    },
+    {
+      "timestep": 49,
+      "total_nodes": 2454,
+      "total_edges": 2587,
+      "labelled_nodes": 476,
+      "illicit_count": 56,
+      "licit_count": 420,
+      "pr_auc": 0.09786673518834908,
+      "roc_auc": 0.4230017006802721
+    }
+  ],
+  "top_gnnexplainer_features": [
+    {
+      "rank": 1,
+      "feature_index": 142,
+      "feature_name": "agg_neighbor_feat_49",
+      "importance": 0.6313100457191467,
+      "feature_type": "aggregated"
+    },
+    {
+      "rank": 2,
+      "feature_index": 160,
+      "feature_name": "agg_neighbor_feat_67",
+      "importance": 0.5996419191360474,
+      "feature_type": "aggregated"
+    },
+    {
+      "rank": 3,
+      "feature_index": 130,
+      "feature_name": "agg_neighbor_feat_37",
+      "importance": 0.5991874933242798,
+      "feature_type": "aggregated"
+    },
+    {
+      "rank": 4,
+      "feature_index": 159,
+      "feature_name": "agg_neighbor_feat_66",
+      "importance": 0.5965623259544373,
+      "feature_type": "aggregated"
+    },
+    {
+      "rank": 5,
+      "feature_index": 80,
+      "feature_name": "trans_feat_80",
+      "importance": 0.5928525328636169,
+      "feature_type": "local_transaction"
+    },
+    {
+      "rank": 6,
+      "feature_index": 152,
+      "feature_name": "agg_neighbor_feat_59",
+      "importance": 0.5868789553642273,
+      "feature_type": "aggregated"
+    },
+    {
+      "rank": 7,
+      "feature_index": 163,
+      "feature_name": "agg_neighbor_feat_70",
+      "importance": 0.5712571144104004,
+      "feature_type": "aggregated"
+    },
+    {
+      "rank": 8,
+      "feature_index": 158,
+      "feature_name": "agg_neighbor_feat_65",
+      "importance": 0.5680882930755615,
+      "feature_type": "aggregated"
+    },
+    {
+      "rank": 9,
+      "feature_index": 81,
+      "feature_name": "trans_feat_81",
+      "importance": 0.5663741827011108,
+      "feature_type": "local_transaction"
+    },
+    {
+      "rank": 10,
+      "feature_index": 16,
+      "feature_name": "trans_feat_16",
+      "importance": 0.5538217425346375,
+      "feature_type": "local_transaction"
+    },
+    {
+      "rank": 11,
+      "feature_index": 115,
+      "feature_name": "agg_neighbor_feat_22",
+      "importance": 0.542055606842041,
+      "feature_type": "aggregated"
+    },
+    {
+      "rank": 12,
+      "feature_index": 90,
+      "feature_name": "trans_feat_90",
+      "importance": 0.5307950973510742,
+      "feature_type": "local_transaction"
+    },
+    {
+      "rank": 13,
+      "feature_index": 173,
+      "feature_name": "neighbor_sum_in_deg",
+      "importance": 0.5176007747650146,
+      "feature_type": "ego_structural"
+    },
+    {
+      "rank": 14,
+      "feature_index": 89,
+      "feature_name": "trans_feat_89",
+      "importance": 0.510908305644989,
+      "feature_type": "local_transaction"
+    },
+    {
+      "rank": 15,
+      "feature_index": 92,
+      "feature_name": "trans_feat_92",
+      "importance": 0.5023221373558044,
+      "feature_type": "local_transaction"
+    }
+  ]
+}

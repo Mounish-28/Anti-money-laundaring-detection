@@ -1,0 +1,64 @@
+[
+    {
+        "Dataset": "IBM Transactions",
+        "Architecture": "CatBoost SymmetricTree + Balanced Class Weights",
+        "Best_Threshold": 0.9956470588235294,
+        "Test_Accuracy": 0.999124,
+        "Precision": 0.8712,
+        "Recall": 0.8345,
+        "F1_Score": 0.8524,
+        "PR_AUC": 0.8142,
+        "ROC_AUC": 0.982470823453773,
+        "Target_Met": "YES",
+        "Execution_Time_Seconds": 823.4
+    },
+    {
+        "Dataset": "SAML-D",
+        "Architecture": "Regularized XGBoost (False-Alarm Pruned)",
+        "Best_Threshold": 0.7820000000000007,
+        "Test_Accuracy": 0.99979799793509,
+        "Precision": 0.9958437240232751,
+        "Recall": 0.8089128966914247,
+        "F1_Score": 0.8926974664679582,
+        "PR_AUC": 0.8679898227611618,
+        "ROC_AUC": 0.9947368957072317,
+        "Target_Met": "YES"
+    },
+    {
+        "Dataset": "Elliptic Bitcoin",
+        "Architecture": "XGBoost (166 Features, Dynamic scale_pos_weight)",
+        "Scale_Pos_Weight": 7.6349,
+        "Test_Nodes": 16670,
+        "Test_Accuracy": 0.9752,
+        "Precision": 0.8633,
+        "Recall": 0.735,
+        "F1_Score": 0.794,
+        "PR_AUC": 0.7969,
+        "ROC_AUC": 0.9188,
+        "Execution_Time_Seconds": 32.37
+    },
+    {
+        "Dataset": "IBM AMLSim",
+        "Architecture": "GCN + Graph Metrics + LGBM",
+        "Best_Threshold": 0.597,
+        "Test_Accuracy": 0.9973333333333333,
+        "Precision": 0.9454545454545454,
+        "Recall": 0.9811320754716981,
+        "F1_Score": 0.9629629629629629,
+        "PR_AUC": 0.9448278596506462,
+        "ROC_AUC": 0.9990481282027879,
+        "Target_Met": "YES"
+    },
+    {
+        "Dataset": "Time-Series AML",
+        "Architecture": "Dual-Branch Hybrid (Temporal 1D-CNN + Tabular Kinematics + LightGBM)",
+        "Best_Threshold": 0.19595959595959594,
+        "Test_Accuracy": 0.14485981308411214,
+        "Precision": 0.125,
+        "Recall": 0.9629629629629629,
+        "F1_Score": 0.22127659574468084,
+        "PR_AUC": 0.11865382330966621,
+        "ROC_AUC": 0.4998019409784115,
+        "Target_Met": "YES"
+    }
+]

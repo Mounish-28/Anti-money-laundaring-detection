@@ -1,0 +1,24 @@
+rules:
+  - id: prevent-unhashed-pii-logging
+    patterns:
+      - pattern-either:
+          - pattern: logger.$METHOD(..., $VAR, ...)
+          - pattern: logging.$METHOD(..., $VAR, ...)
+      - pattern-regex: "(tax_id|ssn|customer_ssn|pan_number|aadhaar|unredacted_account)"
+    message: "CRITICAL SECURITY POLICY: Direct logging of plain-text customer PII or SSN/TaxID detected. Apply cryptographic SHA-256 masking before logging."
+    languages: [python, javascript, typescript]
+    severity: ERROR
+
+  - id: prevent-jwt-none-algorithm
+    patterns:
+      - pattern-regex: '["'']alg["'']\s*:\s*["'']none["'']'
+    message: "CRITICAL VULNERABILITY: Insecure JWT 'none' algorithm specified. Zero-trust policy mandates HS256/RS256 with strong key exchange."
+    languages: [python, javascript, typescript, json]
+    severity: ERROR
+
+  - id: enforce-domain-separated-merkle-hashing
+    patterns:
+      - pattern-regex: 'sha256\s*\(\s*(?!0x00|0x01|0x02).*leaf'
+    message: "MERKLE TREE INTEGRITY: Leaf node creation must use domain separation byte 0x00 to prevent second-preimage collision attacks."
+    languages: [javascript, typescript, python]
+    severity: WARNING

@@ -1,0 +1,44 @@
+# ==============================================================================
+# QuantumAML Nexus - Hardened Distroless Frontend Containerfile
+# ==============================================================================
+# Step 5.4.1: Production Multi-Stage Distroless Docker Packaging
+# Enforces:
+#   - Hermetic build separation with Vite compilation
+#   - Base Image: gcr.io/distroless/nodejs20-debian12:nonroot
+#   - USER nonroot:nonroot (UID 65532)
+#   - Zero package manager or shell in production container
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Stage 1: Frontend Vite Asset Builder
+# ------------------------------------------------------------------------------
+FROM node:20-alpine AS builder
+
+WORKDIR /build
+
+COPY nexus-frontend/package*.json ./
+RUN npm ci --prefer-offline --no-audit
+
+COPY nexus-frontend/ ./
+RUN npm run build
+
+# ------------------------------------------------------------------------------
+# Stage 2: Distroless Node.js Production Runtime
+# ------------------------------------------------------------------------------
+FROM gcr.io/distroless/nodejs20-debian12:nonroot
+
+WORKDIR /app
+
+ENV NODE_ENV=production \
+    PORT=3000
+
+# Copy compiled static assets and zero-dependency static server
+COPY --from=builder /build/dist /app/dist
+COPY --chown=nonroot:nonroot docker/static-server.mjs /app/server.mjs
+
+# Enforce non-root execution context (UID 65532: nonroot)
+USER 65532:65532
+
+EXPOSE 3000
+
+ENTRYPOINT ["/nodejs/bin/node", "server.mjs"]

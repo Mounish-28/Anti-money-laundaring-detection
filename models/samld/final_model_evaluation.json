@@ -1,0 +1,294 @@
+{
+    "timestamp": "2026-09-28T17:17:39Z",
+    "model_name": "Regularized XGBoost (SAML-D Production Head)",
+    "dataset": "SAML-D",
+    "dataset_total_transactions": 9504852,
+    "train_transactions": 7603881,
+    "holdout_test_transactions": 1900971,
+    "class_imbalance": {
+        "total_laundering_cases": 9873,
+        "train_laundering_cases": 7898,
+        "test_laundering_cases": 1975,
+        "base_laundering_rate_pct": 0.1039,
+        "imbalance_ratio": "961.7:1"
+    },
+    "locked_hyperparameters": {
+        "n_estimators": 160,
+        "max_depth": 6,
+        "learning_rate": 0.08,
+        "subsample": 0.85,
+        "colsample_bytree": 0.85,
+        "reg_alpha": 5.0,
+        "reg_lambda": 8.0,
+        "scale_pos_weight": 8.0,
+        "gamma": 2.5,
+        "min_child_weight": 25,
+        "max_delta_step": 1,
+        "tree_method": "hist",
+        "eval_metric": "aucpr",
+        "early_stopping_rounds": 25,
+        "random_state": 42,
+        "n_jobs": 4
+    },
+    "best_tree_iteration": 159,
+    "holdout_evaluation_metrics": {
+        "pr_auc": 0.80207,
+        "roc_auc": 0.99495,
+        "optimal_f1_operating_point": {
+            "threshold": 0.6148,
+            "f1_score": 0.82,
+            "precision": 0.9369,
+            "recall": 0.7291,
+            "false_positive_rate_pct": 0.0051,
+            "confusion_matrix": {
+                "true_negatives": 1898899,
+                "false_positives": 97,
+                "false_negatives": 535,
+                "true_positives": 1440
+            }
+        },
+        "operational_high_recall_operating_point": {
+            "target_recall_pct": 95.0,
+            "achieved_recall_pct": 95.04,
+            "threshold": 0.0125,
+            "precision_pct": 3.01,
+            "false_positive_rate_pct": 3.182,
+            "confusion_matrix": {
+                "true_negatives": 1838569,
+                "false_positives": 60427,
+                "false_negatives": 98,
+                "true_positives": 1877
+            }
+        },
+        "rank_ordered_precision_at_k": {
+            "P@100": 100.0,
+            "P@500": 100.0,
+            "P@1000": 99.9,
+            "P@5000": 32.38
+        }
+    },
+    "feature_importance_distribution": [
+        {
+            "feature_name": "Received_currency_TE",
+            "gain": 2255.3333,
+            "gain_percentage": 14.66,
+            "weight_splits": 57,
+            "weight_percentage": 1.05,
+            "cover": 28113.6
+        },
+        {
+            "feature_name": "Degree_Difference",
+            "gain": 1817.275,
+            "gain_percentage": 11.81,
+            "weight_splits": 339,
+            "weight_percentage": 6.26,
+            "cover": 14548.25
+        },
+        {
+            "feature_name": "Network_Activity",
+            "gain": 1771.9292,
+            "gain_percentage": 11.51,
+            "weight_splits": 363,
+            "weight_percentage": 6.71,
+            "cover": 46585.48
+        },
+        {
+            "feature_name": "Degree_Ratio",
+            "gain": 1442.0809,
+            "gain_percentage": 9.37,
+            "weight_splits": 325,
+            "weight_percentage": 6.0,
+            "cover": 11749.08
+        },
+        {
+            "feature_name": "In_Degree",
+            "gain": 943.6603,
+            "gain_percentage": 6.13,
+            "weight_splits": 670,
+            "weight_percentage": 12.38,
+            "cover": 6025.88
+        },
+        {
+            "feature_name": "Rolling_24h_Velocity",
+            "gain": 882.527,
+            "gain_percentage": 5.73,
+            "weight_splits": 423,
+            "weight_percentage": 7.81,
+            "cover": 8639.0
+        },
+        {
+            "feature_name": "Cash_Velocity_Risk",
+            "gain": 811.9525,
+            "gain_percentage": 5.28,
+            "weight_splits": 258,
+            "weight_percentage": 4.77,
+            "cover": 56325.27
+        },
+        {
+            "feature_name": "Is_Currency_Exchange",
+            "gain": 764.167,
+            "gain_percentage": 4.97,
+            "weight_splits": 67,
+            "weight_percentage": 1.24,
+            "cover": 29793.81
+        },
+        {
+            "feature_name": "Amount_to_Velocity_Ratio",
+            "gain": 635.2622,
+            "gain_percentage": 4.13,
+            "weight_splits": 525,
+            "weight_percentage": 9.7,
+            "cover": 9957.4
+        },
+        {
+            "feature_name": "Receiver_bank_location_TE",
+            "gain": 541.0269,
+            "gain_percentage": 3.52,
+            "weight_splits": 76,
+            "weight_percentage": 1.4,
+            "cover": 4224.31
+        },
+        {
+            "feature_name": "Payment_type_TE",
+            "gain": 531.1794,
+            "gain_percentage": 3.45,
+            "weight_splits": 119,
+            "weight_percentage": 2.2,
+            "cover": 14308.27
+        },
+        {
+            "feature_name": "Out_Degree",
+            "gain": 508.8839,
+            "gain_percentage": 3.31,
+            "weight_splits": 648,
+            "weight_percentage": 11.97,
+            "cover": 6258.5
+        },
+        {
+            "feature_name": "Is_Cross_Border",
+            "gain": 375.9168,
+            "gain_percentage": 2.44,
+            "weight_splits": 1,
+            "weight_percentage": 0.02,
+            "cover": 1784.34
+        },
+        {
+            "feature_name": "Amount",
+            "gain": 297.6977,
+            "gain_percentage": 1.93,
+            "weight_splits": 408,
+            "weight_percentage": 7.54,
+            "cover": 15031.58
+        },
+        {
+            "feature_name": "Is_Cash",
+            "gain": 294.5738,
+            "gain_percentage": 1.91,
+            "weight_splits": 6,
+            "weight_percentage": 0.11,
+            "cover": 3463.32
+        },
+        {
+            "feature_name": "Log_Velocity",
+            "gain": 249.2642,
+            "gain_percentage": 1.62,
+            "weight_splits": 174,
+            "weight_percentage": 3.21,
+            "cover": 5714.59
+        },
+        {
+            "feature_name": "Log_Amount",
+            "gain": 238.9483,
+            "gain_percentage": 1.55,
+            "weight_splits": 81,
+            "weight_percentage": 1.5,
+            "cover": 9102.87
+        },
+        {
+            "feature_name": "Currency_Risk_Differential",
+            "gain": 215.9175,
+            "gain_percentage": 1.4,
+            "weight_splits": 48,
+            "weight_percentage": 0.89,
+            "cover": 1289.15
+        },
+        {
+            "feature_name": "Velocity_Per_Out_Degree",
+            "gain": 206.5227,
+            "gain_percentage": 1.34,
+            "weight_splits": 533,
+            "weight_percentage": 9.85,
+            "cover": 9477.84
+        },
+        {
+            "feature_name": "Structuring_Proximity",
+            "gain": 182.5523,
+            "gain_percentage": 1.19,
+            "weight_splits": 165,
+            "weight_percentage": 3.05,
+            "cover": 1837.65
+        },
+        {
+            "feature_name": "Location_Risk_Differential",
+            "gain": 160.0796,
+            "gain_percentage": 1.04,
+            "weight_splits": 60,
+            "weight_percentage": 1.11,
+            "cover": 3642.53
+        },
+        {
+            "feature_name": "Payment_currency_TE",
+            "gain": 99.2813,
+            "gain_percentage": 0.65,
+            "weight_splits": 46,
+            "weight_percentage": 0.85,
+            "cover": 7325.3
+        },
+        {
+            "feature_name": "Sender_bank_location_TE",
+            "gain": 98.3788,
+            "gain_percentage": 0.64,
+            "weight_splits": 13,
+            "weight_percentage": 0.24,
+            "cover": 2461.5
+        },
+        {
+            "feature_name": "Cross_Border_Currency_Mismatch",
+            "gain": 33.7285,
+            "gain_percentage": 0.22,
+            "weight_splits": 7,
+            "weight_percentage": 0.13,
+            "cover": 826.36
+        },
+        {
+            "feature_name": "Is_Structuring_Band",
+            "gain": 30.8921,
+            "gain_percentage": 0.2,
+            "weight_splits": 1,
+            "weight_percentage": 0.02,
+            "cover": 90.42
+        },
+        {
+            "feature_name": "Round_Amount_Flag",
+            "gain": 0.0,
+            "gain_percentage": 0.0,
+            "weight_splits": 0,
+            "weight_percentage": 0.0,
+            "cover": 0.0
+        }
+    ],
+    "serialized_artifacts": {
+        "joblib_model": "E:\\Anti money laundaring detection\\models\\samld\\xgboost_model.joblib",
+        "json_model": "E:\\Anti money laundaring detection\\models\\samld\\xgboost_model.json",
+        "preprocessor": "E:\\Anti money laundaring detection\\models\\samld\\feature_preprocessor.joblib",
+        "joblib_size_kb": 478.97,
+        "preprocessor_size_kb": 4.9
+    },
+    "runtime_diagnostics": {
+        "total_elapsed_sec": 382.09,
+        "ingestion_sec": 33.27,
+        "feature_engineering_sec": 348.82,
+        "training_sec": 258.43,
+        "evaluation_sec": 6.79
+    }
+}

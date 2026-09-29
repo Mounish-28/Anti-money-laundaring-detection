@@ -1,0 +1,536 @@
+{
+    "timestamp": "2026-09-27T18:35:03Z",
+    "dataset_overview": {
+        "file_path": "E:\\Anti money laundaring detection\\data\\samld\\samld_transactions.csv",
+        "file_size_mb": 950.02,
+        "total_transactions": 9504852,
+        "unique_senders": 292715,
+        "unique_receivers": 652266,
+        "currency_count": 13,
+        "bank_locations_count": 18,
+        "ingestion_duration_sec": 46.04
+    },
+    "missing_values_hygiene": {
+        "Time": {
+            "dtype": "str",
+            "null_count": 0,
+            "null_percentage": 0.0,
+            "is_clean": true
+        },
+        "Date": {
+            "dtype": "str",
+            "null_count": 0,
+            "null_percentage": 0.0,
+            "is_clean": true
+        },
+        "Sender_account": {
+            "dtype": "int64",
+            "null_count": 0,
+            "null_percentage": 0.0,
+            "is_clean": true
+        },
+        "Receiver_account": {
+            "dtype": "int64",
+            "null_count": 0,
+            "null_percentage": 0.0,
+            "is_clean": true
+        },
+        "Amount": {
+            "dtype": "float32",
+            "null_count": 0,
+            "null_percentage": 0.0,
+            "is_clean": true
+        },
+        "Payment_currency": {
+            "dtype": "category",
+            "null_count": 0,
+            "null_percentage": 0.0,
+            "is_clean": true
+        },
+        "Received_currency": {
+            "dtype": "category",
+            "null_count": 0,
+            "null_percentage": 0.0,
+            "is_clean": true
+        },
+        "Sender_bank_location": {
+            "dtype": "category",
+            "null_count": 0,
+            "null_percentage": 0.0,
+            "is_clean": true
+        },
+        "Receiver_bank_location": {
+            "dtype": "category",
+            "null_count": 0,
+            "null_percentage": 0.0,
+            "is_clean": true
+        },
+        "Payment_type": {
+            "dtype": "category",
+            "null_count": 0,
+            "null_percentage": 0.0,
+            "is_clean": true
+        },
+        "Is_laundering": {
+            "dtype": "int8",
+            "null_count": 0,
+            "null_percentage": 0.0,
+            "is_clean": true
+        },
+        "Laundering_type": {
+            "dtype": "category",
+            "null_count": 0,
+            "null_percentage": 0.0,
+            "is_clean": true
+        }
+    },
+    "class_imbalance": {
+        "total": 9504852,
+        "legitimate_count": 9494979,
+        "legitimate_percentage": "99.896%",
+        "laundering_count": 9873,
+        "laundering_percentage": "0.1039%",
+        "imbalance_ratio": "961.71:1",
+        "scale_pos_weight_exact": 961.71,
+        "scale_pos_weight_damped_sqrt": 31.01,
+        "scale_pos_weight_damped_log": 6.87,
+        "laundering_typology_breakdown": [
+            {
+                "typology": "Structuring",
+                "count": 1870,
+                "percentage_of_laundering": 18.94
+            },
+            {
+                "typology": "Cash_Withdrawal",
+                "count": 1334,
+                "percentage_of_laundering": 13.51
+            },
+            {
+                "typology": "Deposit-Send",
+                "count": 945,
+                "percentage_of_laundering": 9.57
+            },
+            {
+                "typology": "Smurfing",
+                "count": 932,
+                "percentage_of_laundering": 9.44
+            },
+            {
+                "typology": "Layered_Fan_In",
+                "count": 656,
+                "percentage_of_laundering": 6.64
+            },
+            {
+                "typology": "Layered_Fan_Out",
+                "count": 529,
+                "percentage_of_laundering": 5.36
+            },
+            {
+                "typology": "Stacked Bipartite",
+                "count": 506,
+                "percentage_of_laundering": 5.13
+            },
+            {
+                "typology": "Behavioural_Change_1",
+                "count": 394,
+                "percentage_of_laundering": 3.99
+            },
+            {
+                "typology": "Bipartite",
+                "count": 383,
+                "percentage_of_laundering": 3.88
+            },
+            {
+                "typology": "Cycle",
+                "count": 382,
+                "percentage_of_laundering": 3.87
+            },
+            {
+                "typology": "Fan_In",
+                "count": 364,
+                "percentage_of_laundering": 3.69
+            },
+            {
+                "typology": "Gather-Scatter",
+                "count": 354,
+                "percentage_of_laundering": 3.59
+            },
+            {
+                "typology": "Behavioural_Change_2",
+                "count": 345,
+                "percentage_of_laundering": 3.49
+            },
+            {
+                "typology": "Scatter-Gather",
+                "count": 338,
+                "percentage_of_laundering": 3.42
+            },
+            {
+                "typology": "Single_large",
+                "count": 250,
+                "percentage_of_laundering": 2.53
+            },
+            {
+                "typology": "Fan_Out",
+                "count": 237,
+                "percentage_of_laundering": 2.4
+            },
+            {
+                "typology": "Over-Invoicing",
+                "count": 54,
+                "percentage_of_laundering": 0.55
+            },
+            {
+                "typology": "Normal_Cash_Deposits",
+                "count": 0,
+                "percentage_of_laundering": 0.0
+            },
+            {
+                "typology": "Normal_Cash_Withdrawal",
+                "count": 0,
+                "percentage_of_laundering": 0.0
+            },
+            {
+                "typology": "Normal_Fan_In",
+                "count": 0,
+                "percentage_of_laundering": 0.0
+            },
+            {
+                "typology": "Normal_Fan_Out",
+                "count": 0,
+                "percentage_of_laundering": 0.0
+            },
+            {
+                "typology": "Normal_Foward",
+                "count": 0,
+                "percentage_of_laundering": 0.0
+            },
+            {
+                "typology": "Normal_Group",
+                "count": 0,
+                "percentage_of_laundering": 0.0
+            },
+            {
+                "typology": "Normal_Mutual",
+                "count": 0,
+                "percentage_of_laundering": 0.0
+            },
+            {
+                "typology": "Normal_Periodical",
+                "count": 0,
+                "percentage_of_laundering": 0.0
+            },
+            {
+                "typology": "Normal_Plus_Mutual",
+                "count": 0,
+                "percentage_of_laundering": 0.0
+            },
+            {
+                "typology": "Normal_Small_Fan_Out",
+                "count": 0,
+                "percentage_of_laundering": 0.0
+            },
+            {
+                "typology": "Normal_single_large",
+                "count": 0,
+                "percentage_of_laundering": 0.0
+            }
+        ]
+    },
+    "cross_border_and_currency_flows": {
+        "cross_border_transactions": 934348,
+        "cross_border_percentage": 9.83,
+        "cross_border_laundering_rate_pct": 0.3259,
+        "domestic_laundering_rate_pct": 0.0797,
+        "cross_border_risk_multiplier": 4.09,
+        "currency_exchange_transactions": 1085862,
+        "currency_exchange_percentage": 11.42,
+        "currency_exchange_laundering_rate_pct": 0.3368,
+        "same_currency_laundering_rate_pct": 0.0738,
+        "currency_exchange_risk_multiplier": 4.56
+    },
+    "payment_type_risk_profiles": [
+        {
+            "payment_type": "Cash Deposit",
+            "total_transactions": 225206,
+            "laundering_count": 1405,
+            "laundering_rate_pct": 0.6239
+        },
+        {
+            "payment_type": "Cash Withdrawal",
+            "total_transactions": 300477,
+            "laundering_count": 1334,
+            "laundering_rate_pct": 0.444
+        },
+        {
+            "payment_type": "Cross-border",
+            "total_transactions": 933931,
+            "laundering_count": 2628,
+            "laundering_rate_pct": 0.2814
+        },
+        {
+            "payment_type": "ACH",
+            "total_transactions": 2008807,
+            "laundering_count": 1159,
+            "laundering_rate_pct": 0.0577
+        },
+        {
+            "payment_type": "Credit card",
+            "total_transactions": 2012909,
+            "laundering_count": 1136,
+            "laundering_rate_pct": 0.0564
+        },
+        {
+            "payment_type": "Debit card",
+            "total_transactions": 2012103,
+            "laundering_count": 1124,
+            "laundering_rate_pct": 0.0559
+        },
+        {
+            "payment_type": "Cheque",
+            "total_transactions": 2011419,
+            "laundering_count": 1087,
+            "laundering_rate_pct": 0.054
+        }
+    ],
+    "continuous_feature_distributions": {
+        "Amount": {
+            "overall": {
+                "mean": 8762.97,
+                "std": 25614.95,
+                "min": 3.73,
+                "median": 6113.72,
+                "max": 12618498.0,
+                "p25": 2143.69,
+                "p75": 10458.46,
+                "p95": 22039.51,
+                "p99": 45021.55,
+                "p99_9": 343102.07,
+                "iqr": 8314.77,
+                "skewness": 102.1641,
+                "kurtosis": 32858.0781,
+                "outlier_percentage": 4.52
+            },
+            "legitimate_vs_laundering": {
+                "legitimate_mean": 8729.88,
+                "legitimate_median": 6114.63,
+                "legitimate_p95": 22031.33,
+                "laundering_mean": 40587.67,
+                "laundering_median": 5322.79,
+                "laundering_p95": 39698.43
+            }
+        },
+        "In_Degree": {
+            "overall": {
+                "mean": 76.82,
+                "std": 117.01,
+                "min": 1.0,
+                "median": 15.0,
+                "max": 751.0,
+                "p25": 13.0,
+                "p75": 133.0,
+                "p95": 261.0,
+                "p99": 542.0,
+                "p99_9": 729.0,
+                "iqr": 120.0,
+                "skewness": 2.3888,
+                "kurtosis": 7.0515,
+                "outlier_percentage": 2.78
+            },
+            "legitimate_vs_laundering": {
+                "legitimate_mean": 76.84,
+                "legitimate_median": 15.0,
+                "legitimate_p95": 261.0,
+                "laundering_mean": 59.99,
+                "laundering_median": 25.0,
+                "laundering_p95": 237.0
+            }
+        },
+        "Out_Degree": {
+            "overall": {
+                "mean": 290.92,
+                "std": 210.46,
+                "min": 1.0,
+                "median": 333.0,
+                "max": 754.0,
+                "p25": 12.0,
+                "p75": 468.0,
+                "p95": 593.0,
+                "p99": 660.0,
+                "p99_9": 731.0,
+                "iqr": 456.0,
+                "skewness": -0.1317,
+                "kurtosis": -1.3523,
+                "outlier_percentage": 0.0
+            },
+            "legitimate_vs_laundering": {
+                "legitimate_mean": 291.04,
+                "legitimate_median": 333.0,
+                "legitimate_p95": 593.0,
+                "laundering_mean": 176.07,
+                "laundering_median": 148.0,
+                "laundering_p95": 654.0
+            }
+        },
+        "Rolling_24h_Velocity": {
+            "overall": {
+                "mean": 2299386.25,
+                "std": 1742883.62,
+                "min": 104.68,
+                "median": 2511249.75,
+                "max": 15038597.0,
+                "p25": 197545.59,
+                "p75": 3715582.25,
+                "p95": 4951975.0,
+                "p99": 5778747.0,
+                "p99_9": 6653612.0,
+                "iqr": 3518036.66,
+                "skewness": 0.0972,
+                "kurtosis": -0.9728,
+                "outlier_percentage": 0.02
+            },
+            "legitimate_vs_laundering": {
+                "legitimate_mean": 2300371.25,
+                "legitimate_median": 2513220.5,
+                "legitimate_p95": 4952844.5,
+                "laundering_mean": 1352193.0,
+                "laundering_median": 1096877.25,
+                "laundering_p95": 3451977.5
+            }
+        }
+    },
+    "feature_correlations": {
+        "pearson_with_target": {
+            "Amount": 0.0401,
+            "In_Degree": -0.0046,
+            "Out_Degree": -0.0176,
+            "Rolling_24h_Velocity": -0.0175,
+            "Is_Cross_Border": 0.0228,
+            "Is_Currency_Exchange": 0.026
+        },
+        "spearman_with_target": {
+            "Amount": -0.0015,
+            "In_Degree": 0.005,
+            "Out_Degree": -0.0153,
+            "Rolling_24h_Velocity": -0.0147,
+            "Is_Cross_Border": 0.0188,
+            "Is_Currency_Exchange": 0.0208
+        },
+        "pearson_inter_feature_matrix": {
+            "Amount": {
+                "Amount": 1.0,
+                "In_Degree": 0.006,
+                "Out_Degree": -0.0464,
+                "Rolling_24h_Velocity": -0.0074,
+                "Is_Cross_Border": 0.0178,
+                "Is_Currency_Exchange": 0.0175,
+                "Is_laundering": 0.0401
+            },
+            "In_Degree": {
+                "Amount": 0.006,
+                "In_Degree": 1.0,
+                "Out_Degree": -0.6582,
+                "Rolling_24h_Velocity": -0.6452,
+                "Is_Cross_Border": 0.0123,
+                "Is_Currency_Exchange": 0.0057,
+                "Is_laundering": -0.0046
+            },
+            "Out_Degree": {
+                "Amount": -0.0464,
+                "In_Degree": -0.6582,
+                "Out_Degree": 1.0,
+                "Rolling_24h_Velocity": 0.9149,
+                "Is_Cross_Border": -0.0375,
+                "Is_Currency_Exchange": -0.0352,
+                "Is_laundering": -0.0176
+            },
+            "Rolling_24h_Velocity": {
+                "Amount": -0.0074,
+                "In_Degree": -0.6452,
+                "Out_Degree": 0.9149,
+                "Rolling_24h_Velocity": 1.0,
+                "Is_Cross_Border": -0.0231,
+                "Is_Currency_Exchange": -0.0203,
+                "Is_laundering": -0.0175
+            },
+            "Is_Cross_Border": {
+                "Amount": 0.0178,
+                "In_Degree": 0.0123,
+                "Out_Degree": -0.0375,
+                "Rolling_24h_Velocity": -0.0231,
+                "Is_Cross_Border": 1.0,
+                "Is_Currency_Exchange": 0.9147,
+                "Is_laundering": 0.0228
+            },
+            "Is_Currency_Exchange": {
+                "Amount": 0.0175,
+                "In_Degree": 0.0057,
+                "Out_Degree": -0.0352,
+                "Rolling_24h_Velocity": -0.0203,
+                "Is_Cross_Border": 0.9147,
+                "Is_Currency_Exchange": 1.0,
+                "Is_laundering": 0.026
+            },
+            "Is_laundering": {
+                "Amount": 0.0401,
+                "In_Degree": -0.0046,
+                "Out_Degree": -0.0176,
+                "Rolling_24h_Velocity": -0.0175,
+                "Is_Cross_Border": 0.0228,
+                "Is_Currency_Exchange": 0.026,
+                "Is_laundering": 1.0
+            }
+        },
+        "multicollinearity_pairs": [
+            {
+                "feature_1": "In_Degree",
+                "feature_2": "Out_Degree",
+                "pearson_r": -0.6582,
+                "risk_assessment": "Moderate Correlation"
+            },
+            {
+                "feature_1": "In_Degree",
+                "feature_2": "Rolling_24h_Velocity",
+                "pearson_r": -0.6452,
+                "risk_assessment": "Moderate Correlation"
+            },
+            {
+                "feature_1": "Out_Degree",
+                "feature_2": "Rolling_24h_Velocity",
+                "pearson_r": 0.9149,
+                "risk_assessment": "Severe Collinearity (requires L2 reg_lambda)"
+            },
+            {
+                "feature_1": "Is_Cross_Border",
+                "feature_2": "Is_Currency_Exchange",
+                "pearson_r": 0.9147,
+                "risk_assessment": "Severe Collinearity (requires L2 reg_lambda)"
+            }
+        ]
+    },
+    "regularized_xgboost_directives": {
+        "scale_pos_weight_recommendations": {
+            "exact_theoretical": 961.71,
+            "damped_square_root": 31.01,
+            "recommended_for_pr_auc_f1": 8.0,
+            "recommended_for_high_recall_95": 16.0,
+            "rationale": "Theoretical ratio 961.7 severely inflates false positives in real-world operations. Damping to 8.0-16.0 maximizes PR-AUC and investigator queue precision."
+        },
+        "regularization_directives": {
+            "reg_alpha_l1": 2.0,
+            "reg_lambda_l2": 8.0,
+            "rationale": "Strong L2 regularization (reg_lambda=8.0) is necessary to control the collinearity between Out_Degree and Rolling_24h_Velocity (r=0.9149). L1 penalty (reg_alpha=2.0) induces sparsity against low-signal account identifiers."
+        },
+        "tree_architecture_directives": {
+            "max_depth": 7,
+            "min_child_weight": 25,
+            "gamma": 2.5,
+            "max_delta_step": 1,
+            "subsample": 0.85,
+            "colsample_bytree": 0.8,
+            "tree_method": "hist",
+            "enable_categorical": true,
+            "rationale": "max_delta_step=1 stabilizes gradient steps in highly skewed logistic loss. min_child_weight=25 and gamma=2.5 prevent trees from isolating small noise clusters of transactions. colsample_bytree=0.80 decorrelates graph topology and transaction amount features."
+        }
+    }
+}

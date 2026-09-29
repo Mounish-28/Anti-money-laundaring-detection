@@ -1,0 +1,186 @@
+{
+  "model_id": "saml_d_xgboost",
+  "version": "v1.0",
+  "family": "XGBoost Hist Gradient Boosting (Regularized)",
+  "task": "binary_classification",
+  "dataset": "SAML-D Synthetic Financial Crime Dataset (9.5M Transactions)",
+  "status": "RELEASED_LOCKED",
+  "created_at": "2026-09-28T17:17:39Z",
+  "updated_at": "2026-09-28T17:43:16.430059+00:00",
+  "optimal_threshold": 0.6148,
+  "high_recall_threshold": 0.0125,
+  "feature_count": 26,
+  "feature_names": [
+    "Amount",
+    "Log_Amount",
+    "Rolling_24h_Velocity",
+    "Log_Velocity",
+    "In_Degree",
+    "Out_Degree",
+    "Amount_to_Velocity_Ratio",
+    "Degree_Ratio",
+    "Degree_Difference",
+    "Network_Activity",
+    "Velocity_Per_Out_Degree",
+    "Cash_Velocity_Risk",
+    "Structuring_Proximity",
+    "Payment_type_TE",
+    "Sender_bank_location_TE",
+    "Receiver_bank_location_TE",
+    "Payment_currency_TE",
+    "Received_currency_TE",
+    "Location_Risk_Differential",
+    "Currency_Risk_Differential",
+    "Is_Cross_Border",
+    "Is_Currency_Exchange",
+    "Cross_Border_Currency_Mismatch",
+    "Is_Cash",
+    "Is_Structuring_Band",
+    "Round_Amount_Flag"
+  ],
+  "metrics": {
+    "pr_auc": 0.80207,
+    "roc_auc": 0.99495,
+    "f1_score": 0.82,
+    "precision": 0.9369,
+    "recall": 0.7291,
+    "false_positive_rate_pct": 0.0051,
+    "operational_fpr_at_95_recall_pct": 3.182,
+    "brier_score": 0.000433,
+    "expected_calibration_error": 0.00183,
+    "precision_at_100": 100.0,
+    "precision_at_500": 100.0,
+    "precision_at_1000": 99.9
+  },
+  "parameters": {
+    "n_estimators": 160,
+    "max_depth": 6,
+    "learning_rate": 0.08,
+    "subsample": 0.85,
+    "colsample_bytree": 0.85,
+    "reg_alpha": 5.0,
+    "reg_lambda": 8.0,
+    "scale_pos_weight": 8.0,
+    "gamma": 2.5,
+    "min_child_weight": 25,
+    "max_delta_step": 1,
+    "tree_method": "hist",
+    "eval_metric": "aucpr",
+    "early_stopping_rounds": 25,
+    "random_state": 42,
+    "n_jobs": 4
+  },
+  "artifacts": {
+    "model_binary_joblib": {
+      "relative_path": "models/samld/xgboost_model.joblib",
+      "sha256": "9faaa85fe594ff5f513669fb11546b15c7b07593d8d2eb98aeba6e33d695f677",
+      "size_bytes": 490462,
+      "status": "FROZEN_AUTHENTICATED"
+    },
+    "model_binary_json": {
+      "relative_path": "models/samld/xgboost_model.json",
+      "sha256": "5bef8c19237a658d57721713e5b04280b9e6b42a631416307097c6c5633b1186",
+      "size_bytes": 686546,
+      "status": "FROZEN_AUTHENTICATED"
+    },
+    "feature_preprocessor": {
+      "relative_path": "models/samld/feature_preprocessor.joblib",
+      "sha256": "73ab7cfa6df5d890c80d9331e8e318c7d5a7415a09d872bff44d160a39d46e0d",
+      "size_bytes": 5022,
+      "status": "FROZEN_AUTHENTICATED"
+    },
+    "model_card": {
+      "relative_path": "models/samld/MODEL_CARD.md",
+      "sha256": "a74968e85531da056859090a1a13a0434ec3357bf6583289db6667a367de7862",
+      "size_bytes": 6236,
+      "status": "FROZEN_AUTHENTICATED"
+    },
+    "final_evaluation_report": {
+      "relative_path": "models/samld/final_model_evaluation.json",
+      "sha256": "55189711b646342550d2ab2885a9023628e6de8fa15dbaa945e02a8db4f9d746",
+      "size_bytes": 9341,
+      "status": "FROZEN_AUTHENTICATED"
+    },
+    "diagnostics_report": {
+      "relative_path": "models/samld/model_diagnostics.json",
+      "sha256": "e81a5f1e05684d8a9a796cfd590c7ec78afbecd222cb3964da8d1293e9fb72f6",
+      "size_bytes": 24125,
+      "status": "FROZEN_AUTHENTICATED"
+    },
+    "feature_summary": {
+      "relative_path": "models/samld/feature_transformation_summary.json",
+      "sha256": "282b1dedc29660f6ba36d336a1e9019eef1979c1bc9dabf587fe10dca5afb4b7",
+      "size_bytes": 15205,
+      "status": "FROZEN_AUTHENTICATED"
+    },
+    "drift_baselines": {
+      "relative_path": "models/samld/drift_baselines.json",
+      "sha256": "d58ce79bc7d59443d200e50573aa24552fa4e6c77bb5f176963c9aaf7bb943f8",
+      "size_bytes": 46992,
+      "status": "FROZEN_AUTHENTICATED"
+    },
+    "risk_tiers_config": {
+      "relative_path": "models/risk_tiers.json",
+      "sha256": "638dc9f504ae9c6a46f65dd90a5472f551f7615f7d183b059fe7f9617f562af8",
+      "size_bytes": 387,
+      "status": "FROZEN_AUTHENTICATED"
+    },
+    "pr_curves_plot": {
+      "relative_path": "models/samld/pr_threshold_curves.png",
+      "sha256": "0d243f591de07fc16e04f1834f22e21909e1eeb1840a70ff1cf3bd5cba2586a3",
+      "size_bytes": 400983,
+      "status": "FROZEN_AUTHENTICATED"
+    },
+    "shap_summary_plot": {
+      "relative_path": "models/samld/shap_global_summary.png",
+      "sha256": "c04dd804cc0cfb7d9e80cc96dad75a238d8337c1f1c3e70aeed1662121bf300d",
+      "size_bytes": 270843,
+      "status": "FROZEN_AUTHENTICATED"
+    },
+    "shap_local_plot": {
+      "relative_path": "models/samld/shap_local_edge_cases.png",
+      "sha256": "236a64fbd9ac8533e5a5cb8ff6b2a4dfa9cf5d866de89c742c8925565e6764c8",
+      "size_bytes": 566985,
+      "status": "FROZEN_AUTHENTICATED"
+    },
+    "calibration_plot": {
+      "relative_path": "models/samld/calibration_curve.png",
+      "sha256": "1ea62b0a58aeecc3e2f736ed44e77305d4c2c478034a0c16b8f12bd0d574803f",
+      "size_bytes": 195824,
+      "status": "FROZEN_AUTHENTICATED"
+    }
+  },
+  "sla_benchmarks": {
+    "streaming_benchmark": {
+      "iterations": 2000,
+      "mean_latency_ms": 0.4095,
+      "p50_latency_ms": 0.3352,
+      "p90_latency_ms": 0.5606,
+      "p95_latency_ms": 0.8103,
+      "p99_latency_ms": 1.2003,
+      "min_latency_ms": 0.311,
+      "max_latency_ms": 4.7046,
+      "throughput_tx_per_sec": 1805.7,
+      "sla_target_ms": 1.0,
+      "sla_passed": true
+    },
+    "batch_benchmark": {
+      "batch_size": 10000,
+      "preprocessing_seconds": 0.0729,
+      "inference_seconds": 0.0375,
+      "total_seconds": 0.1104,
+      "per_record_latency_us": 11.04,
+      "per_record_latency_ms": 0.011,
+      "raw_model_throughput_tx_per_sec": 266341.4,
+      "e2e_batch_throughput_tx_per_sec": 90575.4
+    }
+  },
+  "provenance": {
+    "training_samples": 7603881,
+    "holdout_test_samples": 1900971,
+    "base_laundering_rate_pct": 0.1039,
+    "class_imbalance_ratio": "961.7:1",
+    "model_card_uri": "models/samld/MODEL_CARD.md",
+    "codebase_commit_milestone": "SAML-D Production Lock v1.0"
+  }
+}

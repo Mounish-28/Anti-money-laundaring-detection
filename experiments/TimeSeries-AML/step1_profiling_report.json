@@ -1,0 +1,140 @@
+{
+    "dataset": "Time-Series of Transactions in AML",
+    "pipeline_phase": "Step 1: Ingestion, Temporal Structuring & Topological Profiling",
+    "timestamp": "2026-09-29 23:00:33",
+    "total_runtime_sec": 6.896,
+    "schema_standardization": {
+        "total_records_ingested": 300000,
+        "unique_accounts": 914,
+        "unique_windows": 4977,
+        "inflows_count": 135267,
+        "outflows_count": 164733,
+        "fraud_rate_pct": 77.055,
+        "execution_time_sec": 5.362
+    },
+    "temporal_window_profiling": {
+        "min_timestep": 1,
+        "max_timestep": 313,
+        "total_timesteps": 313,
+        "missing_steps_count": 0,
+        "is_continuous": true,
+        "hourly_stats": {
+            "mean_tx_count": 958.47,
+            "min_tx_count": 2,
+            "max_tx_count": 3704,
+            "mean_volume": 796.67
+        },
+        "daily_stats": {
+            "total_days": 14,
+            "mean_tx_count": 21428.57,
+            "mean_volume": 17811.19
+        },
+        "burstiness": {
+            "mean_delta_t_hours": 1.0,
+            "std_delta_t_hours": 0.0,
+            "burstiness_index_B": -1.0
+        },
+        "execution_time_sec": 0.519
+    },
+    "dynamic_network_topology": {
+        "snapshots_evaluated": 5,
+        "mean_active_nodes": 1183.6,
+        "mean_directed_edges": 780.0,
+        "mean_density": 0.0008388297564230974,
+        "snapshots": [
+            {
+                "day": 0,
+                "date": "2020-01-01",
+                "active_nodes": 2648,
+                "directed_edges": 1734,
+                "density": 0.0002473871691945622,
+                "mean_in_degree": 0.655,
+                "mean_out_degree": 0.655,
+                "in_degree_velocity_per_hour": 0.0273,
+                "out_degree_velocity_per_hour": 0.0273,
+                "cyclic_scc_count": 0,
+                "nodes_in_cyclic_loops": 0,
+                "compute_time_sec": 0.379
+            },
+            {
+                "day": 1,
+                "date": "2020-01-02",
+                "active_nodes": 1395,
+                "directed_edges": 922,
+                "density": 0.00047412618338707105,
+                "mean_in_degree": 0.661,
+                "mean_out_degree": 0.661,
+                "in_degree_velocity_per_hour": 0.0275,
+                "out_degree_velocity_per_hour": 0.0275,
+                "cyclic_scc_count": 0,
+                "nodes_in_cyclic_loops": 0,
+                "compute_time_sec": 0.205
+            },
+            {
+                "day": 2,
+                "date": "2020-01-03",
+                "active_nodes": 868,
+                "directed_edges": 575,
+                "density": 0.000764062740845864,
+                "mean_in_degree": 0.662,
+                "mean_out_degree": 0.662,
+                "in_degree_velocity_per_hour": 0.0276,
+                "out_degree_velocity_per_hour": 0.0276,
+                "cyclic_scc_count": 0,
+                "nodes_in_cyclic_loops": 0,
+                "compute_time_sec": 0.136
+            },
+            {
+                "day": 3,
+                "date": "2020-01-04",
+                "active_nodes": 581,
+                "directed_edges": 386,
+                "density": 0.0011454685738025996,
+                "mean_in_degree": 0.664,
+                "mean_out_degree": 0.664,
+                "in_degree_velocity_per_hour": 0.0277,
+                "out_degree_velocity_per_hour": 0.0277,
+                "cyclic_scc_count": 0,
+                "nodes_in_cyclic_loops": 0,
+                "compute_time_sec": 0.105
+            },
+            {
+                "day": 4,
+                "date": "2020-01-05",
+                "active_nodes": 426,
+                "directed_edges": 283,
+                "density": 0.0015631041148853908,
+                "mean_in_degree": 0.664,
+                "mean_out_degree": 0.664,
+                "in_degree_velocity_per_hour": 0.0277,
+                "out_degree_velocity_per_hour": 0.0277,
+                "cyclic_scc_count": 0,
+                "nodes_in_cyclic_loops": 0,
+                "compute_time_sec": 0.09
+            }
+        ],
+        "execution_time_sec": 0.918
+    },
+    "leakage_safe_partitioning": {
+        "train_boundary": [
+            1,
+            220
+        ],
+        "val_boundary": [
+            221,
+            267
+        ],
+        "test_boundary": [
+            268,
+            313
+        ],
+        "train_records": 294511,
+        "val_records": 4592,
+        "test_records": 897,
+        "train_fraud_rate_pct": 76.77913558406986,
+        "val_fraud_rate_pct": 92.33449477351915,
+        "test_fraud_rate_pct": 89.29765886287625,
+        "leakage_invariants_verified": true,
+        "execution_time_sec": 0.039
+    }
+}

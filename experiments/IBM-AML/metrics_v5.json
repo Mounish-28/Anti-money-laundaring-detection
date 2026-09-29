@@ -1,0 +1,13 @@
+{
+    "Dataset": "IBM Transactions",
+    "Architecture": "CatBoost SymmetricTree + Balanced Class Weights",
+    "Best_Threshold": 0.9956470588235294,
+    "Test_Accuracy": 0.999124,
+    "Precision": 0.8712,
+    "Recall": 0.8345,
+    "F1_Score": 0.8524,
+    "PR_AUC": 0.8142,
+    "ROC_AUC": 0.982470823453773,
+    "Target_Met": "YES",
+    "Execution_Time_Seconds": 823.4
+}

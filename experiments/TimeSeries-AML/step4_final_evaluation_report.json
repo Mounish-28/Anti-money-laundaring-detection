@@ -1,0 +1,572 @@
+{
+    "registry_key": "aml_timeseries_pipeline:v1.0",
+    "alias_key": "timeseries_aml_pipeline:v1.0",
+    "evaluation_summary": {
+        "dataset": "Time-Series of Transactions in AML",
+        "evaluation_partition": "Strict Out-of-Time Holdout (eventAt > 165)",
+        "sample_count": 214,
+        "illicit_count": 27,
+        "metrics": {
+            "pr_auc": 0.11865382330966621,
+            "roc_auc": 0.4998019409784115,
+            "brier_score": 0.12821520060434227,
+            "precision_at_k": {
+                "top_10": 0.0,
+                "top_25": 4.0,
+                "top_50": 6.0,
+                "top_100": 12.0
+            },
+            "recall_at_k": {
+                "top_10": 0.0,
+                "top_25": 3.7037037037037033,
+                "top_50": 11.11111111111111,
+                "top_100": 44.44444444444444
+            }
+        },
+        "operating_points": {
+            "operational_optimal": {
+                "threshold": 0.19595959595959594,
+                "precision": 0.125,
+                "recall": 0.9629629629629629,
+                "f1_score": 0.22127659574468084,
+                "specificity": 0.02673796791443836,
+                "false_positive_rate_pct": 97.32620320855563,
+                "confusion_matrix": {
+                    "TP": 26,
+                    "FP": 182,
+                    "TN": 5,
+                    "FN": 1
+                }
+            },
+            "high_recall_safety": {
+                "threshold": 0.02,
+                "precision": 0.1261682242990654,
+                "recall": 1.0,
+                "f1_score": 0.22406639004149378,
+                "false_positive_rate_pct": 99.99999999999946,
+                "confusion_matrix": {
+                    "TP": 27,
+                    "FP": 187,
+                    "TN": 0,
+                    "FN": 0
+                }
+            }
+        }
+    },
+    "explainability": {
+        "base_value": -0.594842922544368,
+        "global_top_drivers": [
+            {
+                "rank": 1,
+                "feature": "comp_feat_5",
+                "category": "Entity Profile Embedding",
+                "mean_abs_shap": 0.2879
+            },
+            {
+                "rank": 2,
+                "feature": "32",
+                "category": "Raw Transaction Attribute",
+                "mean_abs_shap": 0.1272
+            },
+            {
+                "rank": 3,
+                "feature": "comp_feat_3",
+                "category": "Entity Profile Embedding",
+                "mean_abs_shap": 0.105
+            },
+            {
+                "rank": 4,
+                "feature": "comp_feat_0",
+                "category": "Entity Profile Embedding",
+                "mean_abs_shap": 0.1019
+            },
+            {
+                "rank": 5,
+                "feature": "24",
+                "category": "Raw Transaction Attribute",
+                "mean_abs_shap": 0.0762
+            },
+            {
+                "rank": 6,
+                "feature": "cos_dow",
+                "category": "Cyclical Temporal Dynamics",
+                "mean_abs_shap": 0.0632
+            },
+            {
+                "rank": 7,
+                "feature": "15",
+                "category": "Raw Transaction Attribute",
+                "mean_abs_shap": 0.0556
+            },
+            {
+                "rank": 8,
+                "feature": "35",
+                "category": "Raw Transaction Attribute",
+                "mean_abs_shap": 0.044
+            },
+            {
+                "rank": 9,
+                "feature": "sin_dow",
+                "category": "Cyclical Temporal Dynamics",
+                "mean_abs_shap": 0.0415
+            },
+            {
+                "rank": 10,
+                "feature": "37",
+                "category": "Raw Transaction Attribute",
+                "mean_abs_shap": 0.04
+            },
+            {
+                "rank": 11,
+                "feature": "26",
+                "category": "Raw Transaction Attribute",
+                "mean_abs_shap": 0.0301
+            },
+            {
+                "rank": 12,
+                "feature": "5",
+                "category": "Raw Transaction Attribute",
+                "mean_abs_shap": 0.0295
+            },
+            {
+                "rank": 13,
+                "feature": "comp_feat_4",
+                "category": "Entity Profile Embedding",
+                "mean_abs_shap": 0.028
+            },
+            {
+                "rank": 14,
+                "feature": "11",
+                "category": "Raw Transaction Attribute",
+                "mean_abs_shap": 0.0242
+            },
+            {
+                "rank": 15,
+                "feature": "comp_feat_2",
+                "category": "Entity Profile Embedding",
+                "mean_abs_shap": 0.0232
+            }
+        ],
+        "local_case_studies": [
+            {
+                "case_id": "SAR_TIME_SERIES_ALERT_001",
+                "sample_index": 203,
+                "posterior_probability": 0.29664163517134345,
+                "operational_status": "FLAGGED_FOR_SAR_FILING",
+                "primary_drivers": [
+                    "32 (Raw Transaction Attribute | val: -1.63, SHAP delta: -0.228)",
+                    "comp_feat_5 (Entity Profile Embedding | val: 0.60, SHAP delta: -0.219)",
+                    "comp_feat_0 (Entity Profile Embedding | val: -1.53, SHAP delta: -0.122)",
+                    "37 (Raw Transaction Attribute | val: -2.32, SHAP delta: +0.094)",
+                    "cos_dow (Cyclical Temporal Dynamics | val: 1.00, SHAP delta: +0.077)"
+                ],
+                "regulatory_audit_narrative": "Window score 29.66% exceeds operational threshold 19.60%. Flagged due to elevated temporal sequence risk driven primarily by 32 (Raw Transaction Attribute | val: -1.63, SHAP delta: -0.228) and comp_feat_5 (Entity Profile Embedding | val: 0.60, SHAP delta: -0.219), signaling significant velocity surges and anomalous sequence trajectory."
+            },
+            {
+                "case_id": "SAR_TIME_SERIES_ALERT_002",
+                "sample_index": 143,
+                "posterior_probability": 0.27697872616170327,
+                "operational_status": "FLAGGED_FOR_SAR_FILING",
+                "primary_drivers": [
+                    "comp_feat_5 (Entity Profile Embedding | val: 0.60, SHAP delta: -0.278)",
+                    "32 (Raw Transaction Attribute | val: -1.19, SHAP delta: -0.159)",
+                    "comp_feat_0 (Entity Profile Embedding | val: -1.53, SHAP delta: -0.119)",
+                    "comp_feat_3 (Entity Profile Embedding | val: 2.84, SHAP delta: -0.116)",
+                    "24 (Raw Transaction Attribute | val: 0.76, SHAP delta: +0.100)"
+                ],
+                "regulatory_audit_narrative": "Window score 27.70% exceeds operational threshold 19.60%. Flagged due to elevated temporal sequence risk driven primarily by comp_feat_5 (Entity Profile Embedding | val: 0.60, SHAP delta: -0.278) and 32 (Raw Transaction Attribute | val: -1.19, SHAP delta: -0.159), signaling significant velocity surges and anomalous sequence trajectory."
+            },
+            {
+                "case_id": "SAR_TIME_SERIES_ALERT_003",
+                "sample_index": 186,
+                "posterior_probability": 0.26948833243658943,
+                "operational_status": "FLAGGED_FOR_SAR_FILING",
+                "primary_drivers": [
+                    "comp_feat_5 (Entity Profile Embedding | val: 0.60, SHAP delta: -0.210)",
+                    "15 (Raw Transaction Attribute | val: 0.67, SHAP delta: -0.102)",
+                    "comp_feat_0 (Entity Profile Embedding | val: -1.53, SHAP delta: -0.091)",
+                    "comp_feat_3 (Entity Profile Embedding | val: 2.84, SHAP delta: -0.066)",
+                    "24 (Raw Transaction Attribute | val: -0.09, SHAP delta: -0.060)"
+                ],
+                "regulatory_audit_narrative": "Window score 26.95% exceeds operational threshold 19.60%. Flagged due to elevated temporal sequence risk driven primarily by comp_feat_5 (Entity Profile Embedding | val: 0.60, SHAP delta: -0.210) and 15 (Raw Transaction Attribute | val: 0.67, SHAP delta: -0.102), signaling significant velocity surges and anomalous sequence trajectory."
+            }
+        ]
+    },
+    "drift_baselines": {
+        "mean_psi": 1.2365053687504166,
+        "max_psi": 8.771723437288811,
+        "monitoring_thresholds": {
+            "psi_nominal": "< 0.10",
+            "psi_warning": "0.10 - 0.25",
+            "psi_action_retrain": ">= 0.25"
+        },
+        "feature_drift_metrics": {
+            "0": {
+                "psi": 0.3032,
+                "wasserstein_distance": 0.1567,
+                "status": "ACTION_REQUIRED"
+            },
+            "1": {
+                "psi": 0.2073,
+                "wasserstein_distance": 0.2228,
+                "status": "WARNING"
+            },
+            "2": {
+                "psi": 0.1263,
+                "wasserstein_distance": 0.1688,
+                "status": "WARNING"
+            },
+            "3": {
+                "psi": 0.1409,
+                "wasserstein_distance": 0.1725,
+                "status": "WARNING"
+            },
+            "4": {
+                "psi": 2.2601,
+                "wasserstein_distance": 0.9696,
+                "status": "ACTION_REQUIRED"
+            },
+            "5": {
+                "psi": 0.8055,
+                "wasserstein_distance": 0.2046,
+                "status": "ACTION_REQUIRED"
+            },
+            "6": {
+                "psi": 0.419,
+                "wasserstein_distance": 0.4638,
+                "status": "ACTION_REQUIRED"
+            },
+            "7": {
+                "psi": 0.2504,
+                "wasserstein_distance": 0.1597,
+                "status": "ACTION_REQUIRED"
+            },
+            "8": {
+                "psi": 0.7052,
+                "wasserstein_distance": 0.8615,
+                "status": "ACTION_REQUIRED"
+            },
+            "9": {
+                "psi": 0.3296,
+                "wasserstein_distance": 0.2478,
+                "status": "ACTION_REQUIRED"
+            },
+            "10": {
+                "psi": 0.6485,
+                "wasserstein_distance": 0.5494,
+                "status": "ACTION_REQUIRED"
+            },
+            "11": {
+                "psi": 0.9181,
+                "wasserstein_distance": 0.3624,
+                "status": "ACTION_REQUIRED"
+            },
+            "12": {
+                "psi": 0.4112,
+                "wasserstein_distance": 0.2921,
+                "status": "ACTION_REQUIRED"
+            },
+            "13": {
+                "psi": 0.3705,
+                "wasserstein_distance": 0.3296,
+                "status": "ACTION_REQUIRED"
+            },
+            "14": {
+                "psi": 0.2319,
+                "wasserstein_distance": 0.1688,
+                "status": "WARNING"
+            },
+            "15": {
+                "psi": 0.4087,
+                "wasserstein_distance": 0.2971,
+                "status": "ACTION_REQUIRED"
+            },
+            "16": {
+                "psi": 0.4685,
+                "wasserstein_distance": 0.6152,
+                "status": "ACTION_REQUIRED"
+            },
+            "17": {
+                "psi": 0.562,
+                "wasserstein_distance": 0.375,
+                "status": "ACTION_REQUIRED"
+            },
+            "18": {
+                "psi": 0.6457,
+                "wasserstein_distance": 0.4356,
+                "status": "ACTION_REQUIRED"
+            },
+            "19": {
+                "psi": 0.3192,
+                "wasserstein_distance": 0.2283,
+                "status": "ACTION_REQUIRED"
+            },
+            "20": {
+                "psi": 0.2122,
+                "wasserstein_distance": 0.2267,
+                "status": "WARNING"
+            },
+            "21": {
+                "psi": 0.183,
+                "wasserstein_distance": 0.3315,
+                "status": "WARNING"
+            },
+            "22": {
+                "psi": 0.1938,
+                "wasserstein_distance": 0.2561,
+                "status": "WARNING"
+            },
+            "23": {
+                "psi": 0.3755,
+                "wasserstein_distance": 0.2617,
+                "status": "ACTION_REQUIRED"
+            },
+            "24": {
+                "psi": 2.5331,
+                "wasserstein_distance": 0.5218,
+                "status": "ACTION_REQUIRED"
+            },
+            "25": {
+                "psi": 0.22,
+                "wasserstein_distance": 0.189,
+                "status": "WARNING"
+            },
+            "26": {
+                "psi": 0.4635,
+                "wasserstein_distance": 0.4287,
+                "status": "ACTION_REQUIRED"
+            },
+            "27": {
+                "psi": 0.2725,
+                "wasserstein_distance": 0.2476,
+                "status": "ACTION_REQUIRED"
+            },
+            "28": {
+                "psi": 1.7058,
+                "wasserstein_distance": 0.5326,
+                "status": "ACTION_REQUIRED"
+            },
+            "29": {
+                "psi": 0.3455,
+                "wasserstein_distance": 0.5465,
+                "status": "ACTION_REQUIRED"
+            },
+            "30": {
+                "psi": 0.7426,
+                "wasserstein_distance": 0.6598,
+                "status": "ACTION_REQUIRED"
+            },
+            "31": {
+                "psi": 1.1343,
+                "wasserstein_distance": 0.3855,
+                "status": "ACTION_REQUIRED"
+            },
+            "32": {
+                "psi": 1.432,
+                "wasserstein_distance": 0.6825,
+                "status": "ACTION_REQUIRED"
+            },
+            "33": {
+                "psi": 0.257,
+                "wasserstein_distance": 0.2604,
+                "status": "ACTION_REQUIRED"
+            },
+            "34": {
+                "psi": 0.3816,
+                "wasserstein_distance": 0.2891,
+                "status": "ACTION_REQUIRED"
+            },
+            "35": {
+                "psi": 0.3857,
+                "wasserstein_distance": 0.193,
+                "status": "ACTION_REQUIRED"
+            },
+            "36": {
+                "psi": 0.1161,
+                "wasserstein_distance": 0.0944,
+                "status": "WARNING"
+            },
+            "37": {
+                "psi": 0.3367,
+                "wasserstein_distance": 0.4317,
+                "status": "ACTION_REQUIRED"
+            },
+            "38": {
+                "psi": 0.1142,
+                "wasserstein_distance": 0.1009,
+                "status": "WARNING"
+            },
+            "39": {
+                "psi": 0.1976,
+                "wasserstein_distance": 0.263,
+                "status": "WARNING"
+            },
+            "40": {
+                "psi": 0.3985,
+                "wasserstein_distance": 0.3304,
+                "status": "ACTION_REQUIRED"
+            },
+            "41": {
+                "psi": 1.812,
+                "wasserstein_distance": 0.3213,
+                "status": "ACTION_REQUIRED"
+            },
+            "42": {
+                "psi": 0.8841,
+                "wasserstein_distance": 0.2689,
+                "status": "ACTION_REQUIRED"
+            },
+            "comp_feat_0": {
+                "psi": 8.7717,
+                "wasserstein_distance": 1.5543,
+                "status": "ACTION_REQUIRED"
+            },
+            "comp_feat_1": {
+                "psi": 8.507,
+                "wasserstein_distance": 0.7774,
+                "status": "ACTION_REQUIRED"
+            },
+            "comp_feat_2": {
+                "psi": 7.7446,
+                "wasserstein_distance": 0.5165,
+                "status": "ACTION_REQUIRED"
+            },
+            "comp_feat_3": {
+                "psi": 8.3905,
+                "wasserstein_distance": 2.8706,
+                "status": "ACTION_REQUIRED"
+            },
+            "comp_feat_4": {
+                "psi": 6.9376,
+                "wasserstein_distance": 0.6706,
+                "status": "ACTION_REQUIRED"
+            },
+            "comp_feat_5": {
+                "psi": 8.4537,
+                "wasserstein_distance": 0.8326,
+                "status": "ACTION_REQUIRED"
+            },
+            "sin_hour": {
+                "psi": 0.4948,
+                "wasserstein_distance": 0.12,
+                "status": "ACTION_REQUIRED"
+            },
+            "cos_hour": {
+                "psi": 0.4168,
+                "wasserstein_distance": 0.1064,
+                "status": "ACTION_REQUIRED"
+            },
+            "sin_dow": {
+                "psi": 4.1637,
+                "wasserstein_distance": 0.4848,
+                "status": "ACTION_REQUIRED"
+            },
+            "cos_dow": {
+                "psi": 3.1122,
+                "wasserstein_distance": 0.4439,
+                "status": "ACTION_REQUIRED"
+            },
+            "abs_amount": {
+                "psi": 0.9791,
+                "wasserstein_distance": 0.1331,
+                "status": "ACTION_REQUIRED"
+            },
+            "velocity_surge": {
+                "psi": 0.0413,
+                "wasserstein_distance": 0.0341,
+                "status": "STABLE"
+            },
+            "delta_t": {
+                "psi": 0.0781,
+                "wasserstein_distance": 0.094,
+                "status": "STABLE"
+            },
+            "burstiness_cv": {
+                "psi": 0.5047,
+                "wasserstein_distance": 0.2919,
+                "status": "ACTION_REQUIRED"
+            },
+            "seq_tcn_dim_00": {
+                "psi": 0.0681,
+                "wasserstein_distance": 0.0069,
+                "status": "STABLE"
+            },
+            "seq_tcn_dim_01": {
+                "psi": 0.3358,
+                "wasserstein_distance": 0.0101,
+                "status": "ACTION_REQUIRED"
+            },
+            "seq_tcn_dim_02": {
+                "psi": 0.0,
+                "wasserstein_distance": 0.0027,
+                "status": "STABLE"
+            },
+            "seq_tcn_dim_03": {
+                "psi": 0.1146,
+                "wasserstein_distance": 0.0062,
+                "status": "WARNING"
+            },
+            "seq_tcn_dim_04": {
+                "psi": 1.0345,
+                "wasserstein_distance": 0.0196,
+                "status": "ACTION_REQUIRED"
+            },
+            "seq_tcn_dim_05": {
+                "psi": 0.2217,
+                "wasserstein_distance": 0.0121,
+                "status": "WARNING"
+            },
+            "seq_tcn_dim_06": {
+                "psi": 0.0,
+                "wasserstein_distance": 0.0,
+                "status": "STABLE"
+            },
+            "seq_tcn_dim_07": {
+                "psi": 0.0,
+                "wasserstein_distance": 0.0019,
+                "status": "STABLE"
+            },
+            "seq_tcn_dim_08": {
+                "psi": 0.0,
+                "wasserstein_distance": 0.0015,
+                "status": "STABLE"
+            },
+            "seq_tcn_dim_09": {
+                "psi": 0.3629,
+                "wasserstein_distance": 0.0064,
+                "status": "ACTION_REQUIRED"
+            },
+            "seq_tcn_dim_10": {
+                "psi": 0.0276,
+                "wasserstein_distance": 0.0019,
+                "status": "STABLE"
+            },
+            "seq_tcn_dim_11": {
+                "psi": 0.8091,
+                "wasserstein_distance": 0.0124,
+                "status": "ACTION_REQUIRED"
+            },
+            "seq_tcn_dim_12": {
+                "psi": 1.0698,
+                "wasserstein_distance": 0.0349,
+                "status": "ACTION_REQUIRED"
+            },
+            "seq_tcn_dim_13": {
+                "psi": 0.808,
+                "wasserstein_distance": 0.0159,
+                "status": "ACTION_REQUIRED"
+            },
+            "seq_tcn_dim_14": {
+                "psi": 0.4968,
+                "wasserstein_distance": 0.0247,
+                "status": "ACTION_REQUIRED"
+            },
+            "seq_tcn_dim_15": {
+                "psi": 1.0908,
+                "wasserstein_distance": 0.0251,
+                "status": "ACTION_REQUIRED"
+            }
+        }
+    },
+    "execution_time_sec": 7.483
+}

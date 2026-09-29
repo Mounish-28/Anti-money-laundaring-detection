@@ -1,0 +1,64 @@
+{
+  "dataset": "Elliptic Bitcoin Transaction Graph",
+  "reference_split": "Training Timesteps 1..34 (N=136,265)",
+  "monitoring_split": "Holdout Timesteps 35..49 (N=67,504)",
+  "prediction_drift": {
+    "psi": 0.1474663113407599,
+    "wasserstein_distance": 0.029285066561238575,
+    "status": "MODERATE_DRIFT",
+    "alert_threshold_moderate": 0.1,
+    "alert_threshold_critical": 0.25
+  },
+  "feature_drift_baselines": {
+    "trans_feat_0": {
+      "psi": 7.982632809133518,
+      "wasserstein_distance": 1.2061996083916386,
+      "status": "SIGNIFICANT_DRIFT"
+    },
+    "trans_feat_1": {
+      "psi": 0.11834451089310916,
+      "wasserstein_distance": 4.473445589417255,
+      "status": "MODERATE_DRIFT"
+    },
+    "trans_feat_2": {
+      "psi": 5.173202146482432,
+      "wasserstein_distance": 5.588176147611938,
+      "status": "SIGNIFICANT_DRIFT"
+    },
+    "trans_feat_3": {
+      "psi": 1.186472385777609,
+      "wasserstein_distance": 0.5318570216502773,
+      "status": "SIGNIFICANT_DRIFT"
+    },
+    "trans_feat_4": {
+      "psi": 0.2887627635990035,
+      "wasserstein_distance": 1.5560479562323024,
+      "status": "SIGNIFICANT_DRIFT"
+    },
+    "trans_feat_5": {
+      "psi": 0.0802745947751815,
+      "wasserstein_distance": 0.08426267491488348,
+      "status": "STABLE"
+    },
+    "trans_feat_6": {
+      "psi": 0.31188600073771766,
+      "wasserstein_distance": 0.12690828598449422,
+      "status": "SIGNIFICANT_DRIFT"
+    },
+    "trans_feat_7": {
+      "psi": 0.0,
+      "wasserstein_distance": 0.026794722673258022,
+      "status": "STABLE"
+    },
+    "trans_feat_8": {
+      "psi": 0.14927742066273264,
+      "wasserstein_distance": 6.522052038559317,
+      "status": "MODERATE_DRIFT"
+    },
+    "trans_feat_9": {
+      "psi": 0.13710507087542062,
+      "wasserstein_distance": 4.99236632653313,
+      "status": "MODERATE_DRIFT"
+    }
+  }
+}

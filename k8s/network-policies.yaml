@@ -1,0 +1,254 @@
+# ==============================================================================
+# QuantumAML Nexus - Kubernetes NetworkPolicies & Istio mTLS Domain Segregation
+# ==============================================================================
+# Step 5.4.2: Production Pod-Level Domain Segregation & CNI NetworkPolicies
+# Namespaces:
+#   1. mesh-gateway: Public ingress & reverse proxy zero-trust gateway
+#   2. mesh-investigation: Law enforcement enclave (evidence search, BM25, dossiers)
+#   3. mesh-bank: Financial institution enclave (SAR submission, account sanctions)
+#   4. mesh-telemetry: Audit log sinks, Prometheus, and Grafana monitoring
+# ==============================================================================
+
+---
+# ------------------------------------------------------------------------------
+# 1. NAMESPACE DEFINITIONS
+# ------------------------------------------------------------------------------
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: mesh-gateway
+  labels:
+    enclave.quantumaml.io/domain: gateway
+    istio-injection: enabled
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: mesh-investigation
+  labels:
+    enclave.quantumaml.io/domain: investigation
+    istio-injection: enabled
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: mesh-bank
+  labels:
+    enclave.quantumaml.io/domain: bank
+    istio-injection: enabled
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: mesh-telemetry
+  labels:
+    enclave.quantumaml.io/domain: telemetry
+    istio-injection: enabled
+
+---
+# ------------------------------------------------------------------------------
+# 2. DEFAULT DENY-ALL INGRESS & EGRESS POLICIES (All Enclaves)
+# ------------------------------------------------------------------------------
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: mesh-investigation
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: mesh-bank
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: mesh-gateway
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+
+---
+# ------------------------------------------------------------------------------
+# 3. INVESTIGATION ENCLAVE NETWORK POLICY
+#    - Allows ingress ONLY from mesh-gateway pods
+#    - Allows egress ONLY to mesh-gateway, isolated vector DB, and internal DNS
+#    - ABSOLUTELY BLOCKS any communication with mesh-bank pods
+# ------------------------------------------------------------------------------
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: investigation-enclave-policy
+  namespace: mesh-investigation
+spec:
+  podSelector:
+    matchLabels:
+      app: investigation-service
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow incoming traffic ONLY from mesh-gateway pods on port 8000
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              enclave.quantumaml.io/domain: gateway
+          podSelector:
+            matchLabels:
+              app: quantumaml-gateway
+      ports:
+        - protocol: TCP
+          port: 8000
+  egress:
+    # Egress 1: CoreDNS resolution within cluster
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # Egress 2: Isolated Investigation Vector Database (Same namespace ONLY)
+    - to:
+        - podSelector:
+            matchLabels:
+              app: investigation-vectordb
+      ports:
+        - protocol: TCP
+          port: 6333
+    # Egress 3: Telemetry audit stream to mesh-telemetry
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              enclave.quantumaml.io/domain: telemetry
+          podSelector:
+            matchLabels:
+              app: telemetry-audit-collector
+      ports:
+        - protocol: TCP
+          port: 9000
+
+---
+# ------------------------------------------------------------------------------
+# 4. BANK ENCLAVE NETWORK POLICY
+#    - Allows ingress ONLY from mesh-gateway pods
+#    - Allows egress ONLY to local financial ledger and telemetry
+#    - ABSOLUTELY BLOCKS any communication with mesh-investigation pods
+# ------------------------------------------------------------------------------
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: bank-enclave-policy
+  namespace: mesh-bank
+spec:
+  podSelector:
+    matchLabels:
+      app: bank-service
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow incoming traffic ONLY from mesh-gateway pods on port 8000
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              enclave.quantumaml.io/domain: gateway
+          podSelector:
+            matchLabels:
+              app: quantumaml-gateway
+      ports:
+        - protocol: TCP
+          port: 8000
+  egress:
+    # Egress 1: CoreDNS resolution
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # Egress 2: Bank isolated ledger DB
+    - to:
+        - podSelector:
+            matchLabels:
+              app: bank-ledger-db
+      ports:
+        - protocol: TCP
+          port: 5432
+    # Egress 3: Telemetry audit stream to mesh-telemetry
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              enclave.quantumaml.io/domain: telemetry
+          podSelector:
+            matchLabels:
+              app: telemetry-audit-collector
+      ports:
+        - protocol: TCP
+          port: 9000
+
+---
+# ------------------------------------------------------------------------------
+# 5. ISTIO STRICT MUTUAL TLS (mTLS) PEER AUTHENTICATION
+#    Enforces zero-trust encrypted cryptographic identity for all pod-to-pod mesh traffic
+# ------------------------------------------------------------------------------
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: default-strict-mtls
+  namespace: mesh-gateway
+spec:
+  mtls:
+    mode: STRICT
+---
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: default-strict-mtls
+  namespace: mesh-investigation
+spec:
+  mtls:
+    mode: STRICT
+---
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: default-strict-mtls
+  namespace: mesh-bank
+spec:
+  mtls:
+    mode: STRICT
+---
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: default-strict-mtls
+  namespace: mesh-telemetry
+spec:
+  mtls:
+    mode: STRICT

@@ -1,0 +1,82 @@
+{
+    "pipeline": "IBM-AMLSim-Feature-Fusion-and-GNN-Embeddings",
+    "timestamp": "2026-09-29 22:34:00",
+    "total_runtime_sec": 21.678,
+    "feature_fusion": {
+        "n_nodes": 10000,
+        "n_tabular_features": 24,
+        "feature_names": [
+            "init_balance",
+            "is_individual",
+            "is_corporate",
+            "is_us_jurisdiction",
+            "tx_behavior_id",
+            "tx_in_count",
+            "tx_out_count",
+            "tx_total_count",
+            "tx_in_volume",
+            "tx_out_volume",
+            "tx_total_volume",
+            "net_flow_volume",
+            "pass_through_ratio",
+            "avg_in_amount",
+            "avg_out_amount",
+            "max_in_amount",
+            "max_out_amount",
+            "active_steps_count",
+            "active_steps_ratio",
+            "velocity_tx_per_step",
+            "recent_in_volume_w30",
+            "recent_out_volume_w30",
+            "recent_tx_count_w30",
+            "velocity_acceleration"
+        ],
+        "execution_time_sec": 1.628
+    },
+    "cleansing_and_normalization": {
+        "imputer_path": "data/ibm_amlsim/processed\\amlsim_feature_imputer.joblib",
+        "scaler_path": "data/ibm_amlsim/processed\\amlsim_robust_scaler.joblib",
+        "n_features_cleansed": 24,
+        "skewed_features_log_transformed": [
+            "init_balance",
+            "tx_in_count",
+            "tx_out_count",
+            "tx_total_count",
+            "tx_in_volume",
+            "tx_out_volume",
+            "tx_total_volume",
+            "avg_in_amount",
+            "avg_out_amount",
+            "max_in_amount",
+            "max_out_amount",
+            "recent_in_volume_w30",
+            "recent_out_volume_w30",
+            "recent_tx_count_w30"
+        ],
+        "execution_time_sec": 0.199
+    },
+    "graph_topo_embedding": {
+        "embedding_dim": 32,
+        "epochs": 35,
+        "final_loss": 1.0802,
+        "execution_time_sec": 10.673
+    },
+    "leakage_free_packaging": {
+        "pyg_data_path": "data/ibm_amlsim/processed\\amlsim_fused_pyg_data.pt",
+        "pyg_sha256": "ade6f5b281c81d719802b50ed22ec1fbae598d533b8f7ef4f47b7b95658b9dba",
+        "sparse_package_path": "data/ibm_amlsim/processed\\amlsim_fused_sparse_tensors.pt",
+        "sparse_sha256": "3ffe5f0567a7d9fe0592cbafd94a57a779e35a6869ccd90cdc33b2c982ad5108",
+        "total_nodes": 10000,
+        "fused_feature_dimension": 56,
+        "train_edges": 923579,
+        "val_edges": 199537,
+        "test_edges": 200118,
+        "anti_leakage_guarantees": {
+            "chronological_edge_split": true,
+            "train_only_scaling": true,
+            "disjoint_node_masks": true,
+            "train_graph_isolated": true
+        },
+        "execution_time_sec": 6.254
+    }
+}

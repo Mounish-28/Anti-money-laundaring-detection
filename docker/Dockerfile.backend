@@ -1,0 +1,65 @@
+# ==============================================================================
+# QuantumAML Nexus - Hardened Distroless Backend Containerfile
+# ==============================================================================
+# Step 5.4.1: Production Multi-Stage Distroless Docker Packaging
+# Enforces:
+#   - Build separation eliminating build-time compilers and apt tools
+#   - Base Image: gcr.io/distroless/python3-debian12 (no shell, no package manager)
+#   - Security Context: USER nonroot:nonroot (UID 65532)
+#   - Immutable read-only rootfs compliance
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Stage 1: Dependency Wheel Builder
+# ------------------------------------------------------------------------------
+FROM python:3.11-slim-bookworm AS builder
+
+WORKDIR /build
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1
+
+# Install minimal build tools for compiling native dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    build-essential \
+    libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+
+# Install dependencies into a localized wheel prefix for nonroot distroless copying
+RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
+
+# ------------------------------------------------------------------------------
+# Stage 2: Distroless Hermetic Production Runtime
+# ------------------------------------------------------------------------------
+# Distroless contains ONLY Python and runtime libraries; no /bin/sh, no apt, no curl
+FROM gcr.io/distroless/python3-debian12:nonroot
+
+WORKDIR /app
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONPATH="/app:/install/lib/python3.11/site-packages" \
+    PORT=8000 \
+    PATH="/install/bin:$PATH"
+
+# Copy pre-compiled dependencies and packages from builder stage
+COPY --from=builder /install /install
+
+# Copy shared C libraries required for machine learning & OpenMP
+COPY --from=builder /usr/lib/*-linux-gnu*/libgomp.so* /usr/lib/
+
+# Copy application source code with nonroot ownership
+COPY --chown=nonroot:nonroot app/ /app/app/
+COPY --chown=nonroot:nonroot data/ /app/data/
+
+# Enforce non-root execution context (UID 65532: nonroot)
+USER 65532:65532
+
+EXPOSE 8000
+
+# Exec form entrypoint directly launching Uvicorn (no intermediate shell wrapper)
+ENTRYPOINT ["python3", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4", "--access-log", "--no-server-header"]

@@ -1,0 +1,36 @@
+# Target Python version
+target-version = "py311"
+
+# Maximum line length
+line-length = 120
+
+[lint]
+# Selected rule codes
+select = ["E", "F", "W"]
+
+# Global ignored codes
+ignore = [
+    "BLE001",   # blind Exception catching
+    "S110",     # try-except-pass
+    "SIM102",   # nested if statements
+    "SIM115",   # open file without context manager
+    "SIM117",   # multiple with statements
+    "SIM118",   # key in dict.keys()
+    "SIM202",   # negate condition
+    "F841",     # unused local variables
+    "RUF015",   # next(iter()) micro-optimization
+    "RUF059",   # unpacked variable warnings
+    "DTZ005",   # timezone-naive datetime calls
+    "ASYNC230", # blocking file I/O in async routines
+    "PIE810",   # tuple endswith warnings
+    "PLR0124",  # redundant self-comparison warnings
+    "E501",     # line-length enforcement
+]
+
+# Per-file ignores
+[lint.per-file-ignores]
+"tests/*" = ["ALL"]
+"scripts/*" = ["ALL"]
+"verify_nexus_e2e.py" = ["ALL"]
+"runner.py" = ["ALL"]
+"src/*" = ["ALL"]

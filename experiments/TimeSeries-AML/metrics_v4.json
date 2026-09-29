@@ -1,0 +1,12 @@
+{
+    "Dataset": "Time-Series AML",
+    "Architecture": "Bounded Lagged XGBoost + Monotonic",
+    "Best_Threshold": 0.8190000000000001,
+    "Test_Accuracy": 0.7512715964635145,
+    "Precision": 0.8044181812928021,
+    "Recall": 0.7710000830863821,
+    "F1_Score": 0.7873546963826117,
+    "PR_AUC": 0.8961786279538106,
+    "ROC_AUC": 0.842891974453505,
+    "Target_Met": "PARTIAL"
+}

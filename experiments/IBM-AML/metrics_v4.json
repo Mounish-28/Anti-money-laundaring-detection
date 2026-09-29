@@ -1,0 +1,12 @@
+{
+    "Dataset": "IBM Transactions",
+    "Architecture": "CatBoost + Typology Features",
+    "Best_Threshold": 0.9530000000000001,
+    "Test_Accuracy": 0.9992202186538401,
+    "Precision": 0.823321554770318,
+    "Recall": 0.29987129987129985,
+    "F1_Score": 0.439622641509434,
+    "PR_AUC": 0.4184190068051749,
+    "ROC_AUC": 0.9824142967032025,
+    "Target_Met": "PARTIAL"
+}

@@ -1,0 +1,319 @@
+# ==============================================================================
+# QuantumAML Nexus - Kubernetes Enclave Deployments & Hardened Pod Specs
+# ==============================================================================
+# Step 5.4.2: Pod Security Standards (Restricted Profile) & Enclave Services
+# Enforces:
+#   - USER nonroot:nonroot (UID 65532)
+#   - readOnlyRootFilesystem: true
+#   - POSIX Capabilities: ALL dropped
+#   - allowPrivilegeEscalation: false
+#   - Memory-backed tmpfs mounts for zero disk leakage
+#   - Calibrated Startup, Liveness, and Readiness probes
+# ==============================================================================
+
+---
+# ------------------------------------------------------------------------------
+# 1. INVESTIGATION ENCLAVE DEPLOYMENT
+# ------------------------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: investigation-service
+  namespace: mesh-investigation
+  labels:
+    app: investigation-service
+    enclave.quantumaml.io/domain: investigation
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: investigation-service
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: investigation-service
+        enclave.quantumaml.io/domain: investigation
+      annotations:
+        sidecar.istio.io/inject: "true"
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/role: "investigation-enclave"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: investigation-app
+          image: gcr.io/quantumaml-security/investigation-backend:v1.0.0-distroless
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          ports:
+            - containerPort: 8000
+              name: http
+          env:
+            - name: DOMAIN_ENCLAVE
+              value: "INVESTIGATION_OFFICER"
+            - name: PORT
+              value: "8000"
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+            limits:
+              cpu: "2000m"
+              memory: "2Gi"
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 2
+            periodSeconds: 2
+            failureThreshold: 15
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 2
+          volumeMounts:
+            - name: memory-tmp
+              mountPath: /tmp
+            - name: memory-run
+              mountPath: /run
+      volumes:
+        - name: memory-tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: 128Mi
+        - name: memory-run
+          emptyDir:
+            medium: Memory
+            sizeLimit: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: investigation-service
+  namespace: mesh-investigation
+spec:
+  selector:
+    app: investigation-service
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+
+---
+# ------------------------------------------------------------------------------
+# 2. BANK ENCLAVE DEPLOYMENT
+# ------------------------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bank-service
+  namespace: mesh-bank
+  labels:
+    app: bank-service
+    enclave.quantumaml.io/domain: bank
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: bank-service
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: bank-service
+        enclave.quantumaml.io/domain: bank
+      annotations:
+        sidecar.istio.io/inject: "true"
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/role: "bank-enclave"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: bank-app
+          image: gcr.io/quantumaml-security/bank-backend:v1.0.0-distroless
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          ports:
+            - containerPort: 8000
+              name: http
+          env:
+            - name: DOMAIN_ENCLAVE
+              value: "BANK_ANALYST"
+            - name: PORT
+              value: "8000"
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+            limits:
+              cpu: "2000m"
+              memory: "2Gi"
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 2
+            periodSeconds: 2
+            failureThreshold: 15
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 2
+          volumeMounts:
+            - name: memory-tmp
+              mountPath: /tmp
+      volumes:
+        - name: memory-tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bank-service
+  namespace: mesh-bank
+spec:
+  selector:
+    app: bank-service
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+
+---
+# ------------------------------------------------------------------------------
+# 3. ZERO-TRUST SECURITY GATEWAY DEPLOYMENT
+# ------------------------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: quantumaml-gateway
+  namespace: mesh-gateway
+  labels:
+    app: quantumaml-gateway
+    enclave.quantumaml.io/domain: gateway
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: quantumaml-gateway
+  template:
+    metadata:
+      labels:
+        app: quantumaml-gateway
+        enclave.quantumaml.io/domain: gateway
+      annotations:
+        sidecar.istio.io/inject: "true"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+      containers:
+        - name: gateway-app
+          image: gcr.io/quantumaml-security/gateway:v1.0.0-distroless
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          ports:
+            - containerPort: 8443
+              name: https
+          resources:
+            requests:
+              cpu: "1000m"
+              memory: "1Gi"
+            limits:
+              cpu: "4000m"
+              memory: "4Gi"
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 8443
+            periodSeconds: 2
+            failureThreshold: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8443
+            periodSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8443
+            periodSeconds: 3
+          volumeMounts:
+            - name: memory-tmp
+              mountPath: /tmp
+      volumes:
+        - name: memory-tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: quantumaml-gateway
+  namespace: mesh-gateway
+spec:
+  type: LoadBalancer
+  selector:
+    app: quantumaml-gateway
+  ports:
+    - name: https
+      port: 443
+      targetPort: 8443
