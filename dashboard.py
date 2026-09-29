@@ -29,8 +29,8 @@ ROOT_DIR = os.path.abspath(os.path.dirname(__file__))
 if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)
 
-from app.services.ai_subgraph_analyst import ai_subgraph_analyst
-from app.services.streaming_ingestion_gateway import streaming_gateway
+from app.services.ai_subgraph_analyst import ai_subgraph_analyst  # noqa: E402
+from app.services.streaming_ingestion_gateway import streaming_gateway  # noqa: E402
 
 # ==============================================================================
 # Page Configuration & Modern Glassmorphism Styling
@@ -51,7 +51,7 @@ st.markdown(
         color: #f3f4f6;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
-    
+
     /* Glassmorphism Panel Container */
     .nexus-panel {
         background: linear-gradient(135deg, rgba(22, 30, 46, 0.75), rgba(15, 23, 42, 0.85));
@@ -62,7 +62,7 @@ st.markdown(
         box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
         backdrop-filter: blur(8px);
     }
-    
+
     /* Persona Badges */
     .role-badge-le {
         background: linear-gradient(135deg, rgba(30, 58, 138, 0.5), rgba(30, 64, 175, 0.7));
@@ -84,7 +84,7 @@ st.markdown(
         font-size: 0.85rem;
         display: inline-block;
     }
-    
+
     /* Threat Tiers */
     .tier-low {
         background-color: rgba(16, 185, 129, 0.2);
@@ -119,7 +119,7 @@ st.markdown(
         font-weight: 900;
         box-shadow: 0 0 12px rgba(239, 68, 68, 0.5);
     }
-    
+
     .ai-copilot-card {
         background: linear-gradient(135deg, rgba(88, 28, 135, 0.35), rgba(49, 46, 129, 0.45));
         border: 1px solid #a855f7;

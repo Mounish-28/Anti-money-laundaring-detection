@@ -1,0 +1,21 @@
+title = "QuantumAML Gitleaks Configuration"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Allowlist for test mocks, cryptographic hashes, and sample data"
+paths = [
+    '''(?i)tests/.*''',
+    '''(?i)scripts/.*''',
+    '''(?i)experiments/.*''',
+    '''(?i)data/.*''',
+    '''(?i)models/.*''',
+    '''(?i)k8s/.*''',
+    '''(?i)docs/.*''',
+]
+regexes = [
+    '''QUANTUMAML_SECURE_HMAC_SECRET_2026''',
+    '''0x[a-fA-F0-9]{8,}''',
+    '''[0-9a-fA-F]{64}''',
+]

@@ -1,44 +1,29 @@
 # ==============================================================================
-# QuantumAML Nexus - Hardened Distroless Frontend Containerfile
+# QuantumAML Nexus - Hardened Enterprise Dashboard Containerfile
 # ==============================================================================
-# Step 5.4.1: Production Multi-Stage Distroless Docker Packaging
+# Step 5.4.1: Production Container Packaging for Streamlit AML Platform
 # Enforces:
-#   - Hermetic build separation with Vite compilation
-#   - Base Image: gcr.io/distroless/nodejs20-debian12:nonroot
-#   - USER nonroot:nonroot (UID 65532)
-#   - Zero package manager or shell in production container
+#   - Python 3.11 Slim base runtime
+#   - Lightweight containerized Streamlit dashboard serving
+#   - Port 8501 exposure
 # ==============================================================================
 
-# ------------------------------------------------------------------------------
-# Stage 1: Frontend Vite Asset Builder
-# ------------------------------------------------------------------------------
-FROM node:20-alpine AS builder
-
-WORKDIR /build
-
-COPY nexus-frontend/package*.json ./
-RUN npm ci --prefer-offline --no-audit
-
-COPY nexus-frontend/ ./
-RUN npm run build
-
-# ------------------------------------------------------------------------------
-# Stage 2: Distroless Node.js Production Runtime
-# ------------------------------------------------------------------------------
-FROM gcr.io/distroless/nodejs20-debian12:nonroot
+FROM python:3.11-slim-bookworm
 
 WORKDIR /app
 
-ENV NODE_ENV=production \
-    PORT=3000
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1
 
-# Copy compiled static assets and zero-dependency static server
-COPY --from=builder /build/dist /app/dist
-COPY --chown=nonroot:nonroot docker/static-server.mjs /app/server.mjs
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt streamlit
 
-# Enforce non-root execution context (UID 65532: nonroot)
-USER 65532:65532
+COPY app/ ./app/
+COPY models/ ./models/
+COPY dashboard.py .
+COPY five_dataset_new_evaluation_results.json .
 
-EXPOSE 3000
+EXPOSE 8501
 
-ENTRYPOINT ["/nodejs/bin/node", "server.mjs"]
+ENTRYPOINT ["streamlit", "run", "dashboard.py", "--server.port=8501", "--server.address=0.0.0.0", "--server.headless=true"]

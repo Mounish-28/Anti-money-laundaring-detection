@@ -34,12 +34,13 @@ jobs:
           python scripts/tamper_divergence_simulator.py
           python scripts/wal_failover_recovery.py
 
-      - name: Run Algorithmic & Merkle Prover Suites
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - run: |
-          node nexus-frontend/src/algorithms/test_phase4_suite.mjs
+
+      - name: Run Algorithmic & Merkle Prover Suites
+        run: |
           node scripts/zk_compliance_prover.mjs
           node scripts/benchmark_bm25_saturation.mjs
           node scripts/benchmark_tabular_quicksort.mjs
@@ -55,13 +56,13 @@ jobs:
           push: false
           tags: gcr.io/quantumaml-security/backend:${{ github.sha }}
 
-      - name: Build Distroless Frontend Container
+      - name: Build Enterprise Dashboard Container
         uses: docker/build-push-action@v5
         with:
           context: .
           file: docker/Dockerfile.frontend
           push: false
-          tags: gcr.io/quantumaml-security/frontend:${{ github.sha }}
+          tags: gcr.io/quantumaml-security/dashboard:${{ github.sha }}
 
   canary-rollout:
     name: Progressive Canary Rollout & Integrity Analysis
