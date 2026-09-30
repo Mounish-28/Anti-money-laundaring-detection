@@ -27,16 +27,29 @@ htmlcov/
 
 # Exclude all raw datasets and archives
 **/*.csv
+!models/risk_tiers.csv
 **/*.parquet
 **/*.zip
 **/*.tar.gz
 
-# Exclude JSON files except configurations under app/
+# Exclude JSON files except configurations under app/, evaluation benchmarks, and model metadata
 **/*.json
 !app/**/*.json
+!five_dataset_new_evaluation_results.json
+!models/*.json
+!models/**/*.json
 
-# Exclude host models directory (dynamically mounted as read-only volume at runtime)
-models/
+# Exclude heavy binary model checkpoints from build context (mounted as read-only volume at runtime)
+models/*.pt
+models/**/*.pt
+models/*.joblib
+models/**/*.joblib
+models/*.cbm
+models/**/*.cbm
+models/*.bin
+models/**/*.bin
+models/*.xgb
+models/**/*.xgb
 
 # Ephemeral runtime logs & databases
 *.log

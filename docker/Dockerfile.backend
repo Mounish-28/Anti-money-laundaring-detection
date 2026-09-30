@@ -27,6 +27,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
+# Install lightweight PyTorch CPU wheels to eliminate bloated CUDA binaries
+RUN pip install --no-cache-dir --prefix=/install torch --index-url https://download.pytorch.org/whl/cpu
+
 COPY requirements.txt .
 
 # Install dependencies into a localized wheel prefix for nonroot distroless copying

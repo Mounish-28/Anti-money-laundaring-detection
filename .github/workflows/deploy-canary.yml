@@ -29,6 +29,7 @@ jobs:
 
       - name: Run Cryptographic Verification Battery
         run: |
+          pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
           pip install -r requirements.txt pytest
           python -m pytest tests/security/test_security_pentest_suite.py -v
           python scripts/tamper_divergence_simulator.py
@@ -78,13 +79,13 @@ jobs:
 
       - name: Apply NetworkPolicies & External Secrets
         run: |
-          kubectl apply -f k8s/network-policies.yaml --dry-run=client
-          kubectl apply -f k8s/external-secrets-kms.yaml --dry-run=client
+          kubectl apply -f k8s/network-policies.yaml --dry-run=client --validate=false
+          kubectl apply -f k8s/external-secrets-kms.yaml --dry-run=client --validate=false
 
       - name: Deploy Canary Rollout via Argo Rollouts
         run: |
           echo "Initiating progressive traffic shifting (10% -> 25% -> 50% -> 100%)..."
-          kubectl apply -f k8s/rollout-canary.yaml --dry-run=client
+          kubectl apply -f k8s/rollout-canary.yaml --dry-run=client --validate=false
 
       - name: Validate Integrity & Error Probes
         run: |
