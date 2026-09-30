@@ -1,0 +1,237 @@
+{
+  "summary": {
+    "timestamp": "2026-09-30T17:57:30.285890+00:00",
+    "execution_mode": "In-Process ASGITransport (FastAPI Direct)",
+    "total_transactions": 250,
+    "successful_requests": 250,
+    "failed_or_dropped": 0,
+    "total_duration_sec": 2.08,
+    "requests_per_second": 120.03,
+    "sla_target_ms": 200.0,
+    "sla_compliance_pct": 100.0,
+    "sla_met": true
+  },
+  "latency_profiling": {
+    "p50_ms": 7.03,
+    "p90_ms": 9.02,
+    "p95_ms": 10.53,
+    "p99_ms": 23.31,
+    "mean_ms": 8.2,
+    "min_ms": 5.13,
+    "max_ms": 172.27
+  },
+  "overall_evaluation": {
+    "tp": 125,
+    "fp": 21,
+    "tn": 104,
+    "fn": 0,
+    "total": 250,
+    "precision": 0.8562,
+    "recall": 1.0,
+    "f1_score": 0.9225,
+    "fpr": 0.168,
+    "accuracy": 0.916
+  },
+  "dataset_breakdown": {
+    "IBM Transactions": {
+      "tp": 25,
+      "fp": 16,
+      "tn": 9,
+      "fn": 0,
+      "total": 50,
+      "precision": 0.6098,
+      "recall": 1.0,
+      "f1_score": 0.7576,
+      "fpr": 0.64,
+      "accuracy": 0.68,
+      "p50_ms": 7.09,
+      "p95_ms": 9.18
+    },
+    "SAML-D": {
+      "tp": 25,
+      "fp": 0,
+      "tn": 25,
+      "fn": 0,
+      "total": 50,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "fpr": 0.0,
+      "accuracy": 1.0,
+      "p50_ms": 7.46,
+      "p95_ms": 10.69
+    },
+    "Elliptic Bitcoin": {
+      "tp": 25,
+      "fp": 2,
+      "tn": 23,
+      "fn": 0,
+      "total": 50,
+      "precision": 0.9259,
+      "recall": 1.0,
+      "f1_score": 0.9615,
+      "fpr": 0.08,
+      "accuracy": 0.96,
+      "p50_ms": 6.65,
+      "p95_ms": 11.0
+    },
+    "IBM AMLSim": {
+      "tp": 25,
+      "fp": 3,
+      "tn": 22,
+      "fn": 0,
+      "total": 50,
+      "precision": 0.8929,
+      "recall": 1.0,
+      "f1_score": 0.9434,
+      "fpr": 0.12,
+      "accuracy": 0.94,
+      "p50_ms": 7.01,
+      "p95_ms": 8.83
+    },
+    "Time-Series AML": {
+      "tp": 25,
+      "fp": 0,
+      "tn": 25,
+      "fn": 0,
+      "total": 50,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "fpr": 0.0,
+      "accuracy": 1.0,
+      "p50_ms": 7.12,
+      "p95_ms": 9.74
+    }
+  },
+  "rail_breakdown": {
+    "fiat": {
+      "tp": 100,
+      "fp": 19,
+      "tn": 81,
+      "fn": 0,
+      "total": 200,
+      "precision": 0.8403,
+      "recall": 1.0,
+      "f1_score": 0.9132,
+      "fpr": 0.19,
+      "accuracy": 0.905
+    },
+    "crypto": {
+      "tp": 25,
+      "fp": 2,
+      "tn": 23,
+      "fn": 0,
+      "total": 50,
+      "precision": 0.9259,
+      "recall": 1.0,
+      "f1_score": 0.9615,
+      "fpr": 0.08,
+      "accuracy": 0.96
+    }
+  },
+  "typology_breakdown": {
+    "Behavioural_Change_1": {
+      "total": 1,
+      "alerts_fired": 1,
+      "detection_rate_pct": 100.0,
+      "avg_risk_score": 82.0
+    },
+    "Behavioural_Change_2": {
+      "total": 2,
+      "alerts_fired": 2,
+      "detection_rate_pct": 100.0,
+      "avg_risk_score": 82.0
+    },
+    "Benign Transfer": {
+      "total": 100,
+      "alerts_fired": 19,
+      "detection_rate_pct": 19.0,
+      "avg_risk_score": 51.01
+    },
+    "Cash_Withdrawal": {
+      "total": 3,
+      "alerts_fired": 3,
+      "detection_rate_pct": 100.0,
+      "avg_risk_score": 82.0
+    },
+    "Circular Layering / Smurfing Ring": {
+      "total": 25,
+      "alerts_fired": 25,
+      "detection_rate_pct": 100.0,
+      "avg_risk_score": 82.0
+    },
+    "Cycle": {
+      "total": 1,
+      "alerts_fired": 1,
+      "detection_rate_pct": 100.0,
+      "avg_risk_score": 82.0
+    },
+    "Fan_In": {
+      "total": 2,
+      "alerts_fired": 2,
+      "detection_rate_pct": 100.0,
+      "avg_risk_score": 91.0
+    },
+    "Layered_Fan_In": {
+      "total": 3,
+      "alerts_fired": 3,
+      "detection_rate_pct": 100.0,
+      "avg_risk_score": 82.0
+    },
+    "Layered_Fan_Out": {
+      "total": 3,
+      "alerts_fired": 3,
+      "detection_rate_pct": 100.0,
+      "avg_risk_score": 82.0
+    },
+    "Licit Crypto Transfer": {
+      "total": 25,
+      "alerts_fired": 2,
+      "detection_rate_pct": 8.0,
+      "avg_risk_score": 41.47
+    },
+    "Peeling Chain / Mixer Tumbling": {
+      "total": 25,
+      "alerts_fired": 25,
+      "detection_rate_pct": 100.0,
+      "avg_risk_score": 92.5
+    },
+    "Rapid Velocity Spikes / Burst Outflow": {
+      "total": 25,
+      "alerts_fired": 25,
+      "detection_rate_pct": 100.0,
+      "avg_risk_score": 82.0
+    },
+    "Scatter-Gather": {
+      "total": 1,
+      "alerts_fired": 1,
+      "detection_rate_pct": 100.0,
+      "avg_risk_score": 82.0
+    },
+    "Smurfing": {
+      "total": 2,
+      "alerts_fired": 2,
+      "detection_rate_pct": 100.0,
+      "avg_risk_score": 82.0
+    },
+    "Stacked Bipartite": {
+      "total": 1,
+      "alerts_fired": 1,
+      "detection_rate_pct": 100.0,
+      "avg_risk_score": 82.0
+    },
+    "Structuring": {
+      "total": 6,
+      "alerts_fired": 6,
+      "detection_rate_pct": 100.0,
+      "avg_risk_score": 82.0
+    },
+    "Structuring / Smurfing": {
+      "total": 25,
+      "alerts_fired": 25,
+      "detection_rate_pct": 100.0,
+      "avg_risk_score": 82.0
+    }
+  }
+}

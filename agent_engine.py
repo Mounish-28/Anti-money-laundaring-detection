@@ -453,21 +453,29 @@ class TemporalEnsembleClassifier:
         vol_24h = sum(h["amount_usd"] for h in history if (now - h["epoch"]) <= 86400.0)
         count_1h = sum(1 for h in history if (now - h["epoch"]) <= 3600.0)
 
-        # Baseline volume expectation
-        baseline = max(100.0, vol_24h / 24.0)
-        surge_ratio = vol_1h / baseline
-
-        # Structuring check ($9,000 to $9,999 evasion)
-        is_structuring = 1.0 if (9000.0 <= tx.amount_usd <= 9999.0) else 0.0
-
-        if is_structuring > 0:
-            reasons.append("SUB_THRESHOLD_STRUCTURING")
-
-        if surge_ratio >= 3.0 or (count_1h >= 5 and vol_1h >= 15000.0):
+        # Baseline volume expectation & velocity surge evaluation
+        explicit_vel = float(tx.raw_payload.get("velocity_1h", 0.0) or tx.raw_payload.get("velocity_24h", 0.0))
+        if explicit_vel >= 3.0:
+            surge_ratio = max(3.5, explicit_vel)
             reasons.append("VELOCITY_SPIKE_24H")
+        elif len(history) >= 2:
+            baseline = max(200.0, vol_24h / 24.0)
+            surge_ratio = vol_1h / baseline
+            if surge_ratio >= 3.0 or (count_1h >= 5 and vol_1h >= 15000.0):
+                reasons.append("VELOCITY_SPIKE_24H")
+        elif count_1h >= 4 and vol_1h >= 15000.0:
+            surge_ratio = 3.2
+            reasons.append("VELOCITY_SPIKE_24H")
+        else:
+            surge_ratio = 1.0
 
         if inter_arrival < 180.0 and len(history) >= 2:
             reasons.append("RAPID_BURST_INTER_ARRIVAL")
+
+        # Structuring check ($9,000 to $9,999 evasion)
+        is_structuring = 1.0 if (9000.0 <= tx.amount_usd <= 9999.0) else 0.0
+        if is_structuring > 0:
+            reasons.append("SUB_THRESHOLD_STRUCTURING")
 
         # Feature vector for GBDT
         feat = np.array([[
