@@ -25,6 +25,7 @@ RUN pip install --no-cache-dir -r requirements.txt streamlit
 COPY app/ ./app/
 COPY models/ ./models/
 COPY dashboard.py .
+COPY app.py .
 COPY five_dataset_new_evaluation_results.json .
 
 EXPOSE 8501

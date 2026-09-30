@@ -6,6 +6,7 @@ celery>=5.3.0
 redis>=5.0.0
 numpy>=1.26.0,<2.5.0
 pandas>=2.2.0
+streamlit>=1.32.0
 scikit-learn>=1.4.0
 catboost>=1.2.0
 xgboost>=2.0.0
