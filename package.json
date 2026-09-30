@@ -4,14 +4,13 @@
   "private": true,
   "description": "QuantumAML Nexus - Real-Time Anti-Money Laundering Detection Engine",
   "scripts": {
+    "dev": "npm --prefix nexus-frontend run dev",
+    "build": "npm --prefix nexus-frontend run build",
     "backend": "python -m uvicorn api_server:app --host 0.0.0.0 --port 8000 --reload",
     "api": "python api_server.py",
-    "dev": "python -m streamlit run dashboard_app.py --server.port 8502",
-    "dashboard": "python -m streamlit run dashboard_app.py --server.port 8502",
     "benchmark": "python benchmark_simulation.py",
     "streamer": "python streamer.py",
     "crypto": "python live_crypto_feed.py",
-    "app": "python -m streamlit run app.py --server.port 8501",
-    "all": "powershell -ExecutionPolicy Bypass -File ./run_all.ps1 -NoFrontend"
+    "all": "powershell -ExecutionPolicy Bypass -File ./run_all.ps1"
   }
 }

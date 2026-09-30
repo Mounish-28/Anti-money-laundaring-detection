@@ -16,7 +16,26 @@ from fastapi.testclient import TestClient
 
 from api_server import app
 from agent_engine import agent_engine
-from dashboard_app import compute_kpis
+
+
+def compute_kpis(alerts_data):
+    total = len(alerts_data)
+    open_count = sum(1 for a in alerts_data if a.get("triage_status") in ("OPEN", "PENDING"))
+    escalated = sum(1 for a in alerts_data if a.get("triage_status") in ("ESCALATED", "ESCALATED_LEO"))
+    approved = sum(1 for a in alerts_data if a.get("triage_status") in ("APPROVED", "APPROVED_SAR"))
+    cleared = sum(1 for a in alerts_data if a.get("triage_status") in ("CLEARED", "CLEARED_FALSE_POSITIVE", "DISMISSED"))
+    breaches = sum(1 for a in alerts_data if a.get("regulatory_breach") or a.get("amount_usd", 0.0) >= 10000.0 or a.get("amount", 0.0) >= 10000.0)
+    scores = [a.get("risk_score", 0.0) for a in alerts_data if "risk_score" in a]
+    avg_risk = round(sum(scores) / len(scores), 1) if scores else 0.0
+    return {
+        "total": total,
+        "open": open_count,
+        "escalated": escalated,
+        "approved": approved,
+        "cleared": cleared,
+        "breaches": breaches,
+        "avg_risk": avg_risk,
+    }
 
 
 @pytest.fixture(scope="module")
