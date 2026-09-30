@@ -102,10 +102,10 @@ def normalize_transaction_payload(payload: Dict[str, Any]) -> NormalizedTransact
 
     # Determine rail type
     is_crypto = (
-        "tx_hash" in payload
-        or "from_wallet" in payload
-        or "to_wallet" in payload
-        or "mixer_risk" in payload
+        bool(payload.get("tx_hash"))
+        or bool(payload.get("from_wallet"))
+        or bool(payload.get("to_wallet"))
+        or bool(payload.get("mixer_risk"))
         or payload.get("channel") in ("crypto", "CRYPTO_SCREENING_FEED")
         or str(payload.get("currency", "")).upper() in ("BTC", "ETH", "USDT", "USDC", "SOL")
     )
@@ -682,6 +682,48 @@ class AMLAgent:
 
         self.transactions[tx.tx_id] = decision_record
         return decision_record
+
+    def evaluate(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Standard evaluation method for the AMLAgent engine.
+        Ingests a transaction payload (handling both fiat and crypto fields),
+        runs inference, and returns risk score, risk level (Low/Medium/High/Critical),
+        and fired alert rules.
+        """
+        decision = self.process_transaction(payload)
+        score = decision["aggregate_risk_score"]
+
+        if score >= 85.0:
+            level = "Critical"
+        elif score >= 70.0:
+            level = "High"
+        elif score >= 40.0:
+            level = "Medium"
+        else:
+            level = "Low"
+
+        fired_rules = decision.get("reason_codes", [])
+
+        return {
+            "tx_id": decision["tx_id"],
+            "risk_score": score,
+            "risk_level": level,
+            "alert_triggered": decision["alert_triggered"],
+            "fired_rules": fired_rules,
+            "reason_codes": fired_rules,
+            "severity_tier": decision["severity_tier"],
+            "financial_rail": decision["rail"],
+            "amount_usd": decision["amount_usd"],
+            "entities": {
+                "source": decision["source_node"],
+                "target": decision["target_node"],
+            },
+            "gnn_score": decision["gnn_score"],
+            "ensemble_score": decision["ensemble_score"],
+            "inference_latency_ms": decision["inference_latency_ms"],
+            "audit_hash": decision["audit_hash"],
+            "alert_payload": decision.get("alert_payload"),
+        }
 
     # -------------------------------------------------------------------------
     # 5. INVESTIGATOR 2-HOP SUBGRAPH EXPLANATION
