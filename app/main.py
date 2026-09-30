@@ -914,3 +914,11 @@ app.include_router(
 app.include_router(investigation_router)
 app.include_router(bank_router)
 app.include_router(ai_router)
+
+# ------------------------------------------------------------------------------
+# 8. Live Surveillance Platform (Decoupled Banking & Crypto Streams)
+# ------------------------------------------------------------------------------
+from app.surveillance.router import router as surveillance_router
+
+app.include_router(surveillance_router)
+

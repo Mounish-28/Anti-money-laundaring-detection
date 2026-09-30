@@ -721,7 +721,15 @@ async def update_alert_action(tx_id: str, payload: AlertActionPayload) -> Dict[s
 
 
 # =============================================================================
-# 5. CLI RUNNER
+# 5. LIVE SURVEILLANCE PLATFORM ROUTER (DECOUPLED BANKING & CRYPTO STREAMS)
+# =============================================================================
+from app.surveillance.router import router as surveillance_router
+
+app.include_router(surveillance_router)
+
+
+# =============================================================================
+# 6. CLI RUNNER
 # =============================================================================
 
 if __name__ == "__main__":
