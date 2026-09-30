@@ -40,6 +40,7 @@ if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)
 
 from agent_engine import AMLAgent, agent_engine
+from xai_explainer import AMLThreatExplainer, threat_explainer
 
 # Logging configuration
 logging.basicConfig(
@@ -605,6 +606,34 @@ async def get_transaction_subgraph(tx_id: str) -> SubgraphResponse:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Subgraph extraction error: {str(e)}",
+        )
+
+
+@app.get(
+    "/api/v1/investigate/{tx_id}/brief",
+    status_code=status.HTTP_200_OK,
+    tags=["Forensic Investigation"],
+)
+async def get_investigation_brief(tx_id: str) -> Dict[str, Any]:
+    """
+    Returns an automated forensic investigation brief synthesized by
+    AMLThreatExplainer, containing TreeSHAP feature attributions,
+    topological context, highlighted graph path, and legal-grade SAR narrative.
+    """
+    if tx_id not in agent_engine.transactions:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Transaction ID '{tx_id}' not found in active agent memory.",
+        )
+
+    try:
+        brief = threat_explainer.generate_investigation_brief(tx_id=tx_id)
+        return brief
+    except Exception as e:
+        logger.error(f"Error generating investigation brief for {tx_id}: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Investigation brief generation error: {str(e)}",
         )
 
 
