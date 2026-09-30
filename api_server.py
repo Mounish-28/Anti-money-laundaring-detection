@@ -211,6 +211,14 @@ class ErrorResponse(BaseModel):
     error: ErrorDetail
 
 
+class AlertActionPayload(BaseModel):
+    action: Literal["APPROVE", "ESCALATE", "DISMISS", "APPROVE_SAR", "ESCALATE_LEO", "DISMISS_FALSE_POSITIVE"] = Field(
+        ..., description="Action to perform on the alert"
+    )
+    note: Optional[str] = Field("", description="Investigator rationale or compliance comment")
+    analyst_id: Optional[str] = Field("analyst_fiu_01", description="Identifier of the acting user")
+
+
 # =============================================================================
 # 2. FASTAPI APPLICATION SETUP & MIDDLEWARE
 # =============================================================================
@@ -634,6 +642,81 @@ async def get_investigation_brief(tx_id: str) -> Dict[str, Any]:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Investigation brief generation error: {str(e)}",
+        )
+
+
+@app.get(
+    "/api/v1/alerts",
+    status_code=status.HTTP_200_OK,
+    tags=["Alert Management"],
+)
+async def list_alerts(
+    min_risk: float = 0.0,
+    triage_status: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    Returns all evaluated transactions / alerts with their current triage state.
+    Supports filtering by min_risk threshold and triage_status.
+    """
+    items = []
+    for tx_id, tx in reversed(list(agent_engine.transactions.items())):
+        score = tx.get("aggregate_risk_score", 0.0)
+        if score < min_risk:
+            continue
+        cur_status = tx.get("triage_status", "OPEN")
+        if triage_status and cur_status.upper() != triage_status.upper():
+            continue
+        items.append({
+            "tx_id": tx_id,
+            "risk_score": score,
+            "severity_tier": tx.get("severity_tier", "LOW_NOMINAL"),
+            "alert_triggered": tx.get("alert_triggered", False),
+            "triage_status": cur_status,
+            "triage_note": tx.get("triage_note", ""),
+            "triage_updated_at": tx.get("triage_updated_at"),
+            "source_node": tx.get("source_node", ""),
+            "target_node": tx.get("target_node", ""),
+            "amount_usd": tx.get("amount_usd", 0.0),
+            "currency": tx.get("currency", "USD"),
+            "rail": tx.get("rail", "fiat"),
+            "reason_codes": tx.get("reason_codes", []),
+            "timestamp": tx.get("timestamp", ""),
+            "audit_hash": tx.get("audit_hash", ""),
+        })
+    return {"total": len(items), "alerts": items}
+
+
+@app.post(
+    "/api/v1/alerts/{tx_id}/action",
+    status_code=status.HTTP_200_OK,
+    tags=["Alert Management"],
+)
+async def update_alert_action(tx_id: str, payload: AlertActionPayload) -> Dict[str, Any]:
+    """
+    Updates the triage status of an alert (APPROVE SAR, ESCALATE to LEO, or DISMISS false positive).
+    """
+    if tx_id not in agent_engine.transactions:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Transaction ID '{tx_id}' not found in active agent memory.",
+        )
+    try:
+        updated = agent_engine.update_triage_status(tx_id, payload.action, payload.note)
+        return {
+            "status": "success",
+            "success": True,
+            "tx_id": tx_id,
+            "new_status": updated["triage_status"],
+            "new_triage_status": updated["triage_status"],
+            "analyst_id": payload.analyst_id,
+            "note": updated.get("triage_note"),
+            "updated_at": updated.get("triage_updated_at"),
+        }
+    except Exception as e:
+        logger.error(f"Error updating alert action: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update alert status: {str(e)}",
         )
 
 

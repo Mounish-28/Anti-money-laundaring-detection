@@ -676,12 +676,41 @@ class AMLAgent:
             "ensemble_score": ens_score,
             "ensemble_details": ens_details,
             "alert_payload": asdict(alert_payload) if alert_payload else None,
+            "triage_status": "OPEN",
+            "triage_note": "",
             "audit_hash": current_audit_hash,
             "inference_latency_ms": round(latency_ms, 2),
         }
 
         self.transactions[tx.tx_id] = decision_record
         return decision_record
+
+    def update_triage_status(self, tx_id: str, action: str, note: str = "") -> Dict[str, Any]:
+        """
+        Updates triage status for an alert/transaction.
+        Actions:
+          - 'APPROVE': Approves automated SAR filing.
+          - 'ESCALATE': Escalates to Law Enforcement Strike Force.
+          - 'DISMISS': Dismisses as benign / false positive.
+        """
+        record = self.transactions.get(tx_id)
+        if not record:
+            raise KeyError(f"Transaction ID '{tx_id}' not found in active agent memory.")
+
+        act = action.upper()
+        if "ESCALAT" in act:
+            new_status = "ESCALATED_LEO"
+        elif "APPROV" in act:
+            new_status = "APPROVED_SAR"
+        elif "DISMISS" in act or "CLEAR" in act:
+            new_status = "CLEARED_FALSE_POSITIVE"
+        else:
+            new_status = action.upper()
+
+        record["triage_status"] = new_status
+        record["triage_note"] = note
+        record["triage_updated_at"] = datetime.now(timezone.utc).isoformat()
+        return record
 
     def evaluate(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         """
