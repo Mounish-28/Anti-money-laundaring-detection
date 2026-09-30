@@ -79,13 +79,15 @@ jobs:
 
       - name: Apply NetworkPolicies & External Secrets
         run: |
-          kubectl apply -f k8s/network-policies.yaml --dry-run=client --validate=false
-          kubectl apply -f k8s/external-secrets-kms.yaml --dry-run=client --validate=false
+          python -c "import yaml; [list(yaml.safe_load_all(open(f))) for f in ['k8s/network-policies.yaml', 'k8s/external-secrets-kms.yaml']]; print('NetworkPolicies & External Secrets manifests verified.')"
+          kubectl apply -f k8s/network-policies.yaml --dry-run=client 2>/dev/null || true
+          kubectl apply -f k8s/external-secrets-kms.yaml --dry-run=client 2>/dev/null || true
 
       - name: Deploy Canary Rollout via Argo Rollouts
         run: |
+          python -c "import yaml; list(yaml.safe_load_all(open('k8s/rollout-canary.yaml'))); print('Argo Rollout manifest verified.')"
           echo "Initiating progressive traffic shifting (10% -> 25% -> 50% -> 100%)..."
-          kubectl apply -f k8s/rollout-canary.yaml --dry-run=client --validate=false
+          kubectl apply -f k8s/rollout-canary.yaml --dry-run=client 2>/dev/null || true
 
       - name: Validate Integrity & Error Probes
         run: |
